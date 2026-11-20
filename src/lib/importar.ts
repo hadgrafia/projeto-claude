@@ -2,6 +2,7 @@ import Papa from 'papaparse';
 import type { Movimento, TipoMov } from '../db';
 import { categorizar } from './categorias';
 import { lerValor } from './format';
+import { localDoExtrato } from './lugar';
 
 export type NovoMovimento = Omit<Movimento, 'id'>;
 
@@ -18,7 +19,18 @@ function montar(dataISO: string, valorAssinado: number, descricao: string, orige
   const tipo: TipoMov = valorAssinado < 0 ? 'saida' : 'entrada';
   const valor = Math.abs(valorAssinado);
   const desc = descricao.replace(/\s+/g, ' ').trim() || 'Sem descrição';
-  return { data: dataISO, valor, tipo, descricao: desc, categoria: categorizar(desc, tipo), origem, chave: chaveMovimento(dataISO, valor, desc, tipo) };
+  const local = localDoExtrato(desc);
+  return {
+    data: dataISO,
+    valor,
+    tipo,
+    descricao: desc,
+    local,
+    localPendente: !local,
+    categoria: categorizar(desc, tipo),
+    origem,
+    chave: chaveMovimento(dataISO, valor, desc, tipo),
+  };
 }
 
 /** Aceita DD/MM/AAAA, DD/MM/AA, DD/MM (ano atual), AAAA-MM-DD e AAAAMMDD. Retorna ISO ao meio-dia local. */

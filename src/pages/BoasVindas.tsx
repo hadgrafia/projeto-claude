@@ -7,8 +7,9 @@ import { db, type Perfil, type Tema, type TipoPlano } from '../db';
 import { mesLongo, reais, ultimosMeses } from '../lib/format';
 import { calcularPerfil, PERGUNTAS_PERFIL } from '../lib/invest';
 import { PLANOS } from '../lib/planos';
+import { ehAppAndroid, Leitor } from '../lib/nativo';
 
-const ehAndroidNativo = () => Boolean((window as unknown as { Capacitor?: { getPlatform?: () => string } }).Capacitor?.getPlatform?.() === 'android');
+const ehAndroidNativo = ehAppAndroid;
 const ehIPhone = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 
 export default function BoasVindas() {
@@ -40,6 +41,12 @@ export default function BoasVindas() {
       criadoEm: new Date().toISOString(),
     });
     navegar(tipo ? `/planos/novo?tipo=${tipo}&primeiro=1` : '/inicio', { replace: true });
+    if (metodo === 'notificacoes' && ehAppAndroid()) {
+      // Permissão para avisar "Onde foi este gasto?" e para ler as notificações de pagamento.
+      await Leitor.pedirPermissaoAvisos().catch(() => undefined);
+      const { permitido } = await Leitor.status();
+      if (!permitido) await Leitor.abrirPermissao();
+    }
   }
 
   const passos = [

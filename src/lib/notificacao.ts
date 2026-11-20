@@ -2,6 +2,7 @@ import type { Movimento } from '../db';
 import { categorizar } from './categorias';
 import { lerValor } from './format';
 import { chaveMovimento } from './importar';
+import { extrairLocal } from './lugar';
 
 /**
  * Lê o TEXTO de uma notificação (de qualquer banco ou app de pagamento) e tenta
@@ -33,20 +34,20 @@ export function lerNotificacao(app: string, titulo: string, texto: string, quand
   if (!ehEntrada && !ehSaida) return null;
   const tipo = ehEntrada && !/voc[eê] (pagou|transferiu|enviou)/i.test(completo) ? 'entrada' : 'saida';
 
-  // Estabelecimento: texto depois de " em ", " para " ou " de ", até pontuação.
-  const lugar =
-    completo.match(/\b(?:em|no|na)\s+([A-Z0-9][\w*&.\- ]{2,40})/)?.[1] ??
-    completo.match(/\b(?:para|de)\s+([A-ZÀ-Ú][\w&.\- ]{2,40})/)?.[1] ??
-    app;
-  const descricao = lugar.replace(/\s+(foi|no valor|R\$).*$/i, '').trim();
+  // Nome do lugar. Se não der para descobrir, fica pendente e o app pergunta na hora.
+  const local = extrairLocal(completo, tipo);
+  const descricao = local ?? (tipo === 'entrada' ? 'Entrada' : 'Gasto');
   const data = quando.toISOString();
   return {
     data,
     valor,
     tipo,
     descricao,
-    categoria: categorizar(`${descricao} ${completo}`, tipo),
+    local,
+    localPendente: !local,
+    avisadoPor: app,
+    categoria: categorizar(`${local ?? ''} ${completo}`, tipo),
     origem: 'notificacao',
-    chave: chaveMovimento(data, valor, descricao, tipo),
+    chave: chaveMovimento(data, valor, `${descricao}|${quando.getTime()}`, tipo),
   };
 }

@@ -6,6 +6,7 @@ import { db, exportarTudo, importarTudo, type Tema } from '../db';
 import { useDados } from '../hooks';
 import { mesLongo, ultimosMeses } from '../lib/format';
 import { lerConfigIA, salvarConfigIA } from '../lib/ia';
+import { ehAppAndroid, Leitor } from '../lib/nativo';
 
 export default function Ajustes() {
   const navegar = useNavigate();
@@ -15,6 +16,15 @@ export default function Ajustes() {
   const [gasto, setGasto] = useState<number>();
   const [ia, setIa] = useState({ url: '', token: '' });
   const [salvo, setSalvo] = useState('');
+  const [leitura, setLeitura] = useState<{ permitido: boolean; avisosPermitidos: boolean }>();
+
+  useEffect(() => {
+    if (!ehAppAndroid()) return;
+    const ver = () => Leitor.status().then(setLeitura).catch(() => undefined);
+    ver();
+    document.addEventListener('visibilitychange', ver);
+    return () => document.removeEventListener('visibilitychange', ver);
+  }, []);
 
   useEffect(() => {
     if (!perfil) return;
@@ -59,6 +69,19 @@ export default function Ajustes() {
         <h1 className="titulo" style={{ fontSize: 24 }}>Ajustes</h1>
       </div>
       {salvo && <p className="cartao manter pequeno" role="status">{salvo}</p>}
+
+      {ehAppAndroid() && (
+        <section className="cartao">
+          <h2 style={{ fontSize: 15, fontWeight: 800 }}>Leitura de notificações</h2>
+          <div className="entre pequeno"><span>Ler avisos de pagamento</span><strong>{leitura?.permitido ? 'Ativada' : 'Desativada'}</strong></div>
+          <div className="entre pequeno"><span>Perguntar o lugar na hora</span><strong>{leitura?.avisosPermitidos ? 'Ativado' : 'Desativado'}</strong></div>
+          <p className="mini suave">O app lê só avisos com valores em R$ de pagamento ou de dinheiro recebido. Os outros avisos são ignorados na hora e nada do texto é guardado.</p>
+          {!leitura?.permitido && <button type="button" className="botao pequeno" onClick={() => Leitor.abrirPermissao()}>Ativar leitura</button>}
+          {leitura && !leitura.avisosPermitidos && (
+            <button type="button" className="botao secundario pequeno" onClick={async () => setLeitura({ ...leitura, ...(await Leitor.pedirPermissaoAvisos()) })}>Permitir avisos do app</button>
+          )}
+        </section>
+      )}
 
       <section className="cartao">
         <h2 style={{ fontSize: 15, fontWeight: 800 }}>Tema</h2>

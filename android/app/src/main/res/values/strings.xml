@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Meus Planos</string>
+    <string name="title_activity_main">Meus Planos</string>
+    <string name="package_name">br.meusplanos.financeiros</string>
+    <string name="custom_url_scheme">br.meusplanos.financeiros</string>
+</resources>

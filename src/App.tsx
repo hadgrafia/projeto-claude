@@ -2,6 +2,8 @@ import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
 import { useEffect } from 'react';
 import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import { Icone, type NomeIcone } from './components/Icone';
+import { PerguntaLocal } from './components/Lugar';
+import { iniciarLeituraNativa } from './lib/nativo';
 import { useDados, useOnline } from './hooks';
 import Ajustes from './pages/Ajustes';
 import BoasVindas from './pages/BoasVindas';
@@ -64,6 +66,11 @@ export default function App() {
     else document.documentElement.setAttribute('data-tema', tema);
   }, [perfil?.tema]);
 
+  // App Android: traz os pagamentos lidos das notificações enquanto o app estava fechado.
+  useEffect(() => {
+    if (perfil?.concluiuInicio) return iniciarLeituraNativa();
+  }, [perfil?.concluiuInicio]);
+
   if (!carregado) return null;
   const pronto = perfil?.concluiuInicio;
   const comNav = pronto && ABAS.some((a) => local.pathname === a.para);
@@ -104,6 +111,7 @@ export default function App() {
           </motion.div>
         </AnimatePresence>
         {comNav && <Nav />}
+        {pronto && <PerguntaLocal />}
       </div>
     </MotionConfig>
   );

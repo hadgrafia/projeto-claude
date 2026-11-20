@@ -28,7 +28,9 @@ export default function Importar() {
   }
 
   async function salvar() {
-    const novos = itens.filter((i) => i.ok && !i.repetido).map(({ ok: _ok, repetido: _r, ...m }) => m);
+    const novos = itens
+      .filter((i) => i.ok && !i.repetido)
+      .map(({ ok: _ok, repetido: _r, ...m }) => ({ ...m, local: m.local?.trim() || undefined, localPendente: !m.local?.trim() }));
     await db.movimentos.bulkAdd(novos);
     navegar('/gastos');
   }
@@ -60,7 +62,7 @@ export default function Importar() {
         <>
           <div className="entre">
             <strong>{selecionados.length} de {itens.length} para salvar</strong>
-            <span className="pequeno suave">{itens.filter((i) => i.repetido).length} já existiam</span>
+            <span className="pequeno suave">{itens.filter((i) => i.repetido).length} já existiam · {selecionados.filter((i) => !i.local).length} sem lugar</span>
           </div>
           <div className="lista">
             {itens.map((m, i) => (
@@ -75,7 +77,14 @@ export default function Importar() {
                     style={{ width: 22, height: 22 }}
                   />
                   <span className="cresce coluna" style={{ gap: 2 }}>
-                    <strong style={{ fontSize: 14 }}>{m.descricao}</strong>
+                    <input
+                      aria-label={`Nome do lugar de ${m.descricao}`}
+                      value={m.local ?? ''}
+                      placeholder="Onde foi? Informe o lugar"
+                      onChange={(e) => setItens((l) => l.map((x, j) => (j === i ? { ...x, local: e.target.value, localPendente: !e.target.value.trim() } : x)))}
+                      style={{ border: 0, borderBottom: `1px dashed ${m.local ? 'transparent' : 'var(--terracota-texto)'}`, background: 'transparent', fontWeight: 700, fontSize: 14, padding: '2px 0', width: '100%' }}
+                    />
+                    {m.local !== m.descricao && <span className="mini suave" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.descricao}</span>}
                     {m.tipo === 'saida' ? (
                       <select
                         aria-label="Categoria"

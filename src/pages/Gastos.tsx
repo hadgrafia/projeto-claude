@@ -9,6 +9,8 @@ import { categorizar, ehEssencial, NOMES_CATEGORIAS } from '../lib/categorias';
 import { analisarMes, type Status } from '../lib/feedback';
 import { hora, reais } from '../lib/format';
 import { chaveMovimento } from '../lib/importar';
+import { CampoLugar, useLugaresRecentes } from '../components/Lugar';
+import { lugarInformadoNoApp } from '../lib/nativo';
 
 type Periodo = 'dia' | 'semana' | 'mes' | 'ano';
 
@@ -49,6 +51,7 @@ export default function Gastos() {
     () => movimentos.filter((m) => { const t = new Date(m.data).getTime(); return t >= ini.getTime() && t < fim.getTime(); }),
     [movimentos, ini, fim],
   );
+  const pendentes = movimentos.filter((m) => m.localPendente);
   const entrou = doPeriodo.filter((m) => m.tipo === 'entrada').reduce((a, m) => a + m.valor, 0);
   const saiu = doPeriodo.filter((m) => m.tipo === 'saida').reduce((a, m) => a + m.valor, 0);
   const status = useMemo(() => new Map(analisarMes(movimentos, renda.media).map((s) => [s.categoria, s.status] as [string, Status])), [movimentos, renda.media]);
@@ -84,7 +87,7 @@ export default function Gastos() {
       />
       <div className="topo">
         <button type="button" className="circulo card" aria-label="Período anterior" onClick={() => setDesl(desl - 1)}><Icone nome="voltar" /></button>
-        <strong style={{ textTransform: 'capitalize' }}>{rotulo}</strong>
+        <strong>{rotulo.charAt(0).toUpperCase() + rotulo.slice(1)}</strong>
         <button type="button" className="circulo card" aria-label="Próximo período" disabled={desl >= 0} style={{ opacity: desl >= 0 ? 0.4 : 1 }} onClick={() => setDesl(desl + 1)}>
           <Icone nome="direita" />
         </button>
@@ -115,6 +118,15 @@ export default function Gastos() {
         </div>
       )}
 
+      {pendentes.length > 0 && (
+        <button type="button" className="cartao areia" style={{ border: 0, textAlign: 'left', cursor: 'pointer', flexDirection: 'row', alignItems: 'center' }} onClick={() => setEditando(pendentes[0])}>
+          <span className="circulo terracota"><Icone nome="lapis" /></span>
+          <span className="cresce pequeno" style={{ fontSize: 14 }}>
+            <strong>{pendentes.length} {pendentes.length === 1 ? 'gasto sem o nome do lugar' : 'gastos sem o nome do lugar'}</strong>. Toque para informar.
+          </span>
+        </button>
+      )}
+
       <button type="button" className="botao terracota" onClick={() => setNovo(true)}>
         <Icone nome="mais" /> Anotar gasto ou entrada
       </button>
@@ -133,8 +145,15 @@ export default function Gastos() {
                       <Icone nome={ICONE_CATEGORIA[m.categoria] ?? 'etiqueta'} />
                     </span>
                     <span className="cresce coluna" style={{ gap: 2 }}>
-                      <strong style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.descricao}</strong>
-                      <span className="pequeno suave">{m.categoria} · {m.origem === 'extrato' ? 'extrato' : hora(m.data)}</span>
+                      {m.local ? (
+                        <strong style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.local}</strong>
+                      ) : (
+                        <strong style={{ color: 'var(--terracota-texto)' }}>{m.tipo === 'entrada' ? 'De onde veio?' : 'Onde foi?'} Toque para informar</strong>
+                      )}
+                      <span className="pequeno suave">
+                        {m.categoria} · {m.origem === 'extrato' ? 'extrato' : hora(m.data)}
+                        {m.avisadoPor ? ` · ${m.avisadoPor}` : ''}
+                      </span>
                     </span>
                     <span className="coluna" style={{ alignItems: 'flex-end', gap: 4 }}>
                       <strong className="num" style={{ color: m.tipo === 'entrada' ? 'var(--manter-tx)' : undefined }}>{m.tipo === 'entrada' ? '+' : ''}{reais(m.valor)}</strong>
@@ -161,20 +180,25 @@ export default function Gastos() {
 function FormMovimento({ mov, aoSalvar }: { mov?: Movimento; aoSalvar: () => void }) {
   const [tipo, setTipo] = useState<TipoMov>(mov?.tipo ?? 'saida');
   const [valor, setValor] = useState<number | undefined>(mov?.valor);
-  const [descricao, setDescricao] = useState(mov?.descricao ?? '');
+  const [local, setLocal] = useState(mov?.local ?? '');
+  const sugestoes = useLugaresRecentes(tipo);
   const [categoria, setCategoria] = useState(mov?.categoria ?? '');
   const agora = new Date();
-  const local = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-  const [quando, setQuando] = useState(local(mov ? new Date(mov.data) : agora));
+  const paraCampo = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  const [quando, setQuando] = useState(paraCampo(mov ? new Date(mov.data) : agora));
 
   async function salvar() {
-    if (!valor) return;
+    if (!valor || !local.trim()) return;
     const data = new Date(quando).toISOString();
-    const cat = tipo === 'entrada' ? 'Entrada' : categoria || categorizar(descricao, tipo);
-    const desc = descricao.trim() || (tipo === 'entrada' ? 'Entrada' : cat);
-    const dados = { data, valor, tipo, descricao: desc, categoria: cat };
-    if (mov?.id) await db.movimentos.update(mov.id, dados);
-    else await db.movimentos.add({ ...dados, origem: 'manual', chave: `${chaveMovimento(data, valor, desc, tipo)}-${Date.now()}` });
+    const lugar = local.trim();
+    const auto = categorizar(lugar, tipo);
+    const cat = tipo === 'entrada' ? 'Entrada' : categoria || (mov && mov.categoria !== 'Outros' && auto === 'Outros' ? mov.categoria : auto);
+    const dados = { data, valor, tipo, descricao: mov?.descricao && mov.origem !== 'manual' ? mov.descricao : lugar, local: lugar, localPendente: false, categoria: cat };
+    if (mov?.id) {
+      await db.movimentos.update(mov.id, dados);
+      if (mov.localPendente) lugarInformadoNoApp(mov.chave);
+    }
+    else await db.movimentos.add({ ...dados, origem: 'manual', chave: `${chaveMovimento(data, valor, lugar, tipo)}-${Date.now()}` });
     aoSalvar();
   }
 
@@ -182,10 +206,7 @@ function FormMovimento({ mov, aoSalvar }: { mov?: Movimento; aoSalvar: () => voi
     <>
       <Segmentado rotulo="Tipo" valor={tipo} aoMudar={setTipo} opcoes={[{ valor: 'saida', rotulo: 'Gasto' }, { valor: 'entrada', rotulo: 'Entrada' }]} />
       <CampoDinheiro rotulo="Valor" valor={valor} aoMudar={setValor} />
-      <label className="campo">
-        Descrição
-        <input value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder={tipo === 'entrada' ? 'Ex.: freela, salário' : 'Ex.: iFood, mercado'} />
-      </label>
+      <CampoLugar tipo={tipo} valor={local} aoMudar={setLocal} sugestoes={sugestoes} />
       {tipo === 'saida' && (
         <label className="campo">
           Categoria
@@ -199,7 +220,7 @@ function FormMovimento({ mov, aoSalvar }: { mov?: Movimento; aoSalvar: () => voi
         Data e hora
         <input type="datetime-local" value={quando} onChange={(e) => setQuando(e.target.value)} />
       </label>
-      <button type="button" className="botao" onClick={salvar} disabled={!valor}>Salvar</button>
+      <button type="button" className="botao" onClick={salvar} disabled={!valor || !local.trim()}>Salvar</button>
       {mov?.id && (
         <button type="button" className="botao perigo" onClick={async () => { await db.movimentos.delete(mov.id!); aoSalvar(); }}>
           <Icone nome="lixo" /> Apagar

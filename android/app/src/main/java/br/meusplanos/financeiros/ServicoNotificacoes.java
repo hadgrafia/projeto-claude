@@ -1,0 +1,75 @@
+package br.meusplanos.financeiros;
+
+import android.app.Notification;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.os.Bundle;
+import android.service.notification.NotificationListenerService;
+import android.service.notification.StatusBarNotification;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * Escuta as notificações do celular. Só avisos com valor em R$ de pagamento ou de
+ * dinheiro recebido são aproveitados; todo o resto é ignorado na hora e nada é guardado.
+ * O app NUNCA abre nem acessa o app do banco.
+ */
+public class ServicoNotificacoes extends NotificationListenerService {
+
+    private static final Map<String, String> NOMES = new HashMap<>();
+    static {
+        NOMES.put("com.nu.production", "Nubank");
+        NOMES.put("br.com.intermedium", "Inter");
+        NOMES.put("com.itau", "Itaú");
+        NOMES.put("com.bradesco", "Bradesco");
+        NOMES.put("br.com.bb.android", "Banco do Brasil");
+        NOMES.put("com.santander.app", "Santander");
+        NOMES.put("br.com.gabba.Caixa", "Caixa");
+        NOMES.put("com.c6bank.app", "C6 Bank");
+        NOMES.put("com.mercadopago.wallet", "Mercado Pago");
+        NOMES.put("com.picpay", "PicPay");
+        NOMES.put("com.btg.pactual.banking", "BTG");
+        NOMES.put("br.com.original.bank", "Original");
+        NOMES.put("com.neon", "Neon");
+        NOMES.put("com.next.app", "Next");
+        NOMES.put("br.com.uol.ps.myaccount", "PagBank");
+    }
+
+    @Override
+    public void onNotificationPosted(StatusBarNotification sbn) {
+        if (sbn == null || getPackageName().equals(sbn.getPackageName())) return;
+        Notification n = sbn.getNotification();
+        if (n == null || (n.flags & Notification.FLAG_GROUP_SUMMARY) != 0) return;
+        Bundle ex = n.extras;
+        if (ex == null) return;
+        CharSequence titulo = ex.getCharSequence(Notification.EXTRA_TITLE);
+        CharSequence texto = ex.getCharSequence(Notification.EXTRA_BIG_TEXT);
+        if (texto == null) texto = ex.getCharSequence(Notification.EXTRA_TEXT);
+
+        LeitorPagamentos.Pagamento p = LeitorPagamentos.ler(titulo, texto);
+        if (p == null) return;
+
+        long agora = System.currentTimeMillis();
+        String assinatura = sbn.getPackageName() + "|" + p.valor + "|" + p.tipo + "|" + (String.valueOf(titulo) + texto).hashCode();
+        if (Armazem.jaVisto(this, assinatura, agora)) return;
+
+        String app = nomeDoApp(sbn.getPackageName(), ex);
+        String id = UUID.randomUUID().toString();
+        Armazem.adicionar(this, id, agora, p, app);
+        if (p.local == null) Avisos.perguntarLocal(this, id, p, app);
+    }
+
+    private String nomeDoApp(String pacote, Bundle ex) {
+        if (NOMES.containsKey(pacote)) return NOMES.get(pacote);
+        try {
+            Object info = ex.get("android.appInfo");
+            PackageManager pm = getPackageManager();
+            if (info instanceof ApplicationInfo) return pm.getApplicationLabel((ApplicationInfo) info).toString();
+            return pm.getApplicationLabel(pm.getApplicationInfo(pacote, 0)).toString();
+        } catch (Exception e) {
+            return "app de pagamento";
+        }
+    }
+}

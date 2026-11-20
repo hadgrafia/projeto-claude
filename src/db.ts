@@ -53,6 +53,12 @@ export interface Movimento {
   valor: number;
   tipo: TipoMov;
   descricao: string;
+  /** Nome da loja ou lugar onde o dinheiro foi gasto (ou de quem veio, nas entradas). */
+  local?: string;
+  /** true quando não foi possível descobrir o lugar: o app pergunta para a pessoa. */
+  localPendente?: boolean;
+  /** App ou banco que avisou (só o nome do app, nunca o texto da notificação). */
+  avisadoPor?: string;
   categoria: string;
   origem: OrigemMov;
   /** Assinatura para evitar duplicados ao importar o mesmo extrato duas vezes. */
@@ -109,6 +115,17 @@ class BancoLocal extends Dexie {
       investimentos: '++id, tipo, planoId',
       cache: 'chave',
     });
+    // v2: nome do lugar de cada gasto. Lançamentos antigos usam a descrição como lugar.
+    this.version(2)
+      .stores({ movimentos: '++id, data, tipo, categoria, &chave' })
+      .upgrade((tx) =>
+        tx
+          .table('movimentos')
+          .toCollection()
+          .modify((m: Movimento) => {
+            if (!m.local) m.local = m.descricao;
+          }),
+      );
   }
 }
 

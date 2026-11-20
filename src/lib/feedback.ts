@@ -21,17 +21,19 @@ export interface Sugestao {
 export function analisarMes(movs: Movimento[], renda: number, hoje = new Date()): Sugestao[] {
   const mes = chaveMes(hoje);
   const anteriores = [1, 2, 3].map((i) => somarMeses(mes, -i));
-  const porCat = new Map<string, { atual: number; ant: number[]; qtd: number; noite: number; lojas: Set<string> }>();
+  const porCat = new Map<string, { atual: number; ant: number[]; qtd: number; noite: number; lojas: Set<string>; porLugar: Map<string, number> }>();
   for (const m of movs) {
     if (m.tipo !== 'saida') continue;
     const k = m.data.slice(0, 7);
-    const c = porCat.get(m.categoria) ?? { atual: 0, ant: [0, 0, 0], qtd: 0, noite: 0, lojas: new Set() };
+    const c = porCat.get(m.categoria) ?? { atual: 0, ant: [0, 0, 0], qtd: 0, noite: 0, lojas: new Set<string>(), porLugar: new Map<string, number>() };
     if (k === mes) {
       c.atual += m.valor;
       c.qtd++;
       const h = new Date(m.data).getHours();
       if (m.origem !== 'extrato' && (h >= 22 || h < 5)) c.noite++;
-      c.lojas.add(m.descricao.toLowerCase());
+      const lugar = m.local ?? m.descricao;
+      c.lojas.add(lugar.toLowerCase());
+      if (m.local) c.porLugar.set(m.local, (c.porLugar.get(m.local) ?? 0) + m.valor);
     }
     const i = anteriores.indexOf(k);
     if (i >= 0) c.ant[i] += m.valor;
@@ -47,6 +49,8 @@ export function analisarMes(movs: Movimento[], renda: number, hoje = new Date())
     const partes: string[] = [`${c.qtd} ${c.qtd === 1 ? 'lançamento' : 'lançamentos'}`];
     if (c.noite >= 3) partes.push(`${c.noite} depois das 22h`);
     if (!essencial && totalVariavel) partes.push(`${Math.round((c.atual / totalVariavel) * 100)}% dos gastos variáveis`);
+    const lugares = [...c.porLugar].sort((a, b) => b[1] - a[1]).slice(0, 3);
+    if (lugares.length) partes.push(`principalmente em ${lugares.map(([l, v]) => `${l} (R$ ${Math.round(v).toLocaleString('pt-BR')})`).join(', ')}`);
     if (media) partes.push(`média dos meses anteriores: R$ ${Math.round(media).toLocaleString('pt-BR')}`);
 
     let status: Status = 'manter';
