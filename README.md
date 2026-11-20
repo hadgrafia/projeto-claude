@@ -61,10 +61,22 @@ Depois, no app, vá em **Ajustes → Análise com IA** e informe o endereço do 
 
 **Custo:** o servidor é gratuito, mas a API do Claude cobra por uso (modelo Claude Opus 5.5 com pesquisa na web). Cada análise custa poucos centavos de dólar; acompanhe o gasto no console da Anthropic.
 
-## Próximas etapas
+## Nome do lugar de cada gasto
 
-- App Android (Capacitor) com leitura das notificações de pagamento de qualquer banco ou app. O leitor de notificações (`src/lib/notificacao.ts`) já está pronto e testado.
-- No iPhone, a Apple não permite ler notificações de outros apps: lá o registro é pelo extrato ou manual.
+Todo lançamento mostra **onde** o dinheiro foi gasto (loja, estabelecimento ou pessoa do Pix) ou de quem veio, nas entradas.
+- O lugar é lido da notificação ou do extrato. Prefixos de maquininha e intermediadores (`PG *`, `MERCADOPAGO*` etc.) são removidos.
+- Se não der para identificar, o app pergunta **"Onde foi este gasto?"**:
+  - **No app Android:** no mesmo instante do pagamento, com uma notificação que tem campo de resposta, sem precisar abrir o app.
+  - **Em qualquer versão:** assim que o app é aberto, com sugestões dos lugares mais usados.
+- Com o nome informado, a categoria é ajustada automaticamente e o Feedback mostra onde você mais gastou em cada categoria.
+
+## App Android (leitura de notificações)
+
+A pasta `android/` é o mesmo app empacotado com o Capacitor, mais um serviço nativo que lê os avisos de pagamento de **qualquer banco ou app**. O app nunca abre nem acessa o app do banco. Avisos sem valor em R$ de pagamento ou de dinheiro recebido são ignorados na hora, e o texto das notificações não é guardado.
+
+O GitHub gera o APK sozinho a cada envio de código (`.github/workflows/android.yml`): em **Actions → App Android → Artifacts → meus-planos-apk**. Para instalar no celular, permita "instalar apps desconhecidos" para o navegador ou para o gerenciador de arquivos. No primeiro uso, escolha "Ler notificações de pagamento" e ative o Meus Planos na tela de acesso a notificações que o Android abre.
+
+No iPhone, a Apple não permite ler notificações de outros apps: lá o registro é pelo extrato ou manual.
 
 ## Estrutura
 
