@@ -1,0 +1,210 @@
+import { AnimatePresence, motion } from 'framer-motion';
+import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Icone, ICONE_CATEGORIA } from '../components/Icone';
+import { CampoDinheiro, Dinheiro, Folha, Segmentado } from '../components/Ui';
+import { db, type Movimento, type TipoMov } from '../db';
+import { useDados } from '../hooks';
+import { categorizar, ehEssencial, NOMES_CATEGORIAS } from '../lib/categorias';
+import { analisarMes, type Status } from '../lib/feedback';
+import { hora, reais } from '../lib/format';
+import { chaveMovimento } from '../lib/importar';
+
+type Periodo = 'dia' | 'semana' | 'mes' | 'ano';
+
+function intervalo(p: Periodo, deslocamento: number, hoje = new Date()): [Date, Date, string] {
+  const d = new Date(hoje);
+  d.setHours(0, 0, 0, 0);
+  if (p === 'dia') {
+    d.setDate(d.getDate() + deslocamento);
+    const fim = new Date(d);
+    fim.setDate(fim.getDate() + 1);
+    const rot = deslocamento === 0 ? 'Hoje' : deslocamento === -1 ? 'Ontem' : d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
+    return [d, fim, rot];
+  }
+  if (p === 'semana') {
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7) + deslocamento * 7);
+    const fim = new Date(d);
+    fim.setDate(fim.getDate() + 7);
+    const ult = new Date(fim.getTime() - 1);
+    return [d, fim, `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} – ${ult.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}`];
+  }
+  if (p === 'mes') {
+    const ini = new Date(d.getFullYear(), d.getMonth() + deslocamento, 1);
+    return [ini, new Date(ini.getFullYear(), ini.getMonth() + 1, 1), ini.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })];
+  }
+  const ini = new Date(d.getFullYear() + deslocamento, 0, 1);
+  return [ini, new Date(ini.getFullYear() + 1, 0, 1), String(ini.getFullYear())];
+}
+
+export default function Gastos() {
+  const { movimentos, renda } = useDados();
+  const [periodo, setPeriodo] = useState<Periodo>('mes');
+  const [desl, setDesl] = useState(0);
+  const [novo, setNovo] = useState(false);
+  const [editando, setEditando] = useState<Movimento>();
+  const [ini, fim, rotulo] = intervalo(periodo, desl);
+
+  const doPeriodo = useMemo(
+    () => movimentos.filter((m) => { const t = new Date(m.data).getTime(); return t >= ini.getTime() && t < fim.getTime(); }),
+    [movimentos, ini, fim],
+  );
+  const entrou = doPeriodo.filter((m) => m.tipo === 'entrada').reduce((a, m) => a + m.valor, 0);
+  const saiu = doPeriodo.filter((m) => m.tipo === 'saida').reduce((a, m) => a + m.valor, 0);
+  const status = useMemo(() => new Map(analisarMes(movimentos, renda.media).map((s) => [s.categoria, s.status] as [string, Status])), [movimentos, renda.media]);
+  const porDia = useMemo(() => {
+    const g = new Map<string, Movimento[]>();
+    for (const m of doPeriodo) {
+      const k = new Date(m.data).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+      if (!g.has(k)) g.set(k, []);
+      g.get(k)!.push(m);
+    }
+    return [...g];
+  }, [doPeriodo]);
+  const porCategoria = useMemo(() => {
+    const c = new Map<string, number>();
+    for (const m of doPeriodo) if (m.tipo === 'saida') c.set(m.categoria, (c.get(m.categoria) ?? 0) + m.valor);
+    return [...c].sort((a, b) => b[1] - a[1]);
+  }, [doPeriodo]);
+
+  return (
+    <main className="tela">
+      <div className="topo">
+        <h1 className="titulo">Gastos e entradas</h1>
+        <Link to="/importar" className="circulo card" aria-label="Enviar extrato">
+          <Icone nome="upload" tamanho={20} />
+        </Link>
+      </div>
+
+      <Segmentado
+        rotulo="Período"
+        valor={periodo}
+        aoMudar={(p) => { setPeriodo(p); setDesl(0); }}
+        opcoes={[{ valor: 'dia', rotulo: 'Dia' }, { valor: 'semana', rotulo: 'Semana' }, { valor: 'mes', rotulo: 'Mês' }, { valor: 'ano', rotulo: 'Ano' }]}
+      />
+      <div className="topo">
+        <button type="button" className="circulo card" aria-label="Período anterior" onClick={() => setDesl(desl - 1)}><Icone nome="voltar" /></button>
+        <strong style={{ textTransform: 'capitalize' }}>{rotulo}</strong>
+        <button type="button" className="circulo card" aria-label="Próximo período" disabled={desl >= 0} style={{ opacity: desl >= 0 ? 0.4 : 1 }} onClick={() => setDesl(desl + 1)}>
+          <Icone nome="direita" />
+        </button>
+      </div>
+
+      <div className="grade-2">
+        <div className="cartao manter" style={{ gap: 2 }}>
+          <span className="mini" style={{ fontWeight: 600 }}>Entrou</span>
+          <Dinheiro valor={entrou} centavos className="num" />
+        </div>
+        <div className="cartao terracota" style={{ gap: 2 }}>
+          <span className="mini" style={{ fontWeight: 600 }}>Saiu</span>
+          <Dinheiro valor={saiu} centavos className="num" />
+        </div>
+      </div>
+
+      {porCategoria.length > 0 && (
+        <div className="cartao" style={{ gap: 8 }}>
+          <span className="secao" style={{ marginTop: 0 }}>Para onde foi</span>
+          {porCategoria.slice(0, 5).map(([c, v], i) => (
+            <div key={c} className="coluna" style={{ gap: 4 }}>
+              <div className="entre pequeno"><span>{c}</span><strong className="num">{reais(v)}</strong></div>
+              <div className="barra" style={{ height: 6 }}>
+                <motion.div initial={{ width: 0 }} animate={{ width: `${(v / porCategoria[0][1]) * 100}%` }} transition={{ duration: 0.7, delay: i * 0.05 }} style={{ background: ehEssencial(c) ? 'var(--verde)' : 'var(--terracota)' }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <button type="button" className="botao terracota" onClick={() => setNovo(true)}>
+        <Icone nome="mais" /> Anotar gasto ou entrada
+      </button>
+
+      {porDia.length === 0 && <p className="vazio">Nada registrado neste período.</p>}
+      <AnimatePresence initial={false}>
+        {porDia.map(([dia, itens]) => (
+          <motion.section key={dia} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="coluna">
+            <h2 className="secao" style={{ textTransform: 'uppercase' }}>{dia}</h2>
+            <div className="lista">
+              {itens.map((m) => {
+                const st = m.tipo === 'saida' ? status.get(m.categoria) : undefined;
+                return (
+                  <button key={m.id} type="button" className="item" onClick={() => setEditando(m)}>
+                    <span className={`circulo ${m.tipo === 'entrada' ? 'manter' : st === 'cortar' ? 'terracota' : st === 'rever' ? 'rever' : 'manter'}`}>
+                      <Icone nome={ICONE_CATEGORIA[m.categoria] ?? 'etiqueta'} />
+                    </span>
+                    <span className="cresce coluna" style={{ gap: 2 }}>
+                      <strong style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.descricao}</strong>
+                      <span className="pequeno suave">{m.categoria} · {m.origem === 'extrato' ? 'extrato' : hora(m.data)}</span>
+                    </span>
+                    <span className="coluna" style={{ alignItems: 'flex-end', gap: 4 }}>
+                      <strong className="num" style={{ color: m.tipo === 'entrada' ? 'var(--manter-tx)' : undefined }}>{m.tipo === 'entrada' ? '+' : ''}{reais(m.valor)}</strong>
+                      {st && st !== 'manter' && <span className={`pilula ${st}`}>{st === 'cortar' ? 'Cortar' : 'Rever'}</span>}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </motion.section>
+        ))}
+      </AnimatePresence>
+
+      <Folha aberta={novo} aoFechar={() => setNovo(false)} titulo="Anotar">
+        <FormMovimento aoSalvar={() => setNovo(false)} />
+      </Folha>
+      <Folha aberta={!!editando} aoFechar={() => setEditando(undefined)} titulo="Editar lançamento">
+        {editando && <FormMovimento mov={editando} aoSalvar={() => setEditando(undefined)} />}
+      </Folha>
+    </main>
+  );
+}
+
+function FormMovimento({ mov, aoSalvar }: { mov?: Movimento; aoSalvar: () => void }) {
+  const [tipo, setTipo] = useState<TipoMov>(mov?.tipo ?? 'saida');
+  const [valor, setValor] = useState<number | undefined>(mov?.valor);
+  const [descricao, setDescricao] = useState(mov?.descricao ?? '');
+  const [categoria, setCategoria] = useState(mov?.categoria ?? '');
+  const agora = new Date();
+  const local = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  const [quando, setQuando] = useState(local(mov ? new Date(mov.data) : agora));
+
+  async function salvar() {
+    if (!valor) return;
+    const data = new Date(quando).toISOString();
+    const cat = tipo === 'entrada' ? 'Entrada' : categoria || categorizar(descricao, tipo);
+    const desc = descricao.trim() || (tipo === 'entrada' ? 'Entrada' : cat);
+    const dados = { data, valor, tipo, descricao: desc, categoria: cat };
+    if (mov?.id) await db.movimentos.update(mov.id, dados);
+    else await db.movimentos.add({ ...dados, origem: 'manual', chave: `${chaveMovimento(data, valor, desc, tipo)}-${Date.now()}` });
+    aoSalvar();
+  }
+
+  return (
+    <>
+      <Segmentado rotulo="Tipo" valor={tipo} aoMudar={setTipo} opcoes={[{ valor: 'saida', rotulo: 'Gasto' }, { valor: 'entrada', rotulo: 'Entrada' }]} />
+      <CampoDinheiro rotulo="Valor" valor={valor} aoMudar={setValor} />
+      <label className="campo">
+        Descrição
+        <input value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder={tipo === 'entrada' ? 'Ex.: freela, salário' : 'Ex.: iFood, mercado'} />
+      </label>
+      {tipo === 'saida' && (
+        <label className="campo">
+          Categoria
+          <select value={categoria} onChange={(e) => setCategoria(e.target.value)}>
+            <option value="">Automática</option>
+            {NOMES_CATEGORIAS.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </label>
+      )}
+      <label className="campo">
+        Data e hora
+        <input type="datetime-local" value={quando} onChange={(e) => setQuando(e.target.value)} />
+      </label>
+      <button type="button" className="botao" onClick={salvar} disabled={!valor}>Salvar</button>
+      {mov?.id && (
+        <button type="button" className="botao perigo" onClick={async () => { await db.movimentos.delete(mov.id!); aoSalvar(); }}>
+          <Icone nome="lixo" /> Apagar
+        </button>
+      )}
+    </>
+  );
+}
