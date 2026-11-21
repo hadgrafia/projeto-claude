@@ -1,6 +1,5 @@
-import { AnthropicVertex } from '@anthropic-ai/vertex-sdk';
 import { json, type Env } from '../tipos';
-import { tokenGoogle, type ContaServico } from './analise';
+import { clienteVertex, tokenGoogle, type ContaServico } from './analise';
 
 /**
  * Verificação automática, chamada só pelo robô de publicação (exige o código VERIFICACAO).
@@ -25,9 +24,9 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     try {
       const conta = JSON.parse(env.GCP_SA_KEY) as ContaServico;
       if (!conta.client_email || !conta.private_key) throw new Error('o texto colado não é o arquivo JSON da conta de serviço');
-      const token = await tokenGoogle(conta);
+      await tokenGoogle(conta);
       r.googleCloud = 'ok';
-      const client = new AnthropicVertex({ region: env.GCP_REGION || 'global', projectId: env.GCP_PROJECT_ID || conta.project_id, accessToken: token });
+      const client = await clienteVertex(env, conta);
       const m = await client.messages.create({
         model: 'claude-opus-5-5',
         max_tokens: 2048,

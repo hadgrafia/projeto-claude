@@ -83,6 +83,22 @@ export async function tokenGoogle(conta: ContaServico): Promise<string> {
   return t.access_token;
 }
 
+type OpcoesVertex = NonNullable<ConstructorParameters<typeof AnthropicVertex>[0]>;
+
+/**
+ * Cliente do Claude no Vertex usando o acesso que nós mesmos geramos (JWT da conta de serviço).
+ * O SDK aceita um "authClient": entregamos um mínimo, que só devolve o cabeçalho Authorization,
+ * assim a biblioteca do Google não precisa rodar dentro da Cloudflare.
+ */
+export async function clienteVertex(env: Env, conta: ContaServico, extras: Partial<OpcoesVertex> = {}) {
+  const projeto = env.GCP_PROJECT_ID || conta.project_id;
+  const authClient = {
+    projectId: projeto,
+    getRequestHeaders: async () => new Headers({ Authorization: `Bearer ${await tokenGoogle(conta)}` }),
+  } as unknown as OpcoesVertex['authClient'];
+  return new AnthropicVertex({ region: env.GCP_REGION || 'global', projectId: projeto, authClient, ...extras });
+}
+
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (!env.GCP_SA_KEY) return json({ erro: 'A análise com IA ainda não foi ativada pela administradora.' }, 503);
   let conta: ContaServico;
@@ -110,13 +126,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     'Pesquise os valores atuais e monte a análise no formato pedido.';
 
   try {
-    const client = new AnthropicVertex({
-      region: env.GCP_REGION || 'global',
-      projectId: env.GCP_PROJECT_ID || conta.project_id,
-      accessToken: await tokenGoogle(conta),
-      // No Vertex não há fallback no servidor: se o modelo recusar, tenta de novo no Claude Opus 4.8.
-      middleware: [betaRefusalFallbackMiddleware([{ model: 'claude-opus-4-8' }])],
-    });
+    // No Vertex não há fallback no servidor: se o modelo recusar, tenta de novo no Claude Opus 4.8.
+    const client = await clienteVertex(env, conta, { middleware: [betaRefusalFallbackMiddleware([{ model: 'claude-opus-4-8' }])] });
     const fallbackState = new BetaFallbackState();
     const messages: Anthropic.MessageParam[] = [{ role: 'user', content: pergunta }];
     let resposta: Anthropic.Message | undefined;
