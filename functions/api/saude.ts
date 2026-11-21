@@ -21,6 +21,12 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   r.emailAdministradora = env.ADMIN_EMAIL ? 'ok' : 'não configurado';
   r.exigeLogin = env.EXIGIR_ACCESS === '1' ? 'ok' : 'DESLIGADO';
   try {
+    const n = await env.DB.prepare('SELECT COUNT(DISTINCT email) AS n FROM dados_conta').first<{ n: number }>();
+    r.copiaDasContas = env.DADOS_CHAVE ? `ok (${n?.n ?? 0} contas com cópia)` : 'DADOS_CHAVE não configurada';
+  } catch (e) {
+    r.copiaDasContas = `erro: ${(e as Error).message}`;
+  }
+  try {
     await env.DB.prepare('SELECT COUNT(*) AS n FROM convites_conta').first();
     r.convitesPessoais = 'ok';
   } catch (e) {

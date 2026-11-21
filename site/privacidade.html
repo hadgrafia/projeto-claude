@@ -22,10 +22,13 @@
 
 <h2>Resumo</h2>
 <ul>
-  <li>Seus gastos, entradas, planos e investimentos ficam guardados <strong>somente no seu celular</strong>.</li>
+  <li>Seus gastos, entradas, planos e investimentos ficam no seu celular e numa <strong>cópia cifrada da sua conta</strong> no servidor, para voltarem em qualquer aparelho. Você pode excluir a conta e todos os dados a qualquer momento em Ajustes.</li>
   <li>O app <strong>nunca</strong> abre, acessa ou controla o app do seu banco e nunca pede senha bancária.</li>
   <li>Não vendemos nem compartilhamos dados com anunciantes. O app não tem anúncios.</li>
 </ul>
+
+<h2>Cópia da conta</h2>
+<p>Para que os seus dados não se percam ao trocar de aparelho, reinstalar o app ou usar o site, o app guarda uma cópia da sua conta no servidor: respostas do início, planos, gastos e entradas, investimentos, compras parceladas e o hash da senha do app (nunca a senha em si). A cópia é cifrada com AES-256 antes de ser guardada e fica presa ao seu e-mail. Em <strong>Ajustes → Sair ou excluir minha conta</strong>, você pode sair por um tempo (a cópia continua guardada) ou excluir a conta, o que apaga a cópia do servidor e os dados do aparelho na hora.</p>
 
 <h2>Leitura de notificações (Android)</h2>
 <p>Se você ativar, o app lê avisos de pagamento e de dinheiro recebido de bancos e apps de pagamento para registrar seus gastos. Avisos que não tratam de dinheiro são descartados na hora. Do aviso, o app guarda só valor, tipo (gasto ou entrada), nome do lugar, horário e nome do app que avisou, sempre no próprio celular. O texto completo das notificações não é guardado nem enviado.</p>
@@ -37,7 +40,7 @@
 <p>O acesso é restrito a pessoas convidadas. A conta é criada por um link de convite pessoal enviado ao seu e-mail; depois, você entra com e-mail e senha. A senha é guardada apenas como hash (embaralhada) e ninguém consegue vê-la. Seu e-mail é usado apenas para o acesso.</p>
 
 <h2>Plano em conjunto</h2>
-<p>Se você criar ou entrar num plano em conjunto, o app envia ao servidor um resumo seu (apelido, quanto guardou, quanto separa por mês, valor livre e categorias onde pode economizar). Esses dados são <strong>cifrados no seu celular</strong> com uma chave que só os participantes têm; o servidor guarda apenas o texto cifrado e não consegue lê-lo. Sua lista de gastos nunca é compartilhada. A renda só aparece para o grupo se você permitir.</p>
+<p>Se você criar ou entrar num plano em conjunto, o app envia ao servidor um resumo seu (apelido, quanto guardou, quanto separa por mês, valor livre e categorias onde pode economizar). Esses dados são <strong>cifrados no seu celular</strong> com uma chave que só os participantes têm; no plano em conjunto, o servidor guarda apenas o texto cifrado. A chave do plano também fica na cópia cifrada da sua conta, para o plano voltar se você trocar de aparelho. Sua lista de gastos nunca é compartilhada. A renda só aparece para o grupo se você permitir.</p>
 
 <h2>Análise com IA</h2>
 <p>Quando você pede uma análise, o app envia somente os números do plano (tipo, valores, prazo, renda mensal e perfil de investidor), sem nome, e-mail, banco ou lista de gastos. A análise é feita por IA no Google Cloud (Vertex AI: Claude ou Gemini) e o resultado fica salvo no seu celular.</p>

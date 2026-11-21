@@ -70,3 +70,13 @@ CREATE TABLE IF NOT EXISTS tentativas (
   n INTEGER NOT NULL,
   desde INTEGER NOT NULL
 );
+-- Cópia da conta (perfil, planos, gastos, investimentos), CIFRADA com a chave DADOS_CHAVE do servidor.
+-- Dividida em partes para caber no limite do banco. Faz os dados voltarem em qualquer aparelho.
+CREATE TABLE IF NOT EXISTS dados_conta (
+  email TEXT NOT NULL,
+  parte INTEGER NOT NULL,
+  blob TEXT NOT NULL,
+  versao INTEGER NOT NULL,
+  atualizado_em INTEGER NOT NULL,
+  PRIMARY KEY (email, parte)
+);

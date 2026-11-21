@@ -36,7 +36,7 @@ Para ter o app na tela inicial (grátis, sem loja e sem desligar nenhuma proteç
 - Android (Chrome): no início do app, toque em "Instalar agora" (ou menu ⋮ > Instalar app).
 - iPhone (Safari): Compartilhar > Adicionar à Tela de Início.
 
-Seus dados ficam só no seu celular e o app nunca acessa o seu banco.
+Seus dados ficam guardados na sua conta (cifrados) e o app nunca acessa o seu banco.
 
 Até logo!`
       : `Oi, ${primeiro}!

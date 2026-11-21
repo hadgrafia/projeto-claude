@@ -7,6 +7,7 @@ import { PerguntaLocal } from './components/Lugar';
 import { CapaPrivacidade, TelaBloqueio, useBloqueio } from './components/Bloqueio';
 import { iniciarLeituraNativa } from './lib/nativo';
 import { avisoDoMes } from './lib/avisos';
+import { ligarNuvem, sincronizar } from './lib/nuvem';
 import { useDados, useOnline } from './hooks';
 import Ajustes from './pages/Ajustes';
 import Convite from './pages/Convite';
@@ -159,12 +160,42 @@ export default function App() {
     if (perfil?.concluiuInicio) avisoDoMes().catch(() => undefined);
   }, [perfil?.concluiuInicio]);
 
+  // Cópia da conta: ao abrir, traz os dados salvos (outro aparelho, reinstalação) e passa a
+  // enviar cada mudança. Enquanto busca, mostra uma espera em vez do formulário do início.
+  const [buscando, setBuscando] = useState(true);
+  useEffect(() => {
+    ligarNuvem();
+    let vivo = true;
+    const limite = setTimeout(() => vivo && setBuscando(false), 12_000);
+    sincronizar()
+      .then((r) => {
+        if (r === 'restaurado') location.reload(); // recomeça com os dados da conta (e a senha do app)
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        clearTimeout(limite);
+        if (vivo) setBuscando(false);
+      });
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
   // App Android: traz os pagamentos lidos das notificações enquanto o app estava fechado.
   useEffect(() => {
     if (perfil?.concluiuInicio) return iniciarLeituraNativa();
   }, [perfil?.concluiuInicio]);
 
   if (!carregado || !bloqueio.carregado) return null;
+  if (!perfil?.concluiuInicio && buscando) {
+    return (
+      <div className="espera-conta" role="status">
+        <Logo tamanho={72} />
+        <strong>Buscando os seus dados…</strong>
+        <span className="pequeno suave">Seus planos e respostas ficam guardados na sua conta.</span>
+      </div>
+    );
+  }
   if (perfil?.concluiuInicio && bloqueio.travado && bloqueio.config) {
     return (
       <MotionConfig reducedMotion="user">

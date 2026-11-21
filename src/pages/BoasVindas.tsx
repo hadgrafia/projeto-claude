@@ -80,7 +80,7 @@ export default function BoasVindas() {
         {[
           'Nunca abrimos o app do seu banco nem pedimos senha.',
           'Lemos só avisos de pagamento e de dinheiro recebido, ou o extrato que você enviar.',
-          'Tudo fica guardado só no seu celular e funciona sem internet.',
+          'Tudo fica guardado na sua conta, cifrado: volta em qualquer aparelho e funciona sem internet.',
         ].map((t) => (
           <div key={t} className="linha" style={{ alignItems: 'flex-start', gap: 10 }}>
             <Icone nome="check" cor="#D9774F" />
@@ -137,7 +137,7 @@ export default function BoasVindas() {
       <label className="campo">
         Seu nome ou apelido
         <input value={nome} onChange={(e) => { setNome(e.target.value); setAviso(''); }} autoComplete="given-name" placeholder="Ex.: Ana" required aria-required="true" />
-        <span className="dica">Obrigatório. Fica só no seu celular e aparece para o grupo nos planos em conjunto.</span>
+        <span className="dica">Obrigatório. Fica na sua conta e aparece para o grupo nos planos em conjunto.</span>
       </label>
       <span className="campo" style={{ marginBottom: 0 }}>Tema do app</span>
       <Segmentado

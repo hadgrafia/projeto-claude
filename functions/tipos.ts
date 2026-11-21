@@ -10,6 +10,8 @@ export interface Env {
   GCP_REGION?: string;
   /** Opcional: modelo do Claude preferido no Vertex AI (os outros ficam de reserva). */
   GCP_MODELO?: string;
+  /** Chave (base64, 32 bytes) que cifra a cópia da conta no servidor. Criada uma vez pelo robô. */
+  DADOS_CHAVE?: string;
   /** Código da verificação automática (definido pelo robô de publicação). */
   VERIFICACAO?: string;
   /** Convite automático no Cloudflare Access (token só com permissão de grupos do Access). */

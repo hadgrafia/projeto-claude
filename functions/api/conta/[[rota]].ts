@@ -1,4 +1,4 @@
-import { chaveIp, conferirSenha, criarSessao, EMAIL, excedeu, hashSenha, lerCookie, lerConvite, lerSessao, problemaNaSenha, zerarTentativas, COOKIE } from '../../auth';
+import { criarConvite, chaveIp, conferirSenha, criarSessao, EMAIL, excedeu, hashSenha, lerCookie, lerConvite, lerSessao, problemaNaSenha, zerarTentativas, COOKIE } from '../../auth';
 import { json, sha256, type Env } from '../../tipos';
 
 /**
@@ -97,6 +97,25 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
       env.DB.prepare('DELETE FROM sessoes WHERE email = ? AND hash != ?').bind(s.email, await sha256(token)),
     ]);
     return json({ ok: true });
+  }
+
+  // Exclui a conta e TODOS os dados guardados no servidor. Devolve um convite pessoal (180 dias)
+  // para a pessoa voltar com o mesmo e-mail, se quiser: só ela recebe, pelo próprio e-mail.
+  if (acao === 'excluir' && request.method === 'POST') {
+    const s = await lerSessao(env, request);
+    if (!s.email) return json({ erro: 'Sua sessão expirou. Entre de novo.', sessao: true }, 401);
+    const c = await ler(request);
+    if (texto(c.confirmacao, 20).trim().toUpperCase() !== 'EXCLUIR') return json({ erro: 'Digite EXCLUIR para confirmar.' }, 400);
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM dados_conta WHERE email = ?').bind(s.email),
+      env.DB.prepare('DELETE FROM sessoes WHERE email = ?').bind(s.email),
+      env.DB.prepare('DELETE FROM convites_conta WHERE email = ?').bind(s.email),
+      env.DB.prepare('DELETE FROM tentativas WHERE chave = ?').bind(`email:${s.email}`),
+      env.DB.prepare('DELETE FROM contas WHERE email = ?').bind(s.email),
+    ]);
+    const volta = await criarConvite(env, s.email, 'conta', 'exclusao', new URL(request.url).origin);
+    await env.DB.prepare('UPDATE convites_conta SET expira = ? WHERE email = ?').bind(Date.now() + 180 * 24 * 3600 * 1000, s.email).run();
+    return json({ ok: true, email: s.email, volta }, 200, `${COOKIE}=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0`);
   }
 
   if (acao === 'sair' && request.method === 'POST') {

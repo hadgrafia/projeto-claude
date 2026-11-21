@@ -65,6 +65,18 @@ jobs:
           echo "::add-mask::$VERIFICACAO"
           echo "VERIFICACAO=$VERIFICACAO" >> "$GITHUB_ENV"
           printf '%s' "$VERIFICACAO" | npx wrangler pages secret put VERIFICACAO --project-name meus-planos-financeiros
+          # Chave da cópia cifrada das contas: criada UMA vez e nunca trocada (trocar apagaria o acesso às cópias).
+          # Só cria se a listagem funcionou E a chave não aparece nela (se a listagem falhar, não mexe).
+          if LISTA=$(npx wrangler pages secret list --project-name meus-planos-financeiros 2>&1); then
+            if echo "$LISTA" | grep -q "VERIFICACAO" && ! echo "$LISTA" | grep -q "DADOS_CHAVE"; then
+              openssl rand -base64 32 | tr -d '\n' | npx wrangler pages secret put DADOS_CHAVE --project-name meus-planos-financeiros
+              echo "Chave da cópia das contas criada."
+            else
+              echo "Chave da cópia das contas: já existe (mantida)."
+            fi
+          else
+            echo "::warning::Não consegui listar os segredos; a chave da cópia das contas não foi alterada."
+          fi
       - name: Anotar a versão que está no ar (para poder voltar)
         if: steps.segredos.outputs.ok == 'true'
         id: antes

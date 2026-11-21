@@ -66,7 +66,7 @@ export default function Importar() {
       <div className="cartao verde">
         <div className="linha" style={{ alignItems: 'flex-start' }}>
           <Icone nome="escudo" cor="#D9774F" />
-          <p className="pequeno" style={{ fontSize: 14 }}>O arquivo é lido aqui no seu celular e não é enviado para lugar nenhum. Você baixa o extrato no app do seu banco; o Meus Planos nunca acessa o banco.</p>
+          <p className="pequeno" style={{ fontSize: 14 }}>O arquivo é lido aqui no seu celular; só os lançamentos que você salvar entram na sua conta (cifrados). Você baixa o extrato no app do seu banco; o Meus Planos nunca acessa o banco.</p>
         </div>
       </div>
       <p className="subtitulo">Aceita PDF, OFX e CSV. OFX e CSV são os mais precisos; PDF depende do layout de cada banco, então confira a lista antes de salvar.</p>

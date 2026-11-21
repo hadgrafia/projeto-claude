@@ -4,7 +4,7 @@ import { Icone } from '../components/Icone';
 import { Folha, Segmentado } from '../components/Ui';
 import { CriarSenha, TecladoPin } from '../components/Bloqueio';
 import { EditarRenda } from '../components/EditarRenda';
-import { AjustesCartao, AjustesContato, TrocarSenha } from '../components/AjustesExtras';
+import { AjustesCartao, AjustesContato, ExcluirConta, TrocarSenha } from '../components/AjustesExtras';
 import { Instalar } from '../components/Instalar';
 import { RegistroAutomatico } from '../components/RegistroAutomatico';
 import { PedidosConvite } from '../components/PedidosConvite';
@@ -192,7 +192,7 @@ export default function Ajustes() {
 
       <section className="cartao">
         <h2 style={{ fontSize: 15, fontWeight: 800 }}>Cópia de segurança</h2>
-        <p className="mini suave">Seus dados ficam só neste aparelho. Guarde uma cópia de vez em quando (por exemplo, no seu Google Drive ou iCloud) para não perder nada se trocar de celular. A cópia sai cifrada com a sua senha do app: sem a senha, ninguém consegue ler o arquivo.</p>
+        <p className="mini suave">Seus dados já ficam guardados na sua conta e voltam sozinhos em qualquer aparelho. Se quiser, guarde também um arquivo com a cópia (por exemplo, no Google Drive ou iCloud). O arquivo sai cifrado com a sua senha do app: sem ela, ninguém consegue ler.</p>
         <div className="grade-2">
           <button type="button" className="botao secundario pequeno" onClick={() => (seguranca?.ativo ? setPedirPin('exportar') : baixarBackup())}><Icone nome="baixar" /> Salvar cópia</button>
           <label className="botao secundario pequeno" style={{ cursor: 'pointer' }}>
@@ -231,22 +231,11 @@ export default function Ajustes() {
       <section className="cartao verde">
         <div className="linha" style={{ alignItems: 'flex-start' }}>
           <Icone nome="escudo" cor="#D9774F" />
-          <p className="pequeno">Privacidade: o app nunca acessa o app do seu banco, não pede senhas e não envia seus gastos para nenhum servidor. A análise com IA, quando você pede, recebe só os números do plano.</p>
+          <p className="pequeno">Privacidade: o app nunca acessa o app do seu banco e não pede senhas bancárias. Seus dados ficam neste aparelho e numa cópia cifrada da sua conta, para voltarem em qualquer aparelho. Os agentes e a análise com IA recebem só um resumo dos números quando você pede.</p>
         </div>
       </section>
 
-      <button
-        type="button"
-        className="botao perigo"
-        onClick={async () => {
-          if (confirm('Apagar TODOS os dados deste aparelho? Faça uma cópia antes se quiser guardar.')) {
-            await db.delete();
-            location.reload();
-          }
-        }}
-      >
-        <Icone nome="lixo" /> Apagar todos os dados
-      </button>
+      <ExcluirConta />
       <Folha aberta={!!pedirPin} aoFechar={() => { setPedirPin(undefined); setRestaurando(undefined); setPin(''); }} titulo="Confirme sua senha">
         <p className="pequeno suave" role="status" style={{ textAlign: 'center', minHeight: 20 }}>
           {erroPin || (pedirPin === 'restaurar' ? 'Digite a senha do app usada quando a cópia foi salva.' : 'Digite a senha do app para continuar.')}

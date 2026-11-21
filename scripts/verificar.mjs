@@ -29,6 +29,7 @@ const rotulos = {
   exigeLogin: 'Login obrigatório (só convidados)',
   convitesPessoais: 'Convites pessoais (link para criar conta)',
   contas: 'Contas (e-mail e senha)',
+  copiaDasContas: 'Cópia cifrada das contas (dados em qualquer aparelho)',
   paginaInicial: 'Página inicial',
   paginaEntrar: 'Página Entrar',
   appProtegido: 'App só abre com login',
@@ -52,7 +53,7 @@ for (const [nome, caminho, esperado] of [
   }
 }
 // Itens que, se falharem, fazem o robô voltar para a versão anterior (o site não pode ficar quebrado).
-const CRITICOS = ['banco', 'exigeLogin', 'convitesPessoais', 'contas', 'paginaInicial', 'paginaEntrar', 'appProtegido'];
+const CRITICOS = ['banco', 'exigeLogin', 'convitesPessoais', 'contas', 'copiaDasContas', 'paginaInicial', 'paginaEntrar', 'appProtegido'];
 let critico = false;
 let falhou = false;
 console.log('\n===== Relatório do app publicado =====');
