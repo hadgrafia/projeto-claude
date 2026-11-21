@@ -73,6 +73,35 @@ function AvisoOffline() {
   );
 }
 
+/** Versão nova do app baixada: avisa e deixa a pessoa escolher a hora de atualizar. */
+function AvisoAtualizacao() {
+  const [nova, setNova] = useState(false);
+  useEffect(() => {
+    const f = () => setNova(true);
+    window.addEventListener('mp-versao-nova', f);
+    return () => window.removeEventListener('mp-versao-nova', f);
+  }, []);
+  return (
+    <AnimatePresence>
+      {nova && (
+        <motion.div className="aviso-versao" role="status" initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 60, opacity: 0 }}>
+          <span className="cresce">
+            <strong>Nova versão do app</strong>
+            <br />
+            <span className="mini">Seus dados continuam guardados.</span>
+          </span>
+          <button type="button" className="botao terracota pequeno" onClick={() => (window as Window & { mpAtualizar?: () => void }).mpAtualizar?.()}>
+            Atualizar
+          </button>
+          <button type="button" className="circulo" aria-label="Depois" onClick={() => setNova(false)}>
+            <Icone nome="mais" tamanho={18} />
+          </button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 /** Computador ou tablet deitado: menu lateral fixo. */
 function useTelaGrande() {
   const consulta = '(min-width: 900px)';
@@ -125,6 +154,7 @@ export default function App() {
     <MotionConfig reducedMotion="user">
       <div className={comNav ? 'app com-menu' : 'app'}>
         <AvisoOffline />
+        <AvisoAtualizacao />
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={chave}

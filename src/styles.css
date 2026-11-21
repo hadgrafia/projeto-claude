@@ -193,6 +193,14 @@ h1, h2, h3, p { margin: 0; }
   display: flex; align-items: center; gap: 8px; box-shadow: var(--sombra); max-width: calc(100% - 32px);
 }
 
+.aviso-versao {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 96px); z-index: 35;
+  width: min(440px, calc(100% - 24px)); background: var(--grafite); color: var(--sobre-grafite); border-radius: 22px; padding: 12px 12px 12px 18px;
+  display: flex; align-items: center; gap: 10px; box-shadow: var(--sombra); font-size: 14px;
+}
+.aviso-versao .circulo { background: transparent; color: inherit; transform: rotate(45deg); }
+@media (min-width: 900px) { .aviso-versao { bottom: 24px; left: calc(50% + 132px); } }
+
 .folha-fundo { position: fixed; inset: 0; background: rgba(28, 30, 26, 0.45); z-index: 40; }
 .folha {
   position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); width: min(480px, 100%); max-height: 90dvh; overflow-y: auto;

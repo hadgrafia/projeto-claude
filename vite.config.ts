@@ -10,15 +10,17 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt': a versão nova espera a pessoa tocar em "Atualizar" (ou entra ao reabrir o app).
+      registerType: 'prompt',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       workbox: {
         // Tudo que o app precisa fica guardado no aparelho: abre e funciona sem internet.
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,mjs}'],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         navigateFallback: 'index.html',
-        // /api e o login do Cloudflare Access sempre vão para a rede.
-        navigateFallbackDenylist: [/^\/api\//, /^\/cdn-cgi\//],
+        // /api, a página Entrar e a confirmação do e-mail sempre vão para a rede.
+        navigateFallbackDenylist: [/^\/api\//, /^\/cdn-cgi\//, /^\/entrar/, /^\/conta\//],
+        cleanupOutdatedCaches: true,
       },
       manifest: {
         name: 'Meus Planos Financeiros',

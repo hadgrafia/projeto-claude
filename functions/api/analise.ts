@@ -223,7 +223,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
           }
         }
       }
-      if (semPesquisa) partes.push('\n\n_Esta análise foi feita sem pesquisa na web: confira os valores nos sites indicados._');
+      if (semPesquisa) partes.push('\n\nEsta análise foi feita sem pesquisa na web: confira os valores nos sites indicados.');
       return json({ texto: partes.join('').trim(), fontes: [...fontes].map(([url, titulo]) => ({ url, titulo })), geradaEm: new Date().toISOString(), modelo });
     } catch (e) {
       ultimoErro = e;
@@ -236,7 +236,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     if (ultimoErro !== undefined) claudeSemCotaAte = Date.now() + 30 * 60_000;
     try {
       const g = await analisarComGemini(env, conta, SISTEMA, pergunta);
-      return json({ texto: `${g.texto}\n\n_Análise feita pelo Gemini, a IA do Google, enquanto o Claude está sem cota no Google Cloud._`, fontes: g.fontes, geradaEm: new Date().toISOString(), modelo: g.modelo });
+      return json({ texto: `${g.texto}\n\nAnálise feita pelo Gemini, a IA do Google.`, fontes: g.fontes, geradaEm: new Date().toISOString(), modelo: g.modelo });
     } catch (eg) {
       if (ultimoErro === undefined) ultimoErro = eg;
     }

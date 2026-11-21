@@ -74,40 +74,32 @@ p { margin: 0 0 12px; }
 @keyframes flutuar { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-14px) rotate(-3deg); } }
 
 .secao { padding: 96px 0; }
-.secao-verde { background: var(--verde); color: #f0ebe1; }
+.secao-verde { color: #f0ebe1; }
 .secao-verde .lead, .secao-verde p { color: #c9cfc0; }
-.secao-areia { background: var(--alt); }
-.secao-terracota { background: var(--terracota-fundo); color: #fff7ef; }
+.secao-terracota { color: #fff7ef; }
 .secao-terracota .lead { color: rgba(255, 247, 239, 0.86); }
 .secao-terracota .formulario { color: var(--texto); box-shadow: 0 24px 50px rgba(28, 30, 26, 0.25); }
 
-/* Fundos com a identidade do app: a casa, as barras subindo e a seta do logotipo,
-   em tamanho grande e tom suave, atrás do conteúdo. */
-.com-fundo { position: relative; overflow: hidden; isolation: isolate; }
-.com-fundo > .conteudo, .com-fundo > :not(.fundo-arte) { position: relative; z-index: 1; }
-.fundo-arte { position: absolute; z-index: 0; pointer-events: none; height: auto; overflow: visible; }
-.fundo-arte.revelar { transform: none; }
-.fundo-casa { width: 620px; left: -70px; bottom: -110px; }
-.fundo-casa .traco { fill: none; stroke: var(--fundo-traco); stroke-width: 44; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
-.fundo-casa .barra { fill: var(--fundo-traco); }
-.fundo-casa .seta { fill: var(--fundo-seta); stroke: var(--fundo-recorte); stroke-width: 26; stroke-linejoin: round; paint-order: stroke; }
-.fundo-fita { width: 640px; left: -110px; bottom: -40px; }
-.fundo-fita .fita { fill: none; stroke: var(--fundo-fita); stroke-width: 58; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
-.fundo-fita .ponta { fill: var(--fundo-fita); stroke: var(--fundo-fita); stroke-width: 26; stroke-linejoin: round; }
-.fundo-heroi { left: auto; right: -40px; top: -40px; bottom: auto; width: 700px; --fundo-fita: var(--fundo-traco); }
-:root { --fundo-traco: #e3d8c3; --fundo-seta: #e6c4ae; --fundo-recorte: #f0ebe1; --fundo-fita: #c2673f; }
-@media (prefers-color-scheme: dark) { :root { --fundo-traco: #272a25; --fundo-seta: #3b2a21; --fundo-recorte: #1c1e1a; --fundo-fita: #a9532e; } }
-.conta-arte { --fundo-traco: #46574a; --fundo-seta: #7a5a42; --fundo-recorte: #3b4a3a; }
-.conta-arte .fundo-casa { width: 560px; left: auto; right: -110px; bottom: -90px; }
-/* Animação: os traços se desenham quando aparecem na tela; a seta e as barras sobem. */
-.fundo-arte.visivel .traco, .fundo-arte.visivel .fita { animation: desenhar 2.2s cubic-bezier(0.3, 0.7, 0.2, 1) backwards; }
-.fundo-arte.visivel .traco + .traco { animation-delay: 0.35s; }
-.fundo-arte.visivel .barra, .fundo-arte.visivel .seta, .fundo-arte.visivel .ponta { transform-box: fill-box; transform-origin: bottom; animation: subir 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
-.fundo-arte.visivel .b1 { animation-delay: 0.9s; } .fundo-arte.visivel .b2 { animation-delay: 1.05s; } .fundo-arte.visivel .seta { animation-delay: 1.2s; }
-.fundo-arte.visivel .ponta { transform-origin: center; animation: aparecer 0.6s ease 1.7s backwards; }
-@keyframes desenhar { from { stroke-dashoffset: 1; } }
-@keyframes subir { from { transform: scaleY(0); } }
-@keyframes aparecer { from { opacity: 0; transform: scale(0.4); } }
+/* Fundo orgânico bem suave (formas que fluem, nas cores da paleta), para o fundo não ficar chapado. */
+:root { --org: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 900' preserveAspectRatio='xMidYMid slice'%3E%3Cg fill='%233B4A3A' fill-opacity='0.05'%3E%3Cpath d=%22M0 0H300C360 0 380 80 340 150C300 220 200 250 120 230C60 214 24 176 0 160Z%22/%3E%3Cpath d=%22M420 110C480 40 590 60 640 140C690 220 790 240 880 190C980 135 1090 170 1100 270C1110 370 1010 430 910 420C810 410 750 450 730 530C710 620 600 670 520 610C450 560 480 470 430 400C380 330 360 180 420 110Z%22/%3E%3Cpath d=%22M0 560C90 520 210 560 260 650C310 740 260 840 170 900H0Z%22/%3E%3Cpath d=%22M1200 600C1110 590 1040 660 1060 760C1075 840 1130 900 1170 900H1200Z%22/%3E%3Cpath d=%22M700 900C720 820 800 790 870 820C930 845 960 880 970 900Z%22/%3E%3Cpath d=%22M1200 0V120C1150 130 1090 100 1080 60C1072 30 1090 0 1110 0Z%22/%3E%3Ccircle cx=%221000%22 cy=%22610%22 r=%2262%22/%3E%3Ccircle cx=%22250%22 cy=%22420%22 r=%2238%22/%3E%3C/g%3E%3C/svg%3E"); --org-claro: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 900' preserveAspectRatio='xMidYMid slice'%3E%3Cg fill='%23F0EBE1' fill-opacity='0.045'%3E%3Cpath d=%22M0 0H300C360 0 380 80 340 150C300 220 200 250 120 230C60 214 24 176 0 160Z%22/%3E%3Cpath d=%22M420 110C480 40 590 60 640 140C690 220 790 240 880 190C980 135 1090 170 1100 270C1110 370 1010 430 910 420C810 410 750 450 730 530C710 620 600 670 520 610C450 560 480 470 430 400C380 330 360 180 420 110Z%22/%3E%3Cpath d=%22M0 560C90 520 210 560 260 650C310 740 260 840 170 900H0Z%22/%3E%3Cpath d=%22M1200 600C1110 590 1040 660 1060 760C1075 840 1130 900 1170 900H1200Z%22/%3E%3Cpath d=%22M700 900C720 820 800 790 870 820C930 845 960 880 970 900Z%22/%3E%3Cpath d=%22M1200 0V120C1150 130 1090 100 1080 60C1072 30 1090 0 1110 0Z%22/%3E%3Ccircle cx=%221000%22 cy=%22610%22 r=%2262%22/%3E%3Ccircle cx=%22250%22 cy=%22420%22 r=%2238%22/%3E%3C/g%3E%3C/svg%3E"); --org-terra: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 900' preserveAspectRatio='xMidYMid slice'%3E%3Cg fill='%23F0EBE1' fill-opacity='0.06'%3E%3Cpath d=%22M0 0H300C360 0 380 80 340 150C300 220 200 250 120 230C60 214 24 176 0 160Z%22/%3E%3Cpath d=%22M420 110C480 40 590 60 640 140C690 220 790 240 880 190C980 135 1090 170 1100 270C1110 370 1010 430 910 420C810 410 750 450 730 530C710 620 600 670 520 610C450 560 480 470 430 400C380 330 360 180 420 110Z%22/%3E%3Cpath d=%22M0 560C90 520 210 560 260 650C310 740 260 840 170 900H0Z%22/%3E%3Cpath d=%22M1200 600C1110 590 1040 660 1060 760C1075 840 1130 900 1170 900H1200Z%22/%3E%3Cpath d=%22M700 900C720 820 800 790 870 820C930 845 960 880 970 900Z%22/%3E%3Cpath d=%22M1200 0V120C1150 130 1090 100 1080 60C1072 30 1090 0 1110 0Z%22/%3E%3Ccircle cx=%221000%22 cy=%22610%22 r=%2262%22/%3E%3Ccircle cx=%22250%22 cy=%22420%22 r=%2238%22/%3E%3C/g%3E%3C/svg%3E"); }
+@media (prefers-color-scheme: dark) { :root { --org: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 900' preserveAspectRatio='xMidYMid slice'%3E%3Cg fill='%23F0EBE1' fill-opacity='0.03'%3E%3Cpath d=%22M0 0H300C360 0 380 80 340 150C300 220 200 250 120 230C60 214 24 176 0 160Z%22/%3E%3Cpath d=%22M420 110C480 40 590 60 640 140C690 220 790 240 880 190C980 135 1090 170 1100 270C1110 370 1010 430 910 420C810 410 750 450 730 530C710 620 600 670 520 610C450 560 480 470 430 400C380 330 360 180 420 110Z%22/%3E%3Cpath d=%22M0 560C90 520 210 560 260 650C310 740 260 840 170 900H0Z%22/%3E%3Cpath d=%22M1200 600C1110 590 1040 660 1060 760C1075 840 1130 900 1170 900H1200Z%22/%3E%3Cpath d=%22M700 900C720 820 800 790 870 820C930 845 960 880 970 900Z%22/%3E%3Cpath d=%22M1200 0V120C1150 130 1090 100 1080 60C1072 30 1090 0 1110 0Z%22/%3E%3Ccircle cx=%221000%22 cy=%22610%22 r=%2262%22/%3E%3Ccircle cx=%22250%22 cy=%22420%22 r=%2238%22/%3E%3C/g%3E%3C/svg%3E"); } }
+.heroi, #privacidade { background: var(--org) center / cover no-repeat; }
+#privacidade { background-position: left top; }
+.secao-areia { background: var(--alt) var(--org) left center / cover no-repeat; }
+#instalar.secao-areia { background-position: right center; }
+.secao-verde { background: var(--verde) var(--org-claro) right center / cover no-repeat; }
+.secao-verde:last-of-type { background-position: left center; }
+.secao-terracota { background: var(--terracota-fundo) var(--org-terra) center / cover no-repeat; }
+.pagina-conta { background: var(--areia) var(--org) center / cover no-repeat fixed; }
+
+/* Ícones desenhados à mão: brancos e um pouco transparentes, sobre o verde. */
+.icone-mao { display: block; width: 64px; height: 64px; color: #fff; opacity: 0.78; flex: none; }
+.icone-mao use { fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.recurso .icone-mao { margin: -6px 0 10px -6px; transition: transform 0.3s ease, opacity 0.3s ease; }
+.recurso:hover .icone-mao { transform: translateY(-3px) rotate(-3deg); opacity: 0.92; }
+.planos-icones { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; max-width: 460px; }
+.planos-icones li { display: grid; justify-items: center; gap: 6px; text-align: center; font-size: 13px; font-weight: 600; color: rgba(240, 235, 225, 0.75); }
+.planos-icones .icone-mao { width: 72px; height: 72px; }
 
 .passos { list-style: none; padding: 0; margin: 32px 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
 .cartao { background: var(--cartao); border-radius: 28px; padding: 28px; }
@@ -117,7 +109,6 @@ p { margin: 0 0 12px; }
 .grade-recursos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin-top: 32px; }
 .recurso { background: var(--verde-2); border-radius: 28px; padding: 26px; }
 .recurso h3 { color: #f0ebe1; }
-.recurso h3::before { content: ''; display: block; width: 36px; height: 6px; border-radius: 999px; background: #d9774f; margin-bottom: 16px; }
 
 .duas-colunas { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 48px; align-items: start; }
 .lista-check { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
@@ -154,7 +145,7 @@ p { margin: 0 0 12px; }
 .revelar.visivel { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) {
   .revelar { opacity: 1; transform: none; transition: none; }
-  .flutua, .fundo-arte * { animation: none !important; }
+  .flutua { animation: none; }
   html { scroll-behavior: auto; }
 }
 
@@ -168,15 +159,12 @@ p { margin: 0 0 12px; }
   .celular-atras { right: auto; left: calc(50% - 20px); top: 50px; }
   .passos, .grade-recursos, .grade-instalar { grid-template-columns: 1fr; }
   .secao { padding: 64px 0; }
-  .fundo-casa { width: 420px; left: auto; right: -120px; bottom: -90px; }
-  .fundo-fita { width: 460px; left: auto; right: -160px; }
-  .fundo-heroi { width: 520px; right: -200px; top: auto; bottom: -60px; }
 }
 
 /* ---------- Página Entrar (conta com e-mail e senha) ---------- */
 .pagina-conta { min-height: 100vh; min-height: 100dvh; }
 .conta { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; min-height: 100dvh; }
-.conta-arte { background: var(--verde); color: #f0ebe1; padding: 40px clamp(24px, 5vw, 64px); display: flex; flex-direction: column; justify-content: flex-start; gap: 12vh; overflow: hidden; }
+.conta-arte { background: var(--verde) var(--org-claro) center / cover no-repeat; color: #f0ebe1; padding: 40px clamp(24px, 5vw, 64px); display: flex; flex-direction: column; justify-content: space-between; gap: 32px; overflow: hidden; }
 .conta-arte .marca { color: #f0ebe1; }
 .conta-arte h1 { font-size: clamp(32px, 4vw, 48px); max-width: 520px; }
 .conta-arte p { color: #c9cfc0; max-width: 460px; }
@@ -206,7 +194,8 @@ main.conta-caixa { margin: 12vh auto; text-align: center; justify-items: center;
   .conta { grid-template-columns: 1fr; }
   .conta-arte { padding: 24px 20px 28px; gap: 16px; }
   .conta-arte h1 { margin: 0; font-size: 30px; }
-  .conta-arte .fundo-casa { width: 300px; right: -70px; bottom: -70px; }
+  .planos-icones .icone-mao { width: 52px; height: 52px; }
+  .planos-icones li { font-size: 12px; }
   .conta-arte .some-celular { display: none; }
   .conta-lado { align-items: flex-start; padding: 28px 20px 48px; }
 }

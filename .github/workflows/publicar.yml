@@ -69,9 +69,25 @@ jobs:
           if [ -n "$CLOUDFLARE_ACCESS_TOKEN" ]; then
             printf '%s' "$CLOUDFLARE_ACCESS_TOKEN" | npx wrangler pages secret put CF_ACCESS_TOKEN --project-name meus-planos-financeiros
           fi
+      - name: Anotar a versão que está no ar (para poder voltar)
+        if: steps.segredos.outputs.ok == 'true'
+        id: antes
+        run: node scripts/reverter.mjs anotar
       - name: Publicar
         if: steps.segredos.outputs.ok == 'true'
         run: npx wrangler pages deploy dist --project-name meus-planos-financeiros --branch main --commit-dirty=true
-      - name: Testar o app publicado (banco, IA, convites)
+      - name: Testar o app publicado (e voltar a versão anterior se algo grave falhar)
         if: steps.segredos.outputs.ok == 'true'
-        run: node scripts/verificar.mjs
+        env:
+          ANTERIOR: ${{ steps.antes.outputs.anterior }}
+        run: |
+          set +e
+          node scripts/verificar.mjs
+          codigo=$?
+          set -e
+          if [ "$codigo" = "2" ]; then
+            echo "::error::Problema grave na versão nova: voltando para a anterior."
+            node scripts/reverter.mjs voltar
+            exit 1
+          fi
+          exit $codigo
