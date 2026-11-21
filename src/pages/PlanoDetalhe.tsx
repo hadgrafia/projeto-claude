@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Icone } from '../components/Icone';
+import { SecaoConjunto } from '../components/Conjunto';
 import { Barra, Casa, CampoDinheiro, Dinheiro, Entra, Folha, Markdown } from '../components/Ui';
 import { db } from '../db';
 import { situacaoPlano, useDados, useOnline, useSelic } from '../hooks';
@@ -80,7 +81,7 @@ export default function PlanoDetalhe() {
         <div className="cartao" style={{ gap: 2 }}>
           <span className="mini suave">Separando por mês</span>
           <strong className="num" style={{ fontSize: 18 }}>{reaisCurto(s.aporte)}</strong>
-          <span className="mini suave">{pct(plano.percentual)} do livre</span>
+          <span className="mini suave">{plano.conjunto ? `você: ${reaisCurto(s.meuAporte)} (${pct(plano.percentual)} do livre)` : `${pct(plano.percentual)} do livre`}</span>
         </div>
         <div className="cartao" style={{ gap: 2 }}>
           <span className="mini suave">Previsão</span>
@@ -99,6 +100,8 @@ export default function PlanoDetalhe() {
       <motion.button type="button" whileTap={{ scale: 0.97 }} className="botao" onClick={() => setDeposito(true)}>
         <Icone nome="mais" /> Guardei dinheiro neste plano
       </motion.button>
+
+      <SecaoConjunto plano={plano} />
 
       <section className="cartao">
         <h2 style={{ fontSize: 15, fontWeight: 800 }}>Composição da meta</h2>

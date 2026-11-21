@@ -1,24 +1,10 @@
-/**
- * Meus Planos Financeiros — análise aprimorada com IA.
- *
- * Um Cloudflare Worker pequeno que guarda a chave da API do Claude (nunca vai para o app)
- * e faz a pesquisa na web para um plano. O app envia APENAS os parâmetros do plano
- * (tipo, valores, prazo, renda média, perfil de risco). Nunca nome, banco, extrato
- * ou lista de gastos.
- *
- * Variáveis (configure com `wrangler secret put`):
- *   ANTHROPIC_API_KEY — chave da API do Claude
- *   APP_TOKEN         — código de acesso que as pessoas convidadas digitam no app
- *   ALLOWED_ORIGIN    — endereço do app (ex.: https://meus-planos.pages.dev)
- */
 import Anthropic from '@anthropic-ai/sdk';
+import { json, type Env } from '../tipos';
 
-interface Env {
-  ANTHROPIC_API_KEY: string;
-  APP_TOKEN: string;
-  ALLOWED_ORIGIN: string;
-}
-
+/**
+ * Análise aprimorada com IA (Claude + pesquisa na web). A chave da API fica só no servidor.
+ * O app envia APENAS os parâmetros do plano: nunca nome, banco, extrato ou lista de gastos.
+ */
 interface Pedido {
   tipo: 'casa' | 'carro' | 'equipamentos' | 'viagem' | 'outro' | 'investimentos';
   dados: Record<string, unknown>;
@@ -46,16 +32,6 @@ Links diretos de sites confiáveis para este plano.
 Até 4 itens.
 Seja direto: no máximo ~600 palavras.`;
 
-const cors = (env: Env) => ({
-  'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, X-App-Token',
-  'Access-Control-Max-Age': '86400',
-});
-
-const json = (env: Env, body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...cors(env) } });
-
 /** Mantém só campos simples e curtos: o app nunca deve mandar dados pessoais. */
 function limpar(dados: Record<string, unknown>): Record<string, string | number | boolean> {
   const out: Record<string, string | number | boolean> = {};
@@ -67,24 +43,18 @@ function limpar(dados: Record<string, unknown>): Record<string, string | number 
   return out;
 }
 
-export default {
-  async fetch(req: Request, env: Env): Promise<Response> {
-    if (req.method === 'OPTIONS') return new Response(null, { headers: cors(env) });
-    const url = new URL(req.url);
-    if (req.method !== 'POST' || url.pathname !== '/analise') return json(env, { erro: 'Rota não encontrada.' }, 404);
-    if (!env.APP_TOKEN || req.headers.get('X-App-Token') !== env.APP_TOKEN)
-      return json(env, { erro: 'Código de acesso inválido.' }, 401);
-
-    let pedido: Pedido;
-    try {
-      const texto = await req.text();
-      if (texto.length > 8000) return json(env, { erro: 'Pedido grande demais.' }, 413);
-      pedido = JSON.parse(texto) as Pedido;
-    } catch {
-      return json(env, { erro: 'Pedido inválido.' }, 400);
-    }
+export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+  if (!env.ANTHROPIC_API_KEY) return json({ erro: 'A análise com IA ainda não foi ativada pela administradora.' }, 503);
+  let pedido: Pedido;
+  try {
+    const texto = await request.text();
+    if (texto.length > 8000) return json({ erro: 'Pedido grande demais.' }, 413);
+    pedido = JSON.parse(texto) as Pedido;
+  } catch {
+    return json({ erro: 'Pedido inválido.' }, 400);
+  }
     const tipos = ['casa', 'carro', 'equipamentos', 'viagem', 'outro', 'investimentos'];
-    if (!tipos.includes(pedido.tipo)) return json(env, { erro: 'Tipo de plano inválido.' }, 400);
+    if (!tipos.includes(pedido.tipo)) return json({ erro: 'Tipo de plano inválido.' }, 400);
 
     const hoje = new Date().toISOString().slice(0, 10);
     const pergunta =
@@ -113,8 +83,8 @@ export default {
         if (resposta.stop_reason !== 'pause_turn') break;
         messages.push({ role: 'assistant', content: resposta.content });
       }
-      if (!resposta) return json(env, { erro: 'Sem resposta.' }, 502);
-      if (resposta.stop_reason === 'refusal') return json(env, { erro: 'A análise não pôde ser feita para este pedido.' }, 422);
+      if (!resposta) return json({ erro: 'Sem resposta.' }, 502);
+      if (resposta.stop_reason === 'refusal') return json({ erro: 'A análise não pôde ser feita para este pedido.' }, 422);
 
       const partes: string[] = [];
       const fontes = new Map<string, string>();
@@ -126,16 +96,15 @@ export default {
           }
         }
       }
-      return json(env, {
+      return json({
         texto: partes.join('').trim(),
         fontes: [...fontes].map(([url, titulo]) => ({ url, titulo })),
         geradaEm: new Date().toISOString(),
       });
     } catch (e) {
-      if (e instanceof Anthropic.RateLimitError) return json(env, { erro: 'Muitas análises agora. Tente em alguns minutos.' }, 429);
-      if (e instanceof Anthropic.AuthenticationError) return json(env, { erro: 'Chave da IA não configurada no servidor.' }, 500);
-      if (e instanceof Anthropic.APIError) return json(env, { erro: `Erro da IA (${e.status}).` }, 502);
-      return json(env, { erro: 'Não foi possível concluir a análise.' }, 502);
+      if (e instanceof Anthropic.RateLimitError) return json({ erro: 'Muitas análises agora. Tente em alguns minutos.' }, 429);
+      if (e instanceof Anthropic.AuthenticationError) return json({ erro: 'Chave da IA inválida no servidor.' }, 500);
+      if (e instanceof Anthropic.APIError) return json({ erro: `Erro da IA (${e.status}).` }, 502);
+      return json({ erro: 'Não foi possível concluir a análise.' }, 502);
     }
-  },
 };

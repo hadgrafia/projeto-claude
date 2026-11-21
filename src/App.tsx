@@ -3,9 +3,11 @@ import { useEffect } from 'react';
 import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import { Icone, type NomeIcone } from './components/Icone';
 import { PerguntaLocal } from './components/Lugar';
+import { CapaPrivacidade, TelaBloqueio, useBloqueio } from './components/Bloqueio';
 import { iniciarLeituraNativa } from './lib/nativo';
 import { useDados, useOnline } from './hooks';
 import Ajustes from './pages/Ajustes';
+import Convite from './pages/Convite';
 import BoasVindas from './pages/BoasVindas';
 import Feedback from './pages/Feedback';
 import Gastos from './pages/Gastos';
@@ -59,6 +61,7 @@ function AvisoOffline() {
 export default function App() {
   const { perfil, carregado } = useDados();
   const local = useLocation();
+  const bloqueio = useBloqueio();
 
   useEffect(() => {
     const tema = perfil?.tema ?? 'sistema';
@@ -71,7 +74,16 @@ export default function App() {
     if (perfil?.concluiuInicio) return iniciarLeituraNativa();
   }, [perfil?.concluiuInicio]);
 
-  if (!carregado) return null;
+  if (!carregado || !bloqueio.carregado) return null;
+  if (perfil?.concluiuInicio && bloqueio.travado && bloqueio.config) {
+    return (
+      <MotionConfig reducedMotion="user">
+        <div className="app">
+          <TelaBloqueio config={bloqueio.config} aoDestravar={bloqueio.destravar} />
+        </div>
+      </MotionConfig>
+    );
+  }
   const pronto = perfil?.concluiuInicio;
   const comNav = pronto && ABAS.some((a) => local.pathname === a.para);
   const chave = local.pathname.split('/').slice(0, 2).join('/') + (local.pathname.split('/')[2] ? '/x' : '');
@@ -90,6 +102,7 @@ export default function App() {
           >
             <Routes location={local}>
               <Route path="/boas-vindas" element={<BoasVindas />} />
+              <Route path="/convite" element={<Convite />} />
               {pronto ? (
                 <>
                   <Route path="/inicio" element={<Inicio />} />
@@ -112,6 +125,7 @@ export default function App() {
         </AnimatePresence>
         {comNav && <Nav />}
         {pronto && <PerguntaLocal />}
+        {bloqueio.oculto && pronto && <CapaPrivacidade />}
       </div>
     </MotionConfig>
   );

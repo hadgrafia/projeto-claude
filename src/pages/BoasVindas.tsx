@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icone, ICONE_PLANO } from '../components/Icone';
 import { CampoDinheiro, Segmentado } from '../components/Ui';
+import { CriarSenha } from '../components/Bloqueio';
+import { convitePendente } from './Convite';
 import { db, type Perfil, type Tema, type TipoPlano } from '../db';
 import { mesLongo, reais, ultimosMeses } from '../lib/format';
 import { calcularPerfil, PERGUNTAS_PERFIL } from '../lib/invest';
@@ -22,6 +24,7 @@ export default function BoasVindas() {
   const [renda, setRenda] = useState<(number | undefined)[]>(meses.map(() => undefined));
   const [gasto, setGasto] = useState<number>();
   const [respostas, setRespostas] = useState<number[]>([]);
+  const [senhaCriada, setSenhaCriada] = useState(false);
 
   const media = (() => {
     const v = renda.filter((x): x is number => !!x);
@@ -40,7 +43,8 @@ export default function BoasVindas() {
       concluiuInicio: true,
       criadoEm: new Date().toISOString(),
     });
-    navegar(tipo ? `/planos/novo?tipo=${tipo}&primeiro=1` : '/inicio', { replace: true });
+    const convite = convitePendente();
+    navegar(convite ?? (tipo ? `/planos/novo?tipo=${tipo}&primeiro=1` : '/inicio'), { replace: true });
     if (metodo === 'notificacoes' && ehAppAndroid()) {
       // Permissão para avisar "Onde foi este gasto?" e para ler as notificações de pagamento.
       await Leitor.pedirPermissaoAvisos().catch(() => undefined);
@@ -130,7 +134,21 @@ export default function BoasVindas() {
       />
     </>,
 
-    // 2 — renda e gastos
+    // 2 — segurança: senha obrigatória e biometria opcional
+    <>
+      <h1 className="titulo">Proteja seus dados</h1>
+      <p className="subtitulo">Ninguém além de você abre o app: ele pede a senha (ou sua digital ou rosto) toda vez que é aberto.</p>
+      {senhaCriada ? (
+        <div className="cartao manter" style={{ alignItems: 'center', textAlign: 'center' }}>
+          <Icone nome="check" tamanho={32} />
+          <strong>Senha criada</strong>
+        </div>
+      ) : (
+        <CriarSenha aoConcluir={() => { setSenhaCriada(true); setPasso(3); }} />
+      )}
+    </>,
+
+    // 3 — renda e gastos
     <>
       <h1 className="titulo">Quanto você recebeu nos últimos 6 meses?</h1>
       <p className="subtitulo">Pode variar de mês a mês (PJ, freela, comissão). O app usa a média para planejar, e atualiza sozinho com as entradas detectadas.</p>
@@ -153,7 +171,7 @@ export default function BoasVindas() {
       <CampoDinheiro rotulo="Quanto você gasta por mês, mais ou menos?" valor={gasto} aoMudar={setGasto} dica="Uma estimativa basta. Assim que houver gastos registrados, o app usa os reais." />
     </>,
 
-    // 3 — perfil de investidor
+    // 4 — perfil de investidor
     <>
       <h1 className="titulo">Seu jeito de investir</h1>
       <p className="subtitulo">3 perguntas para o app sugerir onde guardar o dinheiro de cada plano.</p>
@@ -178,7 +196,7 @@ export default function BoasVindas() {
       ))}
     </>,
 
-    // 4 — primeiro plano
+    // 5 — primeiro plano
     <>
       <h1 className="titulo">Qual é o seu primeiro plano?</h1>
       <p className="subtitulo">Você pode criar quantos planos quiser depois, cada um com sua meta.</p>
@@ -210,7 +228,7 @@ export default function BoasVindas() {
           {passos[passo]}
         </motion.div>
       </AnimatePresence>
-      {passo < passos.length - 1 && (
+      {passo < passos.length - 1 && (passo !== 2 || senhaCriada) && (
         <div className="linha" style={{ marginTop: 8 }}>
           {passo > 0 && (
             <button type="button" className="circulo escuro" style={{ width: 52, height: 52 }} aria-label="Voltar" onClick={() => setPasso(passo - 1)}>

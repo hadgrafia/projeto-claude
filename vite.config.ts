@@ -15,6 +15,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,mjs}'],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         navigateFallback: 'index.html',
+        // /api e o login do Cloudflare Access sempre vão para a rede.
+        navigateFallbackDenylist: [/^\/api\//, /^\/cdn-cgi\//],
       },
       manifest: {
         name: 'Meus Planos Financeiros',

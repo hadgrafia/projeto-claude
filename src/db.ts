@@ -40,7 +40,34 @@ export interface Plano {
   /** Detalhamento da meta calculada (rótulo → valor). */
   composicao?: { rotulo: string; valor: number }[];
   analiseIA?: { texto: string; geradaEm: string };
+  /** Plano em conjunto com familiares (dados cifrados de ponta a ponta no servidor). */
+  conjunto?: Conjunto;
   criadoEm: string;
+}
+
+/** Resumo que cada participante compartilha. Nunca inclui a lista de gastos. */
+export interface ResumoMembro {
+  membroId: string;
+  apelido: string;
+  guardado: number;
+  aporteMensal: number;
+  livreMensal: number;
+  rendaMedia?: number;
+  sugestoes: { categoria: string; status: 'rever' | 'cortar'; ganho: number }[];
+  atualizadoEm: string;
+}
+
+export interface Conjunto {
+  id: string;
+  membroId: string;
+  /** Segredo deste aparelho para falar com o servidor (o servidor só guarda o hash). */
+  segredo: string;
+  /** Chave AES-256 do plano. Fica só nos aparelhos e no link de convite. */
+  chave: string;
+  versao: number;
+  mostrarRenda: boolean;
+  membros: ResumoMembro[];
+  sincronizadoEm?: string;
 }
 
 export type TipoMov = 'saida' | 'entrada';

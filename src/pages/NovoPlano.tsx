@@ -6,6 +6,7 @@ import { CampoDinheiro, Dinheiro, Folha } from '../components/Ui';
 import { db, type TipoPlano } from '../db';
 import { useDados } from '../hooks';
 import * as fipe from '../lib/fipe';
+import { enviarDefinicao } from '../lib/conjunto';
 import { lerValor, pct, reais, reaisCurto } from '../lib/format';
 import { PLANOS, respostasPadrao, type Campo } from '../lib/planos';
 
@@ -70,6 +71,8 @@ export default function NovoPlano() {
     };
     if (id) {
       await db.planos.update(Number(id), dados);
+      const salvo = await db.planos.get(Number(id));
+      if (salvo?.conjunto) await enviarDefinicao(salvo).catch(() => alert('O plano foi salvo neste aparelho, mas não foi enviado ao grupo agora. Ele é atualizado quando a conexão voltar.'));
       navegar(`/planos/${id}`, { replace: true });
     } else {
       const novo = await db.planos.add({ ...dados, criadoEm: new Date().toISOString() });

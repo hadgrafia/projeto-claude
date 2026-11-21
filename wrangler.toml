@@ -1,0 +1,14 @@
+# Cloudflare Pages: o app (dist/) e as funções /api no MESMO endereço,
+# protegido pelo Cloudflare Access (só e-mails convidados entram).
+name = "meus-planos-financeiros"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+EXIGIR_ACCESS = "1"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "meus-planos"
+database_id = "00000000-0000-0000-0000-000000000000"

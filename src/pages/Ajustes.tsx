@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icone } from '../components/Icone';
-import { CampoDinheiro, Segmentado } from '../components/Ui';
+import { CampoDinheiro, Folha, Segmentado } from '../components/Ui';
+import { CriarSenha, TecladoPin } from '../components/Bloqueio';
+import { ativarBiometria, biometriaDisponivel, cifrar, conferirPin, decifrar, definirTempo, lerBloqueio, removerBiometria, type ConfigBloqueio } from '../lib/bloqueio';
 import { db, exportarTudo, importarTudo, type Tema } from '../db';
 import { useDados } from '../hooks';
 import { mesLongo, ultimosMeses } from '../lib/format';
-import { lerConfigIA, salvarConfigIA } from '../lib/ia';
+import { entrarDeNovo } from '../lib/conjunto';
 import { ehAppAndroid, Leitor } from '../lib/nativo';
 
 export default function Ajustes() {
@@ -14,9 +16,51 @@ export default function Ajustes() {
   const meses = ultimosMeses(6);
   const [renda, setRenda] = useState<(number | undefined)[]>([]);
   const [gasto, setGasto] = useState<number>();
-  const [ia, setIa] = useState({ url: '', token: '' });
   const [salvo, setSalvo] = useState('');
   const [leitura, setLeitura] = useState<{ permitido: boolean; avisosPermitidos: boolean }>();
+  const [seguranca, setSeguranca] = useState<ConfigBloqueio>();
+  const [temBio, setTemBio] = useState(false);
+  const [pedirPin, setPedirPin] = useState<'exportar' | 'restaurar' | 'trocar'>();
+  const [restaurando, setRestaurando] = useState<string>();
+  const [criando, setCriando] = useState(false);
+  const [pin, setPin] = useState('');
+  const [erroPin, setErroPin] = useState('');
+  const recarregarSeguranca = () => lerBloqueio().then(setSeguranca);
+
+  useEffect(() => {
+    recarregarSeguranca();
+    biometriaDisponivel().then(setTemBio);
+  }, []);
+  useEffect(() => {
+    if (restaurando) setPedirPin('restaurar');
+  }, [restaurando]);
+
+  useEffect(() => {
+    if (pin.length !== 6 || !pedirPin) return;
+    (async () => {
+      const r = await conferirPin(pin);
+      setPin('');
+      if (!r.ok) {
+        setErroPin(r.travadoAte ? 'Muitas tentativas. Aguarde um pouco.' : `Senha incorreta. ${r.restantes} tentativas.`);
+        return;
+      }
+      setErroPin('');
+      const acao = pedirPin;
+      setPedirPin(undefined);
+      if (acao === 'exportar') await baixarBackup(pin);
+      if (acao === 'trocar') setCriando(true);
+      if (acao === 'restaurar' && restaurando) {
+        try {
+          await importarTudo(JSON.parse(await decifrar(restaurando, pin)));
+          aviso('Dados restaurados.');
+        } catch {
+          aviso('Não foi possível abrir a cópia. Ela precisa ser restaurada com a senha usada quando foi salva.');
+        }
+        setRestaurando(undefined);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pin]);
 
   useEffect(() => {
     if (!ehAppAndroid()) return;
@@ -33,9 +77,6 @@ export default function Ajustes() {
     setGasto(perfil.gastoMensalEstimado || undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [perfil?.id]);
-  useEffect(() => {
-    lerConfigIA().then(setIa);
-  }, []);
 
   const aviso = (t: string) => {
     setSalvo(t);
@@ -52,9 +93,10 @@ export default function Ajustes() {
     aviso('Renda atualizada.');
   }
 
-  async function baixarBackup() {
-    const dados = await exportarTudo();
-    const url = URL.createObjectURL(new Blob([JSON.stringify(dados)], { type: 'application/json' }));
+  async function baixarBackup(senha?: string) {
+    const dados = JSON.stringify(await exportarTudo());
+    const conteudo = senha ? await cifrar(dados, senha) : dados;
+    const url = URL.createObjectURL(new Blob([conteudo], { type: 'application/json' }));
     const a = document.createElement('a');
     a.href = url;
     a.download = `meus-planos-backup-${new Date().toISOString().slice(0, 10)}.json`;
@@ -69,6 +111,49 @@ export default function Ajustes() {
         <h1 className="titulo" style={{ fontSize: 24 }}>Ajustes</h1>
       </div>
       {salvo && <p className="cartao manter pequeno" role="status">{salvo}</p>}
+
+      <section className="cartao">
+        <h2 style={{ fontSize: 15, fontWeight: 800 }}>Segurança</h2>
+        {seguranca?.ativo ? (
+          <>
+            <div className="entre pequeno"><span>Senha do app</span><strong>Ativada</strong></div>
+            <div className="entre pequeno"><span>Digital ou rosto</span><strong>{seguranca.biometria ? 'Ativado' : temBio ? 'Desativado' : 'Indisponível neste aparelho'}</strong></div>
+            <span className="campo" style={{ marginBottom: 0 }}>Bloquear depois de sair do app</span>
+            <Segmentado
+              rotulo="Tempo para bloquear"
+              valor={String(seguranca.bloquearApos)}
+              aoMudar={async (v) => { await definirTempo(Number(v)); recarregarSeguranca(); }}
+              opcoes={[{ valor: '0', rotulo: 'Na hora' }, { valor: '30', rotulo: '30 s' }, { valor: '60', rotulo: '1 min' }, { valor: '300', rotulo: '5 min' }]}
+            />
+            <div className="grade-2">
+              <button type="button" className="botao secundario pequeno" onClick={() => setPedirPin('trocar')}>Trocar senha</button>
+              {temBio && (
+                <button
+                  type="button"
+                  className="botao secundario pequeno"
+                  onClick={async () => {
+                    try {
+                      if (seguranca.biometria) await removerBiometria();
+                      else await ativarBiometria();
+                      recarregarSeguranca();
+                    } catch (e) {
+                      aviso((e as Error).message);
+                    }
+                  }}
+                >
+                  {seguranca.biometria ? 'Desligar biometria' : 'Ligar biometria'}
+                </button>
+              )}
+            </div>
+            <p className="mini suave">Esqueceu a senha? Por segurança não há como recuperar: é preciso apagar os dados e restaurar uma cópia.</p>
+          </>
+        ) : (
+          <>
+            <p className="pequeno">O app está sem senha. Qualquer pessoa com o seu celular desbloqueado consegue abrir.</p>
+            <button type="button" className="botao pequeno" onClick={() => setCriando(true)}>Criar senha</button>
+          </>
+        )}
+      </section>
 
       {ehAppAndroid() && (
         <section className="cartao">
@@ -106,22 +191,16 @@ export default function Ajustes() {
       </section>
 
       <section className="cartao">
-        <h2 style={{ fontSize: 15, fontWeight: 800 }}>Análise com IA</h2>
-        <p className="mini suave">Quem administra o app passa o endereço e o código de acesso. Sem eles, todo o resto do app funciona normalmente.</p>
-        <label className="campo">Endereço do servidor
-          <input value={ia.url} onChange={(e) => setIa({ ...ia, url: e.target.value })} placeholder="https://…workers.dev" inputMode="url" />
-        </label>
-        <label className="campo">Código de acesso
-          <input value={ia.token} onChange={(e) => setIa({ ...ia, token: e.target.value })} type="password" autoComplete="off" />
-        </label>
-        <button type="button" className="botao pequeno" onClick={async () => { await salvarConfigIA(ia); aviso('Análise com IA configurada.'); }}>Salvar</button>
+        <h2 style={{ fontSize: 15, fontWeight: 800 }}>Acesso</h2>
+        <p className="mini suave">O app só abre para e-mails convidados. A cada tantos dias, o Cloudflare pede para você confirmar seu e-mail com um código. Se a análise com IA ou o plano em conjunto avisarem que a sessão expirou, toque abaixo.</p>
+        <button type="button" className="botao secundario pequeno" onClick={entrarDeNovo} disabled={!navigator.onLine}>Entrar de novo</button>
       </section>
 
       <section className="cartao">
         <h2 style={{ fontSize: 15, fontWeight: 800 }}>Cópia de segurança</h2>
-        <p className="mini suave">Seus dados ficam só neste aparelho. Guarde uma cópia de vez em quando (por exemplo, no seu Google Drive ou iCloud) para não perder nada se trocar de celular.</p>
+        <p className="mini suave">Seus dados ficam só neste aparelho. Guarde uma cópia de vez em quando (por exemplo, no seu Google Drive ou iCloud) para não perder nada se trocar de celular. A cópia sai cifrada com a sua senha do app: sem a senha, ninguém consegue ler o arquivo.</p>
         <div className="grade-2">
-          <button type="button" className="botao secundario pequeno" onClick={baixarBackup}><Icone nome="baixar" /> Salvar cópia</button>
+          <button type="button" className="botao secundario pequeno" onClick={() => (seguranca?.ativo ? setPedirPin('exportar') : baixarBackup())}><Icone nome="baixar" /> Salvar cópia</button>
           <label className="botao secundario pequeno" style={{ cursor: 'pointer' }}>
             <Icone nome="upload" /> Restaurar
             <input
@@ -131,8 +210,13 @@ export default function Ajustes() {
               onChange={async (e) => {
                 const f = e.target.files?.[0];
                 if (!f || !confirm('Restaurar substitui todos os dados atuais por os da cópia. Continuar?')) return;
+                const texto = await f.text();
+                if (texto.includes('meus-planos-cifrado-1')) {
+                  setRestaurando(texto);
+                  return;
+                }
                 try {
-                  await importarTudo(JSON.parse(await f.text()));
+                  await importarTudo(JSON.parse(texto));
                   aviso('Dados restaurados.');
                 } catch {
                   aviso('Arquivo de cópia inválido.');
@@ -169,6 +253,15 @@ export default function Ajustes() {
       >
         <Icone nome="lixo" /> Apagar todos os dados
       </button>
+      <Folha aberta={!!pedirPin} aoFechar={() => { setPedirPin(undefined); setRestaurando(undefined); setPin(''); }} titulo="Confirme sua senha">
+        <p className="pequeno suave" role="status" style={{ textAlign: 'center', minHeight: 20 }}>
+          {erroPin || (pedirPin === 'restaurar' ? 'Digite a senha do app usada quando a cópia foi salva.' : 'Digite a senha do app para continuar.')}
+        </p>
+        <TecladoPin valor={pin} aoMudar={setPin} />
+      </Folha>
+      <Folha aberta={criando} aoFechar={() => setCriando(false)} titulo={seguranca?.ativo ? 'Nova senha' : 'Criar senha'}>
+        <CriarSenha atual={seguranca} aoConcluir={() => { setCriando(false); recarregarSeguranca(); aviso('Senha salva.'); }} />
+      </Folha>
     </main>
   );
 }

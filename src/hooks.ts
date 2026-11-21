@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { db } from './db';
 import { gastoMensalTipico, resumoRenda, totalGuardado, valorLivreMensal, aporteDoPlano, mesesParaMeta, previsao, aporteNecessario, taxaMensal } from './lib/finance';
 import { mesesEntre, chaveMes } from './lib/format';
+import { somaOutros } from './lib/conjunto';
 import { cdiDaSelic, liquidoAnual, obterSelic, type Selic } from './lib/invest';
 
 /** Todos os dados do app, ao vivo, lidos do aparelho. */
@@ -60,8 +61,11 @@ export function situacaoPlano(
   livre: number,
   selic?: number,
 ) {
-  const guardado = totalGuardado(plano, investimentos);
-  const aporte = aporteDoPlano(plano, livre);
+  const outros = somaOutros(plano);
+  const meuGuardado = totalGuardado(plano, investimentos);
+  const meuAporte = aporteDoPlano(plano, livre);
+  const guardado = meuGuardado + outros.guardado;
+  const aporte = meuAporte + outros.aporte;
   const pct = plano.meta > 0 ? (guardado / plano.meta) * 100 : 0;
   const prazoMeses = plano.prazo ? Math.max(1, mesesEntre(chaveMes(new Date()), plano.prazo)) : undefined;
   const horizonte = prazoMeses ?? 24;
@@ -69,5 +73,5 @@ export function situacaoPlano(
   const r = taxaMensal(rendimentoAa);
   const meses = mesesParaMeta(plano.meta, guardado, aporte, r);
   const necessario = prazoMeses ? aporteNecessario(plano.meta, guardado, prazoMeses, r) : undefined;
-  return { guardado, aporte, pct, meses, previsao: previsao(meses), prazoMeses, necessario, rendimentoAa };
+  return { guardado, aporte, meuGuardado, meuAporte, pct, meses, previsao: previsao(meses), prazoMeses, necessario, rendimentoAa };
 }
