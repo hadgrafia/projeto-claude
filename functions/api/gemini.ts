@@ -116,7 +116,7 @@ function lerJson(texto: string): unknown {
     }
     const agente = texto.match(/"agente"\s*:\s*"(\w+)"/)?.[1];
     const resposta = texto.match(/"resposta"\s*:\s*"((?:[^"\\]|\\.){1,1500})"/)?.[1];
-    if (agente && resposta) return { agente, resposta: JSON.parse(`"${resposta}"`), acoes: [] };
+    if (agente && resposta) return { agente, resposta: JSON.parse(`"${resposta}"`), registros: [], recuperado: texto.slice(0, 400), tamanho: texto.length };
     throw new GeminiErro(502, `resposta fora do formato (${texto.length} caracteres): ${texto.slice(0, 120)}`);
   }
 }

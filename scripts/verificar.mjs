@@ -58,7 +58,7 @@ let falhou = false;
 console.log('\n===== Relatório do app publicado =====');
 for (const [k, v] of Object.entries(r)) {
   const ok = v === 'ok' || v.startsWith('ok ');
-  const opcional = k === 'modelos';
+  const opcional = k === 'modelos' || k === 'agentesDiagnostico';
   if (!ok && !opcional) falhou = true;
   if (!ok && CRITICOS.includes(k)) critico = true;
   console.log(`${ok ? '✅' : opcional ? 'ℹ️ ' : '❌'} ${rotulos[k] ?? k}: ${v}`);

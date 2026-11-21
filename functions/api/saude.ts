@@ -74,6 +74,9 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       try {
         const { json: a } = await conversarComGemini(env, conta, SISTEMA_AGENTES, [{ role: 'user', parts: [{ text: 'CONTEXTO: {"rendaMensal": 4000}\n\nMENSAGEM:\ngastei 25 reais no sorvete da Borelli' }] }], ESQUEMA_AGENTES);
         const x = paraAcoes(a as Parameters<typeof paraAcoes>[0]) as { agente?: string; acoes?: { tipo?: string; valor?: number }[] };
+        const bruto = a as { recuperado?: string; tamanho?: number };
+        if (bruto.recuperado) r.agentesDiagnostico = `JSON quebrado (${bruto.tamanho} caracteres): ${bruto.recuperado.replace(/\s+/g, ' ')}`;
+        else r.agentesDiagnostico = `JSON ok: ${JSON.stringify(a).slice(0, 400)}`;
         r.agentes = x.agente && x.acoes?.some((c) => c.tipo === 'registrar' && Number(c.valor) === 25) ? `ok (${x.agente} preparou o registro de R$ 25)` : `resposta inesperada: agente=${x.agente} acoes=${JSON.stringify(x.acoes ?? null).slice(0, 300)}`;
       } catch (e) {
         r.agentes = `erro: ${((e as Error).message ?? '').slice(0, 200)}`;
