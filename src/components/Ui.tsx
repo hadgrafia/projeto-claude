@@ -137,8 +137,8 @@ export function CampoDinheiro({ rotulo, valor, aoMudar, dica }: { rotulo: string
 }
 
 /** Animação de entrada em sequência para listas e cartões. */
-export const Entra = ({ children, i = 0 }: { children: ReactNode; i?: number }) => (
-  <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: Math.min(i, 8) * 0.05, ease: 'easeOut' }}>
+export const Entra = ({ children, i = 0, largo }: { children: ReactNode; i?: number; largo?: boolean }) => (
+  <motion.div style={largo ? { gridColumn: '1 / -1' } : undefined} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: Math.min(i, 8) * 0.05, ease: 'easeOut' }}>
     {children}
   </motion.div>
 );

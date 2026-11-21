@@ -40,7 +40,7 @@ export default function Inicio() {
         </Link>
       </div>
 
-      <Entra>
+      <Entra largo>
         <section className="cartao verde">
           <div className="linha" style={{ alignItems: 'center' }}>
             <div className="coluna cresce" style={{ gap: 6 }}>

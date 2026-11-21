@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meus Planos Financeiros · Cada real com um destino</title>
+<meta name="description" content="App gratuito e privado para planejar a casa nova, o carro ou a viagem: entende seus gastos, diz quanto guardar, onde investir e se vale parcelar uma compra.">
+<meta name="theme-color" content="#3B4A3A">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<meta property="og:title" content="Meus Planos Financeiros">
+<meta property="og:description" content="Cada real com um destino. Planeje seus sonhos com privacidade.">
+<meta property="og:image" content="./img/capa.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./site.css">
+<script>
+  // Quem instalou o app antigo na tela inicial cai aqui: leva direto para o app.
+  if (window.matchMedia('(display-mode: standalone)').matches) location.replace('./app/');
+</script>
+</head>
+<body>
+<header class="topo">
+  <div class="conteudo topo-linha">
+    <a href="#inicio" class="marca" aria-label="Meus Planos Financeiros, início">
+      <img src="./icon.svg" width="40" height="40" alt="">
+      <span>Meus Planos</span>
+    </a>
+    <nav class="menu" aria-label="Seções">
+      <a href="#como-funciona">Como funciona</a>
+      <a href="#recursos">Recursos</a>
+      <a href="#privacidade">Privacidade</a>
+      <a href="#instalar">Instalar</a>
+    </nav>
+    <a class="botao botao-claro" href="./app/">Entrar</a>
+  </div>
+</header>
+
+<main id="inicio">
+  <section class="heroi">
+    <div class="conteudo heroi-grade">
+      <div class="heroi-texto revelar">
+        <span class="selo">Gratuito · Privado · Só para convidados</span>
+        <h1>Cada real com um destino.</h1>
+        <p class="lead">O app que transforma o seu salário em planos de verdade: casa nova, carro, viagem ou o que você quiser. Ele entende seus gastos, diz quanto guardar por mês, onde investir e se vale a pena parcelar aquela compra.</p>
+        <div class="acoes">
+          <a class="botao botao-terracota" href="#convite">Quero um convite</a>
+          <a class="botao botao-contorno" href="./app/">Já tenho convite</a>
+        </div>
+        <p class="nota">Funciona no navegador do celular e do computador. Sem instalar nada, sem pagar nada.</p>
+      </div>
+      <div class="heroi-visual revelar" aria-hidden="true">
+        <div class="celular flutua">
+          <img src="./img/tela-inicio.png" width="390" height="844" alt="">
+        </div>
+        <div class="celular celular-atras">
+          <img src="./img/tela-compra.png" width="390" height="844" alt="">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="como-funciona" class="secao">
+    <div class="conteudo">
+      <h2 class="revelar">Como funciona</h2>
+      <ol class="passos">
+        <li class="cartao revelar">
+          <span class="numero">1</span>
+          <h3>Conte seus sonhos</h3>
+          <p>Crie quantos planos quiser. O app faz as perguntas certas para cada um e calcula a meta: aluguel e custo de vida da cidade, preço do carro pela Tabela FIPE, passagens e hospedagem.</p>
+        </li>
+        <li class="cartao revelar">
+          <span class="numero">2</span>
+          <h3>Mostre seus gastos</h3>
+          <p>No Android, o app lê os avisos de pagamento de qualquer banco. Em qualquer aparelho, você pode enviar o extrato do mês (PDF, OFX ou CSV) ou anotar em dois toques.</p>
+        </li>
+        <li class="cartao revelar">
+          <span class="numero">3</span>
+          <h3>Siga o plano</h3>
+          <p>Ele diz o que manter, o que rever e o que cortar, quanto separar para cada plano e quando realmente dá para chegar. Tudo recalculado sozinho quando algo muda.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="recursos" class="secao secao-verde">
+    <div class="conteudo">
+      <h2 class="revelar">Tudo o que o app faz por você</h2>
+      <div class="grade-recursos">
+        <article class="recurso revelar"><h3>Planos ilimitados</h3><p>Casa nova, carro, equipamentos, viagem. Cada um com meta, prazo e a data em que é possível chegar com a sua renda.</p></article>
+        <article class="recurso revelar"><h3>Antes de comprar</h3><p>Diga o que vai comprar e o app recomenda: à vista, em quantas vezes sem juros, ou se é melhor esperar para não criar dívida.</p></article>
+        <article class="recurso revelar"><h3>Limite do cartão</h3><p>Acompanha parcelas e avisa antes de o limite estourar, para o seu nome não ficar sujo.</p></article>
+        <article class="recurso revelar"><h3>Onde investir</h3><p>Tesouro, CDB, cofrinhos, LCI ou ações: sugestões pelo prazo de cada plano e pelo seu perfil, com a Selic do dia.</p></article>
+        <article class="recurso revelar"><h3>Plano em conjunto</h3><p>Convide alguém da família para juntar dinheiro para o mesmo objetivo. Cada um vê só os próprios gastos.</p></article>
+        <article class="recurso revelar"><h3>Análise com IA</h3><p>Pesquisa preços e taxas atuais em fontes confiáveis e monta uma análise do seu plano, com as fontes.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section id="privacidade" class="secao">
+    <div class="conteudo duas-colunas">
+      <div class="revelar">
+        <h2>Seu dinheiro, seus dados</h2>
+        <p class="lead">O app foi feito para nunca pôr suas finanças em risco.</p>
+      </div>
+      <ul class="lista-check revelar">
+        <li>Nunca abre nem acessa o app do seu banco, e nunca pede senha bancária.</li>
+        <li>Seus gastos ficam guardados só no seu aparelho e funcionam sem internet.</li>
+        <li>Protegido por senha, digital ou reconhecimento facial.</li>
+        <li>No plano em conjunto, os dados são cifrados no seu celular: nem o servidor consegue ler.</li>
+        <li>Só pessoas convidadas entram. <a href="./privacidade.html">Leia a política de privacidade</a>.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="instalar" class="secao secao-areia">
+    <div class="conteudo">
+      <h2 class="revelar">Use onde quiser</h2>
+      <p class="lead revelar">Depois de receber o convite, entre com o seu e-mail. Para ter o app na tela inicial, é só instalar pelo navegador: é grátis e não precisa de loja.</p>
+      <div class="grade-instalar">
+        <article class="cartao revelar">
+          <h3>Android</h3>
+          <ol>
+            <li>Abra <strong>meus-planos-financeiros.pages.dev/app</strong> no Chrome.</li>
+            <li>Toque no menu <strong>⋮</strong> e em <strong>Instalar app</strong>.</li>
+            <li>Pronto: o ícone aparece na tela inicial.</li>
+          </ol>
+        </article>
+        <article class="cartao revelar">
+          <h3>iPhone</h3>
+          <ol>
+            <li>Abra o endereço no <strong>Safari</strong>.</li>
+            <li>Toque em <strong>Compartilhar</strong> e em <strong>Adicionar à Tela de Início</strong>.</li>
+            <li>Use o Face ID para desbloquear.</li>
+          </ol>
+        </article>
+        <article class="cartao revelar">
+          <h3>Computador</h3>
+          <ol>
+            <li>Abra o endereço no Chrome, Edge ou Safari.</li>
+            <li>O app se ajusta à tela grande, com menu lateral.</li>
+            <li>No Chrome, dá para instalar pelo ícone na barra de endereço.</li>
+          </ol>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="convite" class="secao">
+    <div class="conteudo convite">
+      <div class="revelar">
+        <h2>Peça seu convite</h2>
+        <p class="lead">O Meus Planos é usado só por pessoas convidadas. Deixe seu nome e e-mail: assim que o acesso for liberado, você recebe o convite.</p>
+      </div>
+      <form id="form-convite" class="cartao formulario revelar" novalidate>
+        <label>Seu nome<input name="nome" autocomplete="name" required maxlength="80"></label>
+        <label>Seu e-mail<input name="email" type="email" autocomplete="email" inputmode="email" required maxlength="254"></label>
+        <label>Qual é o seu plano? <small>(opcional)</small><textarea name="mensagem" maxlength="500" rows="3" placeholder="Ex.: quero juntar para morar sozinha"></textarea></label>
+        <label class="armadilha" aria-hidden="true">Site<input name="site" tabindex="-1" autocomplete="off"></label>
+        <label class="aceite"><input type="checkbox" name="aceite" required> Concordo com a <a href="./privacidade.html">política de privacidade</a>.</label>
+        <button class="botao botao-terracota" type="submit">Pedir convite</button>
+        <p class="retorno" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </section>
+
+  <section class="secao secao-verde">
+    <div class="conteudo">
+      <h2 class="revelar">Perguntas frequentes</h2>
+      <div class="faq">
+        <details class="revelar"><summary>Quanto custa?</summary><p>Nada. O app é gratuito e não tem anúncios.</p></details>
+        <details class="revelar"><summary>Preciso instalar alguma coisa?</summary><p>Não. Funciona direto no navegador. Se quiser o ícone na tela inicial, é só instalar pelo navegador, sem loja e sem pagar.</p></details>
+        <details class="revelar"><summary>O app mexe na minha conta do banco?</summary><p>Nunca. Ele só lê os avisos de pagamento (no Android, se você permitir) ou o extrato que você mesmo envia.</p></details>
+        <details class="revelar"><summary>Funciona sem internet?</summary><p>Sim. Depois do primeiro acesso, o app abre e funciona sem conexão. Só a análise com IA e o plano em conjunto precisam de internet.</p></details>
+        <details class="revelar"><summary>Por que preciso de convite?</summary><p>Para manter o app seguro e próximo de quem usa. Peça o seu no formulário acima.</p></details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="rodape">
+  <div class="conteudo rodape-linha">
+    <a href="#inicio" class="marca"><img src="./icon.svg" width="32" height="32" alt=""><span>Meus Planos Financeiros</span></a>
+    <span>Cada real com um destino.</span>
+    <a href="./privacidade.html">Privacidade</a>
+  </div>
+</footer>
+
+<script src="./site.js" defer></script>
+</body>
+</html>

@@ -27,3 +27,14 @@ CREATE TABLE IF NOT EXISTS acessos (
   convidado_por TEXT NOT NULL,
   em INTEGER NOT NULL
 );
+-- Pedidos de convite feitos pela página de apresentação (a administradora aprova ou recusa).
+CREATE TABLE IF NOT EXISTS pedidos (
+  id TEXT PRIMARY KEY,
+  nome TEXT NOT NULL,
+  email TEXT NOT NULL,
+  mensagem TEXT,
+  status TEXT NOT NULL DEFAULT 'pendente',
+  ip_hash TEXT NOT NULL,
+  criado_em INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS pedidos_status ON pedidos (status, criado_em);

@@ -99,12 +99,14 @@ if (!politica)
   );
 
 const apps = exigir(await cf(`/accounts/${CONTA}/access/apps`), 'Listar aplicativos do Access');
-let app = apps.find((a) => a.domain === DOMINIO);
+// Página de apresentação (raiz) é pública; o app (/app), a API (/api) e as versões de teste
+// (*.meus-planos-financeiros.pages.dev) exigem login de convidado.
+let app = apps.find((a) => a.name === 'Meus Planos Financeiros' || a.domain === DOMINIO);
 const configApp = {
   name: 'Meus Planos Financeiros',
   type: 'self_hosted',
-  domain: DOMINIO,
-  self_hosted_domains: [DOMINIO, `*.${DOMINIO}`],
+  domain: `${DOMINIO}/app`,
+  self_hosted_domains: [`${DOMINIO}/app`, `${DOMINIO}/api`, `*.${DOMINIO}`],
   session_duration: '720h',
   allowed_idps: [otp.id],
   auto_redirect_to_identity: true,
@@ -113,7 +115,7 @@ const configApp = {
 };
 if (!app) app = exigir(await cf(`/accounts/${CONTA}/access/apps`, { method: 'POST', body: JSON.stringify(configApp) }), 'Proteger o app com o Access');
 else exigir(await cf(`/accounts/${CONTA}/access/apps/${app.id}`, { method: 'PUT', body: JSON.stringify(configApp) }), 'Atualizar proteção do app');
-console.log(`✅ Access: só e-mails do grupo "${NOME_GRUPO}" abrem https://${DOMINIO}`);
+console.log(`✅ Access: só e-mails do grupo "${NOME_GRUPO}" abrem https://${DOMINIO}/app`);
 
 // Páginas públicas: política de privacidade (exigida pela Play Store) e verificação automática
 // (que tem o próprio código secreto). Todo o resto continua exigindo login.
@@ -124,14 +126,14 @@ if (!publica)
     await cf(`/accounts/${CONTA}/access/policies`, { method: 'POST', body: JSON.stringify({ name: NOME_PUBLICA, decision: 'bypass', include: [{ everyone: {} }] }) }),
     'Criar política pública',
   );
-for (const caminho of ['privacidade.html', 'api/saude']) {
+for (const caminho of ['api/saude', 'api/pedido-convite']) {
   const dominio = `${DOMINIO}/${caminho}`;
   const atual = apps.find((a) => a.domain === dominio);
   const cfg = { name: `Meus Planos · ${caminho}`, type: 'self_hosted', domain: dominio, self_hosted_domains: [dominio], app_launcher_visible: false, policies: [{ id: publica.id, precedence: 1 }] };
   if (!atual) exigir(await cf(`/accounts/${CONTA}/access/apps`, { method: 'POST', body: JSON.stringify(cfg) }), `Liberar ${caminho}`);
   else exigir(await cf(`/accounts/${CONTA}/access/apps/${atual.id}`, { method: 'PUT', body: JSON.stringify(cfg) }), `Atualizar ${caminho}`);
 }
-console.log(`✅ Política de privacidade pública: https://${DOMINIO}/privacidade.html`);
+console.log(`✅ Página de apresentação pública: https://${DOMINIO}/ (com pedido de convite)`);
 
 // Quantos e-mails estão liberados (sem mostrar quais).
 const g = exigir(await cf(`/accounts/${CONTA}/access/groups/${grupo.id}`), 'Ler grupo de convidados');

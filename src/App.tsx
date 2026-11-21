@@ -1,7 +1,8 @@
 import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import { Icone, type NomeIcone } from './components/Icone';
+import { Logo } from './components/Logo';
 import { PerguntaLocal } from './components/Lugar';
 import { CapaPrivacidade, TelaBloqueio, useBloqueio } from './components/Bloqueio';
 import { iniciarLeituraNativa } from './lib/nativo';
@@ -31,17 +32,29 @@ const ABAS: { para: string; rotulo: string; icone: NomeIcone }[] = [
 function Nav() {
   return (
     <nav className="nav" aria-label="Navegação principal">
+      <div className="nav-marca">
+        <Logo tamanho={40} />
+        <strong>Meus Planos</strong>
+      </div>
       {ABAS.map((a) => (
         <NavLink key={a.para} to={a.para} aria-label={a.rotulo} className={({ isActive }) => (isActive ? 'ativo' : '')}>
           {({ isActive }) => (
             <>
               {isActive && <motion.span layoutId="nav-ativo" className="fundo-ativo" transition={{ type: 'spring', stiffness: 500, damping: 40 }} />}
               <Icone nome={a.icone} />
-              {isActive && <span>{a.rotulo}</span>}
+              <span className={isActive ? 'rotulo' : 'rotulo so-computador'}>{a.rotulo}</span>
             </>
           )}
         </NavLink>
       ))}
+      <NavLink to="/compra" className={({ isActive }) => `so-computador ${isActive ? 'ativo' : ''}`} aria-label="Antes de comprar">
+        <Icone nome="etiqueta" />
+        <span className="rotulo">Antes de comprar</span>
+      </NavLink>
+      <NavLink to="/ajustes" className={({ isActive }) => `so-computador ${isActive ? 'ativo' : ''}`} aria-label="Ajustes">
+        <Icone nome="engrenagem" />
+        <span className="rotulo">Ajustes</span>
+      </NavLink>
     </nav>
   );
 }
@@ -60,10 +73,24 @@ function AvisoOffline() {
   );
 }
 
+/** Computador ou tablet deitado: menu lateral fixo. */
+function useTelaGrande() {
+  const consulta = '(min-width: 900px)';
+  const [grande, setGrande] = useState(() => window.matchMedia(consulta).matches);
+  useEffect(() => {
+    const m = window.matchMedia(consulta);
+    const f = () => setGrande(m.matches);
+    m.addEventListener('change', f);
+    return () => m.removeEventListener('change', f);
+  }, []);
+  return grande;
+}
+
 export default function App() {
   const { perfil, carregado } = useDados();
   const local = useLocation();
   const bloqueio = useBloqueio();
+  const telaGrande = useTelaGrande();
 
   useEffect(() => {
     const tema = perfil?.tema ?? 'sistema';
@@ -91,12 +118,12 @@ export default function App() {
     );
   }
   const pronto = perfil?.concluiuInicio;
-  const comNav = pronto && ABAS.some((a) => local.pathname === a.para);
+  const comNav = pronto && (ABAS.some((a) => local.pathname === a.para) || telaGrande);
   const chave = local.pathname.split('/').slice(0, 2).join('/') + (local.pathname.split('/')[2] ? '/x' : '');
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className="app">
+      <div className={comNav ? 'app com-menu' : 'app'}>
         <AvisoOffline />
         <AnimatePresence mode="wait" initial={false}>
           <motion.div

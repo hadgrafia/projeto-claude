@@ -3,8 +3,10 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 // base relativo: funciona em qualquer hospedagem estática (GitHub Pages, Cloudflare Pages, Capacitor).
+// O app fica em /app/ (só convidados); a página de apresentação pública fica na raiz (pasta site/).
 export default defineConfig({
   base: './',
+  build: { outDir: 'dist/app', emptyOutDir: true },
   plugins: [
     react(),
     VitePWA({

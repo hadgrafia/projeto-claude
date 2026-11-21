@@ -66,7 +66,7 @@ export default function PlanoDetalhe() {
         <Link to={`/planos/${plano.id}/editar`} className="circulo card" aria-label="Editar plano"><Icone nome="lapis" /></Link>
       </div>
 
-      <Entra>
+      <Entra largo>
         <section className="cartao terracota" style={{ borderRadius: 28, padding: 20 }}>
           <div className="linha">
             <div className="coluna cresce" style={{ gap: 6 }}>

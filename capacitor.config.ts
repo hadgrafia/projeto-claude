@@ -8,9 +8,9 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'br.meusplanos.financeiros',
   appName: 'Meus Planos',
-  webDir: 'dist',
+  webDir: 'dist/app',
   server: {
-    url: 'https://meus-planos-financeiros.pages.dev',
+    url: 'https://meus-planos-financeiros.pages.dev/app/',
     // Tela de login por código no e-mail do Cloudflare Access.
     allowNavigation: ['meus-planos-financeiros.pages.dev', '*.cloudflareaccess.com'],
   },

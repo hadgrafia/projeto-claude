@@ -6,8 +6,10 @@ import { emailAccess, json, type Env } from '../tipos';
  */
 export const onRequest: PagesFunction<Env> = async (ctx) => {
   // /api/saude tem o próprio código secreto (usado só pelo robô de publicação).
-  const saude = new URL(ctx.request.url).pathname === '/api/saude';
-  if (!saude && ctx.env.EXIGIR_ACCESS === '1' && !emailAccess(ctx.request)) return json({ erro: 'Acesso não autorizado.' }, 401);
+  // Rotas públicas: verificação automática (tem código secreto próprio) e pedido de convite.
+  const caminho = new URL(ctx.request.url).pathname;
+  const publica = caminho === '/api/saude' || caminho === '/api/pedido-convite';
+  if (!publica && ctx.env.EXIGIR_ACCESS === '1' && !emailAccess(ctx.request)) return json({ erro: 'Acesso não autorizado.' }, 401);
   const tamanho = Number(ctx.request.headers.get('Content-Length') ?? 0);
   if (tamanho > 64_000) return json({ erro: 'Pedido grande demais.' }, 413);
   const r = await ctx.next();

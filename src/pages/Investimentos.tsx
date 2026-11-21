@@ -54,7 +54,7 @@ export default function Investimentos() {
         <button type="button" className="circulo terracota" aria-label="Adicionar investimento" onClick={() => setEditando('novo')}><Icone nome="mais" /></button>
       </div>
 
-      <Entra>
+      <Entra largo>
         <section className="cartao verde">
           <span className="suave pequeno">Total investido</span>
           <Dinheiro valor={saldoTotal} className="valor-grande" />
