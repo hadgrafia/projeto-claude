@@ -5,7 +5,9 @@ import { Entra } from '../components/Ui';
 import { FormMovimento } from './Gastos';
 import { guardarArquivoParaImportar, lerComprovante, lerParametros, pegarCompartilhado, type Lido } from '../lib/compartilhar';
 import { linhasDoPDF, lerLinhasExtrato } from '../lib/importar';
-import { reais } from '../lib/format';
+import { dataCurta, reais } from '../lib/format';
+import { db, type Movimento } from '../db';
+import { jaRegistrado } from '../lib/conciliar';
 
 /**
  * Lançamento rápido: chega por "Compartilhar comprovante" ou por um link de automação.
@@ -16,6 +18,18 @@ export default function Lancar() {
   const navegar = useNavigate();
   const [lido, setLido] = useState<Lido | null>();
   const [aviso, setAviso] = useState('');
+  const [parecido, setParecido] = useState<Movimento>();
+
+  // Mesma compra já registrada (aviso repetido, comprovante compartilhado duas vezes, extrato)?
+  useEffect(() => {
+    if (!lido?.valor) return;
+    const agora = Date.now();
+    db.movimentos
+      .where('data')
+      .between(new Date(agora - 4 * 864e5).toISOString(), new Date(agora + 864e5).toISOString(), true, true)
+      .toArray()
+      .then((lista) => setParecido(jaRegistrado({ valor: lido.valor!, tipo: lido.tipo, data: new Date().toISOString(), local: lido.local }, lista)));
+  }, [lido]);
 
   useEffect(() => {
     const p = new URLSearchParams(local.search);
@@ -67,6 +81,11 @@ export default function Lancar() {
         </section>
       </Entra>
       {aviso && <p className="cartao areia pequeno">{aviso}</p>}
+      {parecido && (
+        <p className="cartao areia pequeno">
+          Parece que esta compra já foi registrada: {reais(parecido.valor)}{parecido.local ? ` em ${parecido.local}` : ''} ({dataCurta(parecido.data)}). Se for a mesma, toque em voltar; se for outra, salve normalmente.
+        </p>
+      )}
       <section className="cartao">
         <FormMovimento
           mov={lido ? { valor: lido.valor, local: lido.local, tipo: lido.tipo, categoria: lido.tipo === 'saida' ? lido.categoria : '' } : undefined}

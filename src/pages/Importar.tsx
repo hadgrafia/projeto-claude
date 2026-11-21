@@ -3,14 +3,15 @@ import { pegarArquivoParaImportar } from '../lib/compartilhar';
 import { useNavigate } from 'react-router-dom';
 import { Icone } from '../components/Icone';
 import { Entra } from '../components/Ui';
-import { db } from '../db';
+import { db, type Movimento } from '../db';
+import { conciliar } from '../lib/conciliar';
 import { NOMES_CATEGORIAS } from '../lib/categorias';
 import { dataCurta, reais } from '../lib/format';
 import { lerArquivoExtrato, type NovoMovimento } from '../lib/importar';
 
 export default function Importar() {
   const navegar = useNavigate();
-  const [itens, setItens] = useState<(NovoMovimento & { ok: boolean; repetido: boolean })[]>([]);
+  const [itens, setItens] = useState<(NovoMovimento & { ok: boolean; repetido: boolean; igual?: Movimento; exato?: boolean })[]>([]);
   const [estado, setEstado] = useState<'' | 'lendo' | 'erro' | 'pronto'>('');
   const [msg, setMsg] = useState('');
 
@@ -25,8 +26,12 @@ export default function Importar() {
     setEstado('lendo');
     try {
       const lidos = await lerArquivoExtrato(arquivo);
-      const existentes = new Set((await db.movimentos.where('chave').anyOf(lidos.map((l) => l.chave)).toArray()).map((m) => m.chave));
-      setItens(lidos.map((l) => ({ ...l, repetido: existentes.has(l.chave), ok: !existentes.has(l.chave) })));
+      // Compara com o que já foi registrado (avisos do banco, comprovantes, à mão, extratos anteriores).
+      const datas = lidos.map((l) => new Date(l.data).getTime());
+      const de = new Date(Math.min(...datas) - 4 * 864e5).toISOString();
+      const ate = new Date(Math.max(...datas) + 4 * 864e5).toISOString();
+      const existentes = lidos.length ? await db.movimentos.where('data').between(de, ate, true, true).toArray() : [];
+      setItens(conciliar(lidos, existentes).map(({ item, igual, exato }) => ({ ...item, igual, exato, repetido: Boolean(igual), ok: !igual })));
       setEstado('pronto');
       setMsg(lidos.length ? '' : 'Não encontrei lançamentos neste arquivo. Tente o formato OFX ou CSV, que todo banco exporta.');
     } catch {
@@ -37,13 +42,20 @@ export default function Importar() {
 
   async function salvar() {
     const novos = itens
-      .filter((i) => i.ok && !i.repetido)
-      .map(({ ok: _ok, repetido: _r, ...m }) => ({ ...m, local: m.local?.trim() || undefined, localPendente: !m.local?.trim() }));
+      .filter((i) => i.ok)
+      .map(({ ok: _ok, repetido: _r, igual: _i, exato: _e, ...m }) => ({ ...m, local: m.local?.trim() || undefined, localPendente: !m.local?.trim() }));
     await db.movimentos.bulkAdd(novos);
+    // O que já existia sem o nome do lugar ganha o nome que veio no extrato.
+    for (const i of itens) {
+      if (!i.ok && i.igual?.id && i.igual.localPendente && i.local?.trim()) {
+        await db.movimentos.update(i.igual.id, { local: i.local.trim(), descricao: i.local.trim(), localPendente: false });
+      }
+    }
     navegar('/gastos');
   }
 
-  const selecionados = itens.filter((i) => i.ok && !i.repetido);
+  const selecionados = itens.filter((i) => i.ok);
+  const origemTexto = (m: Movimento) => (m.origem === 'notificacao' ? 'pelo aviso do banco' : m.origem === 'extrato' ? 'por um extrato anterior' : 'à mão');
 
   return (
     <main className="tela sem-nav">
@@ -70,17 +82,17 @@ export default function Importar() {
         <>
           <div className="entre">
             <strong>{selecionados.length} de {itens.length} para salvar</strong>
-            <span className="pequeno suave">{itens.filter((i) => i.repetido).length} já existiam · {selecionados.filter((i) => !i.local).length} sem lugar</span>
+            <span className="pequeno suave">{itens.filter((i) => i.repetido).length} já registrados · {selecionados.filter((i) => !i.local).length} sem lugar</span>
           </div>
           <div className="lista">
             {itens.map((m, i) => (
               <Entra key={m.chave + i} i={i}>
-                <div className="item" style={{ cursor: 'default', opacity: m.repetido ? 0.5 : 1 }}>
+                <div className="item" style={{ cursor: 'default', opacity: m.repetido && !m.ok ? 0.55 : 1 }}>
                   <input
                     type="checkbox"
                     aria-label={`Incluir ${m.descricao}`}
-                    checked={m.ok && !m.repetido}
-                    disabled={m.repetido}
+                    checked={m.ok}
+                    disabled={m.exato}
                     onChange={(e) => setItens((l) => l.map((x, j) => (j === i ? { ...x, ok: e.target.checked } : x)))}
                     style={{ width: 22, height: 22 }}
                   />
@@ -93,6 +105,12 @@ export default function Importar() {
                       style={{ border: 0, borderBottom: `1px dashed ${m.local ? 'transparent' : 'var(--terracota-texto)'}`, background: 'transparent', fontWeight: 700, fontSize: 14, padding: '2px 0', width: '100%' }}
                     />
                     {m.local !== m.descricao && <span className="mini suave" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.descricao}</span>}
+                    {m.igual && (
+                      <span className="mini" style={{ color: 'var(--verde-texto, var(--texto))', fontWeight: 600 }}>
+                        ✓ Já registrado {origemTexto(m.igual)}{m.igual.local ? ` (${m.igual.local}, ${dataCurta(m.igual.data)})` : ` em ${dataCurta(m.igual.data)}`}
+                        {!m.exato && !m.ok ? '. Marque se for outra compra.' : ''}
+                      </span>
+                    )}
                     {m.tipo === 'saida' ? (
                       <select
                         aria-label="Categoria"
