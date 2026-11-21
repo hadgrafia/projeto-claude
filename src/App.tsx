@@ -5,9 +5,11 @@ import { Icone, type NomeIcone } from './components/Icone';
 import { PerguntaLocal } from './components/Lugar';
 import { CapaPrivacidade, TelaBloqueio, useBloqueio } from './components/Bloqueio';
 import { iniciarLeituraNativa } from './lib/nativo';
+import { avisoDoMes } from './lib/avisos';
 import { useDados, useOnline } from './hooks';
 import Ajustes from './pages/Ajustes';
 import Convite from './pages/Convite';
+import Compra from './pages/Compra';
 import BoasVindas from './pages/BoasVindas';
 import Feedback from './pages/Feedback';
 import Gastos from './pages/Gastos';
@@ -69,6 +71,10 @@ export default function App() {
     else document.documentElement.setAttribute('data-tema', tema);
   }, [perfil?.tema]);
 
+  useEffect(() => {
+    if (perfil?.concluiuInicio) avisoDoMes().catch(() => undefined);
+  }, [perfil?.concluiuInicio]);
+
   // App Android: traz os pagamentos lidos das notificações enquanto o app estava fechado.
   useEffect(() => {
     if (perfil?.concluiuInicio) return iniciarLeituraNativa();
@@ -115,6 +121,7 @@ export default function App() {
                   <Route path="/investir" element={<Investimentos />} />
                   <Route path="/feedback" element={<Feedback />} />
                   <Route path="/ajustes" element={<Ajustes />} />
+                  <Route path="/compra" element={<Compra />} />
                   <Route path="*" element={<Navigate to="/inicio" replace />} />
                 </>
               ) : (

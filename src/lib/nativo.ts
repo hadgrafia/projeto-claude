@@ -23,6 +23,7 @@ interface LeitorNotificacoes {
   pedirPermissaoAvisos(): Promise<{ avisosPermitidos: boolean }>;
   pendentes(): Promise<{ itens: Capturado[] }>;
   confirmar(opcoes: { ids: string[] }): Promise<void>;
+  notificar(opcoes: { titulo: string; texto: string }): Promise<void>;
 }
 
 export const ehAppAndroid = () => Capacitor.getPlatform() === 'android';
@@ -36,6 +37,7 @@ export async function sincronizar() {
   const existentes = new Map((await db.movimentos.where('chave').anyOf(chaves).toArray()).map((m) => [m.chave, m]));
   const novos = [];
   const resolvidos: string[] = [];
+  const aviso = (await db.perfil.get('eu'))?.limiteAvisoCompra ?? 100;
   for (const i of itens) {
     const local = i.local?.trim() || undefined;
     const ja = existentes.get(`n-${i.id}`);
@@ -55,6 +57,7 @@ export async function sincronizar() {
       descricao: local ?? (i.tipo === 'entrada' ? 'Entrada' : 'Gasto'),
       local,
       localPendente: !local,
+      detalhePendente: i.tipo === 'saida' && i.valor >= aviso,
       avisadoPor: i.app,
       categoria: categorizar(local ?? '', i.tipo),
       origem: 'notificacao' as const,

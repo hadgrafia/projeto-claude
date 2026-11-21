@@ -83,6 +83,13 @@ public class LeitorNotificacoesPlugin extends Plugin {
         call.resolve(r);
     }
 
+    /** Aviso do próprio app (ex.: limite do cartão quase no fim, resumo do mês). */
+    @PluginMethod
+    public void notificar(PluginCall call) {
+        Avisos.avisoGeral(getContext(), call.getString("titulo", "Meus Planos"), call.getString("texto", ""));
+        call.resolve();
+    }
+
     /** O app já guardou estes itens com o lugar: apaga daqui e fecha a pergunta, se ainda estiver aberta. */
     @PluginMethod
     public void confirmar(PluginCall call) {

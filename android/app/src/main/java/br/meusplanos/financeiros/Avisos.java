@@ -84,6 +84,29 @@ final class Avisos {
         }
     }
 
+    static final String CANAL_GERAL = "avisos";
+
+    static void avisoGeral(Context c, String titulo, String texto) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel canal = new NotificationChannel(CANAL_GERAL, "Avisos do app", NotificationManager.IMPORTANCE_DEFAULT);
+            canal.setDescription("Limite do cartão, parcelas e resumo do mês.");
+            c.getSystemService(NotificationManager.class).createNotificationChannel(canal);
+        }
+        Intent abrir = new Intent(c, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent aoTocar = PendingIntent.getActivity(c, 1, abrir, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        NotificationCompat.Builder b = new NotificationCompat.Builder(c, CANAL_GERAL)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(titulo)
+            .setContentText(texto)
+            .setStyle(new NotificationCompat.BigTextStyle().bigText(texto))
+            .setContentIntent(aoTocar)
+            .setAutoCancel(true);
+        try {
+            NotificationManagerCompat.from(c).notify((titulo + texto).hashCode(), b.build());
+        } catch (SecurityException ignored) {
+        }
+    }
+
     static void cancelar(Context c, String id) {
         NotificationManagerCompat.from(c).cancel(idNotificacao(id));
     }

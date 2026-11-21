@@ -1,12 +1,14 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
-import { db, type Movimento, type TipoMov } from '../db';
+import { db, type Importancia, type Movimento, type TipoMov } from '../db';
+import { inicioParcelas } from '../lib/compras';
+import { conferirLimiteCartao } from '../lib/avisos';
 import { categorizar } from '../lib/categorias';
 import { hora, reais } from '../lib/format';
 import { lugarInformadoNoApp } from '../lib/nativo';
 import { Icone } from './Icone';
-import { Folha } from './Ui';
+import { CampoDinheiro, Folha } from './Ui';
 
 /** Lugares mais usados, para sugerir com um toque. */
 export function useLugaresRecentes(tipo: TipoMov = 'saida') {
@@ -52,12 +54,19 @@ export function CampoLugar({ tipo, valor, aoMudar, sugestoes, autoFoco }: { tipo
  * Aparece sozinha assim que o app abre ou recebe um gasto novo; um de cada vez.
  */
 export function PerguntaLocal() {
-  const pendentes = useLiveQuery(async () => (await db.movimentos.orderBy('data').reverse().toArray()).filter((m) => m.localPendente), []) ?? [];
+  const pendentes = useLiveQuery(async () => (await db.movimentos.orderBy('data').reverse().toArray()).filter((m) => m.localPendente || m.detalhePendente), []) ?? [];
   const [adiados, setAdiados] = useState<Set<number>>(new Set());
   const atual = pendentes.find((m) => !adiados.has(m.id!));
   return (
-    <Folha aberta={!!atual} aoFechar={() => atual && setAdiados(new Set(adiados).add(atual.id!))} titulo={atual?.tipo === 'entrada' ? 'De onde veio este dinheiro?' : 'Onde foi este gasto?'}>
-      {atual && <FormLocal key={atual.id} mov={atual} restantes={pendentes.length - 1} aoAdiar={() => setAdiados(new Set(adiados).add(atual.id!))} />}
+    <Folha
+      aberta={!!atual}
+      aoFechar={() => atual && setAdiados(new Set(adiados).add(atual.id!))}
+      titulo={atual?.localPendente ? (atual.tipo === 'entrada' ? 'De onde veio este dinheiro?' : 'Onde foi este gasto?') : 'Conte sobre esta compra'}
+    >
+      {atual?.localPendente && <FormLocal key={atual.id} mov={atual} restantes={pendentes.length - 1} aoAdiar={() => setAdiados(new Set(adiados).add(atual.id!))} />}
+      {atual && !atual.localPendente && atual.detalhePendente && (
+        <FormDetalheCompra key={`d${atual.id}`} mov={atual} aoAdiar={() => setAdiados(new Set(adiados).add(atual.id!))} />
+      )}
     </Folha>
   );
 }
@@ -94,6 +103,83 @@ function FormLocal({ mov, restantes, aoAdiar }: { mov: Movimento; restantes: num
         </button>
         <button type="button" className="botao secundario pequeno" onClick={aoAdiar}>Agora não</button>
       </form>
+    </>
+  );
+}
+
+/** Compra acima do valor de aviso: finalidade, importância e parcelamento (entra no controle de parcelas e do cartão). */
+function FormDetalheCompra({ mov, aoAdiar }: { mov: Movimento; aoAdiar: () => void }) {
+  const [descricao, setDescricao] = useState(mov.local ?? '');
+  const [importancia, setImportancia] = useState<Importancia>();
+  const [parcelas, setParcelas] = useState(1);
+  const [juros, setJuros] = useState<number>();
+  const [noCartao, setNoCartao] = useState(true);
+  const [total, setTotal] = useState<number | undefined>(mov.valor);
+  const ok = Boolean(descricao.trim() && importancia && total);
+
+  async function salvar() {
+    if (!ok) return;
+    const i = (juros ?? 0) / 100;
+    const valorParcela = parcelas > 1 ? (i > 0 ? (total! * i) / (1 - Math.pow(1 + i, -parcelas)) : total! / parcelas) : total!;
+    await db.transaction('rw', db.compras, db.movimentos, async () => {
+      await db.compras.add({
+        descricao: descricao.trim(),
+        importancia: importancia!,
+        valor: total!,
+        parcelas,
+        juros: juros ?? 0,
+        valorParcela,
+        noCartao,
+        inicio: inicioParcelas(noCartao, new Date(mov.data)),
+        movimentoChave: mov.chave,
+        criadaEm: new Date().toISOString(),
+      });
+      await db.movimentos.update(mov.id!, { detalhePendente: false });
+    });
+    if (noCartao) conferirLimiteCartao().catch(() => undefined);
+  }
+
+  return (
+    <>
+      <div className="cartao verde">
+        <span className="suave pequeno">{mov.local ?? 'Compra'} · {hora(mov.data)}</span>
+        <strong className="valor-grande" style={{ fontSize: 30 }}>{reais(mov.valor)}</strong>
+        <span className="suave pequeno">Compras acima do seu valor de aviso entram no controle de parcelas e do limite do cartão.</span>
+      </div>
+      <label className="campo">
+        O que foi comprado ou para quê?
+        <input value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Ex.: presente, conserto do carro" />
+      </label>
+      <div className="chips" role="radiogroup" aria-label="Importância">
+        {(['necessidade', 'util', 'desejo'] as Importancia[]).map((v) => (
+          <button key={v} type="button" role="radio" aria-checked={importancia === v} className="chip" onClick={() => setImportancia(v)} style={importancia === v ? { background: 'var(--verde)', color: 'var(--sobre-verde)' } : undefined}>
+            {v === 'necessidade' ? 'Necessidade' : v === 'util' ? 'Útil' : 'Desejo'}
+          </button>
+        ))}
+      </div>
+      <CampoDinheiro rotulo="Valor total da compra" valor={total} aoMudar={setTotal} dica="Se o aviso mostrou só o valor da parcela, corrija para o total." />
+      <div className="grade-2">
+        <label className="campo">
+          Parcelas
+          <select value={parcelas} onChange={(e) => setParcelas(Number(e.target.value))}>
+            <option value={1}>À vista</option>
+            {Array.from({ length: 23 }, (_, i) => i + 2).map((n) => <option key={n} value={n}>{n}x</option>)}
+          </select>
+        </label>
+        <label className="campo">
+          Juros ao mês
+          <div className="com-sufixo">
+            <input inputMode="decimal" value={juros ?? ''} onChange={(e) => setJuros(e.target.value ? Number(e.target.value.replace(',', '.')) : undefined)} placeholder="0 = sem juros" disabled={parcelas === 1} />
+            <span>%</span>
+          </div>
+        </label>
+      </div>
+      <div className="chips">
+        <button type="button" className="chip" aria-pressed={noCartao} onClick={() => setNoCartao(true)}>No cartão de crédito</button>
+        <button type="button" className="chip" aria-pressed={!noCartao} onClick={() => setNoCartao(false)}>Outra forma</button>
+      </div>
+      <button type="button" className="botao" disabled={!ok} onClick={salvar}><Icone nome="check" /> Salvar</button>
+      <button type="button" className="botao secundario pequeno" onClick={aoAdiar}>Agora não</button>
     </>
   );
 }

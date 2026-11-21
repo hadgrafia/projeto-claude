@@ -4,6 +4,9 @@ import { Icone, ICONE_PLANO } from '../components/Icone';
 import { Barra, Casa, Dinheiro, Entra, Folha } from '../components/Ui';
 import { EditarRenda } from '../components/EditarRenda';
 import { useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '../db';
+import { compromissoDoMes } from '../lib/compras';
 import { situacaoPlano, useDados, useSelic } from '../hooks';
 import { analisarMes } from '../lib/feedback';
 import { mesCurto, pct, reaisCurto } from '../lib/format';
@@ -22,6 +25,8 @@ export default function Inicio() {
   const sugestoes = analisarMes(movimentos, renda.mensal).filter((s) => s.status !== 'manter');
   const ganho = sugestoes.reduce((a, s) => a + s.ganhoMensal, 0);
   const [editandoRenda, setEditandoRenda] = useState(false);
+  const compras = useLiveQuery(() => db.compras.toArray(), []) ?? [];
+  const parcelasMes = compromissoDoMes(compras);
 
   return (
     <main className="tela">
@@ -104,6 +109,17 @@ export default function Inicio() {
             <Icone nome="lapis" tamanho={18} /> Ajustar renda
           </button>
         </section>
+      </Entra>
+
+      <Entra i={5}>
+        <Link to="/compra" className="cartao terracota cartao-link" style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <span className="circulo" style={{ background: 'rgba(255,255,255,0.2)', color: '#fff' }}><Icone nome="etiqueta" /></span>
+          <span className="cresce coluna" style={{ gap: 2 }}>
+            <strong>Vai fazer uma compra?</strong>
+            <span className="pequeno">Veja se vale agora e em quantas vezes parcelar{parcelasMes > 0 ? ` · parcelas este mês: ${reaisCurto(parcelasMes)}` : ''}</span>
+          </span>
+          <Icone nome="direita" />
+        </Link>
       </Entra>
 
       {sugestoes.length > 0 && (

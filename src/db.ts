@@ -24,6 +24,16 @@ export interface Perfil {
   tema: Tema;
   metodo: 'notificacoes' | 'extrato' | 'manual';
   concluiuInicio: boolean;
+  /** Compras a partir deste valor pedem finalidade e parcelamento (padrão R$ 100). */
+  limiteAvisoCompra?: number;
+  /** Cartão de crédito: limite total e quanto já está usado (informado pela pessoa). */
+  limiteCartao?: number;
+  limiteUsado?: number;
+  limiteUsadoEm?: string;
+  /** Contato para avisos do app. */
+  email?: string;
+  celular?: string;
+  avisos?: { celular: boolean; email: boolean };
   criadoEm: string;
 }
 
@@ -87,6 +97,8 @@ export interface Movimento {
   local?: string;
   /** true quando não foi possível descobrir o lugar: o app pergunta para a pessoa. */
   localPendente?: boolean;
+  /** true quando a compra passou do valor de aviso: o app pergunta a finalidade e o parcelamento. */
+  detalhePendente?: boolean;
   /** App ou banco que avisou (só o nome do app, nunca o texto da notificação). */
   avisadoPor?: string;
   categoria: string;
@@ -123,6 +135,25 @@ export interface Investimento {
   atualizadoEm: string;
 }
 
+export type Importancia = 'necessidade' | 'util' | 'desejo';
+
+/** Compra planejada ou registrada, com o parcelamento escolhido. */
+export interface Compra {
+  id?: number;
+  descricao: string;
+  importancia: Importancia;
+  valor: number;
+  parcelas: number;
+  /** Juros ao mês (%) — 0 quando sem juros. */
+  juros: number;
+  valorParcela: number;
+  noCartao: boolean;
+  /** Mês (AAAA-MM) da primeira parcela. */
+  inicio: string;
+  movimentoChave?: string;
+  criadaEm: string;
+}
+
 export interface Cache {
   chave: string;
   valor: unknown;
@@ -134,6 +165,7 @@ class BancoLocal extends Dexie {
   planos!: Table<Plano, number>;
   movimentos!: Table<Movimento, number>;
   investimentos!: Table<Investimento, number>;
+  compras!: Table<Compra, number>;
   cache!: Table<Cache, string>;
 
   constructor() {
@@ -172,6 +204,8 @@ class BancoLocal extends Dexie {
             delete p.rendaMeses;
           }),
       );
+    // v4: compras parceladas (conselheiro de compras e limite do cartão).
+    this.version(4).stores({ compras: '++id, inicio, movimentoChave' });
   }
 }
 
@@ -195,12 +229,14 @@ export async function exportarTudo() {
     planos: await db.planos.toArray(),
     movimentos: await db.movimentos.toArray(),
     investimentos: await db.investimentos.toArray(),
+    compras: await db.compras.toArray(),
   };
 }
 
 export async function importarTudo(dados: Awaited<ReturnType<typeof exportarTudo>>) {
-  await db.transaction('rw', [db.perfil, db.planos, db.movimentos, db.investimentos], async () => {
-    await Promise.all([db.perfil.clear(), db.planos.clear(), db.movimentos.clear(), db.investimentos.clear()]);
+  await db.transaction('rw', [db.perfil, db.planos, db.movimentos, db.investimentos, db.compras], async () => {
+    await Promise.all([db.perfil.clear(), db.planos.clear(), db.movimentos.clear(), db.investimentos.clear(), db.compras.clear()]);
+    await db.compras.bulkPut(dados.compras ?? []);
     await db.perfil.bulkPut(dados.perfil);
     await db.planos.bulkPut(dados.planos);
     await db.movimentos.bulkPut(dados.movimentos);

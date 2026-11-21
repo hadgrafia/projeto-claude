@@ -4,6 +4,7 @@ import { Icone } from '../components/Icone';
 import { Folha, Segmentado } from '../components/Ui';
 import { CriarSenha, TecladoPin } from '../components/Bloqueio';
 import { EditarRenda } from '../components/EditarRenda';
+import { AjustesCartao, AjustesContato } from '../components/AjustesExtras';
 import { ativarBiometria, biometriaDisponivel, cifrar, conferirPin, decifrar, definirTempo, lerBloqueio, removerBiometria, type ConfigBloqueio } from '../lib/bloqueio';
 import { db, exportarTudo, importarTudo, type Tema } from '../db';
 import { useDados } from '../hooks';
@@ -163,6 +164,9 @@ export default function Ajustes() {
         <h2 style={{ fontSize: 15, fontWeight: 800 }}>Renda mensal</h2>
         {perfil && <EditarRenda key={perfil.rendaAtualizadaEm} perfil={perfil} aoSalvar={() => aviso('Renda atualizada. Os planos foram recalculados.')} />}
       </section>
+
+      {perfil && <AjustesCartao key={`c${perfil.limiteUsadoEm}`} perfil={perfil} aoSalvar={aviso} />}
+      {perfil && <AjustesContato perfil={perfil} aoSalvar={aviso} />}
 
       <section className="cartao">
         <h2 style={{ fontSize: 15, fontWeight: 800 }}>Acesso</h2>
