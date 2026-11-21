@@ -85,6 +85,8 @@ export function montarContexto(d: {
       ? { limite: d.perfil.limiteCartao, disponivel: Math.round(limiteDisponivel(d.perfil.limiteCartao, d.perfil.limiteUsado, d.perfil.limiteUsadoEm, d.compras) ?? 0) }
       : undefined,
     parcelasNesteMes: Math.round(compromissoDoMes(d.compras, mes)),
+    comprasParceladas: d.compras.slice(-20).map((c) => ({ descricao: c.descricao, valor: c.valor, parcelas: c.parcelas, valorParcela: Math.round(c.valorParcela), inicio: c.inicio, noCartao: c.noCartao })),
+    valorParaAvisoDeCompra: d.perfil?.limiteAvisoCompra ?? 100,
   };
 }
 
@@ -169,7 +171,7 @@ export function impostoDoAno(movs: Movimento[], ano: string) {
 /* ---------- Conversa com a equipe ---------- */
 
 export interface Acao {
-  tipo: 'registrar' | 'avaliar_compra' | 'criar_plano' | 'relatorio' | 'resumo' | 'imposto';
+  tipo: 'registrar' | 'avaliar_compra' | 'criar_plano' | 'relatorio' | 'resumo' | 'imposto' | 'renda' | 'guardar' | 'porcentagem' | 'investimento' | 'cartao' | 'tela';
   valor?: number | null;
   local?: string | null;
   tipoMov?: string | null;
@@ -183,6 +185,14 @@ export interface Acao {
   nome?: string | null;
   mes?: string | null;
   ano?: string | null;
+  percentual?: number | null;
+  tipoInvestimento?: string | null;
+  saldo?: number | null;
+  aporteMensal?: number | null;
+  plano?: string | null;
+  limite?: number | null;
+  usado?: number | null;
+  tela?: string | null;
 }
 export interface RespostaAgente {
   agente: IdAgente;
@@ -243,3 +253,23 @@ export function gastoDoTexto(msg: string): Acao | null {
   const local = bruto ? bruto.charAt(0).toUpperCase() + bruto.slice(1, 60) : '';
   return { tipo: 'registrar', valor, local: local || undefined, tipoMov, categoria: null };
 }
+
+/** Encontra o plano pelo nome dito na conversa ("casa nova" → "Casa Nova"). */
+export function acharPlano<T extends { nome: string }>(planos: T[], nome?: string | null) {
+  if (!nome) return undefined;
+  const n = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const alvo = n(nome);
+  return planos.find((p) => n(p.nome) === alvo) ?? planos.find((p) => n(p.nome).includes(alvo) || alvo.includes(n(p.nome)));
+}
+
+export const TELAS: Record<string, { rota: string; nome: string }> = {
+  inicio: { rota: '/inicio', nome: 'Início' },
+  gastos: { rota: '/gastos', nome: 'Gastos' },
+  enviar_extrato: { rota: '/importar', nome: 'Enviar extrato' },
+  planos: { rota: '/planos', nome: 'Planos' },
+  novo_plano: { rota: '/planos/novo', nome: 'Novo plano' },
+  investir: { rota: '/investir', nome: 'Investir' },
+  conselhos: { rota: '/feedback', nome: 'Conselhos' },
+  antes_de_comprar: { rota: '/compra', nome: 'Antes de comprar' },
+  ajustes: { rota: '/ajustes', nome: 'Ajustes' },
+};

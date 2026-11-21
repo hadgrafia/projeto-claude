@@ -4,8 +4,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Avatar, PainelAgentes, useEquipe } from '../components/Equipe';
 import { Icone } from '../components/Icone';
 import { Markdown } from '../components/Ui';
-import { db, type Importancia, type TipoMov } from '../db';
-import { AGENTES, baixar, gastoDoTexto, impostoDoAno, perguntar, planilhaDoMes, prepararAnexo, resumoDoMes, type Acao, type IdAgente } from '../lib/agentes';
+import { db, type Importancia, type TipoInvestimento, type TipoMov } from '../db';
+import { acharPlano, AGENTES, baixar, gastoDoTexto, TELAS, impostoDoAno, perguntar, planilhaDoMes, prepararAnexo, resumoDoMes, type Acao, type IdAgente } from '../lib/agentes';
 import { selicVista } from '../lib/agentesAvisos';
 import { categorizar, NOMES_CATEGORIAS } from '../lib/categorias';
 import { compromissoDoMes, limiteDisponivel, recomendar } from '../lib/compras';
@@ -149,17 +149,6 @@ export default function Agentes() {
       {conversa.length === 0 && (
         <>
           <PainelAgentes />
-          <section className="cartao">
-            <strong>Experimente</strong>
-            <div className="chips">
-              {(Object.keys(AGENTES) as IdAgente[]).map((id) => (
-                <button key={id} type="button" className="chip" onClick={() => enviar(AGENTES[id].exemplo)} disabled={!online}>
-                  {AGENTES[id].exemplo}
-                </button>
-              ))}
-            </div>
-            <span className="mini suave">Também dá para mandar áudio, foto ou PDF do comprovante.</span>
-          </section>
         </>
       )}
 
@@ -228,7 +217,7 @@ export default function Agentes() {
           }}
           rows={1}
           maxLength={2000}
-          placeholder={online ? 'Escreva para a equipe…' : 'Sem internet'}
+          placeholder={online ? 'Escreva, grave um áudio ou envie um comprovante…' : 'Sem internet'}
           aria-label="Mensagem para os agentes"
         />
         {texto.trim() ? (
@@ -338,6 +327,105 @@ function CartaoAcao({ acao, feita, aoFazer, equipe }: { acao: Acao; feita?: bool
           </button>
         )}
         {msg && <span className="mini">{msg}</span>}
+      </div>
+    );
+  }
+
+  const feitoOu = (botao: React.ReactNode) => (feita ? <span className="mini">✓ Feito</span> : botao);
+
+  if (acao.tipo === 'renda' && acao.valor) {
+    return (
+      <div className="acao">
+        <span className="pequeno">Renda mensal: <strong>{reais(acao.valor)}</strong> (hoje: {reais(equipe.renda.mensal)})</span>
+        {feitoOu(
+          <button type="button" className="botao pequeno" onClick={async () => { await db.perfil.update('eu', { rendaMensal: acao.valor!, rendaAtualizadaEm: new Date().toISOString() }); aoFazer(); }}>
+            Atualizar renda
+          </button>,
+        )}
+      </div>
+    );
+  }
+
+  if ((acao.tipo === 'guardar' || acao.tipo === 'porcentagem') && acao.nome) {
+    const p = acharPlano(equipe.planos, acao.nome);
+    if (!p) return <div className="acao"><span className="mini">Não encontrei o plano “{acao.nome}”. Confira o nome em Planos.</span></div>;
+    if (acao.tipo === 'guardar' && acao.valor)
+      return (
+        <div className="acao">
+          <span className="pequeno">Somar <strong>{reais(acao.valor)}</strong> ao plano <strong>{p.nome}</strong> (hoje {reais(p.guardado)} fora dos investimentos)</span>
+          {feitoOu(<button type="button" className="botao pequeno" onClick={async () => { await db.planos.update(p.id!, { guardado: p.guardado + acao.valor! }); aoFazer(); }}>Somar ao plano</button>)}
+        </div>
+      );
+    const pctNovo = Math.max(0, Math.min(100, Math.round(acao.percentual ?? 0)));
+    const soma = equipe.planos.reduce((a, x) => a + (x.id === p.id ? pctNovo : x.percentual), 0);
+    return (
+      <div className="acao">
+        <span className="pequeno"><strong>{p.nome}</strong>: de {p.percentual}% para <strong>{pctNovo}%</strong> do valor livre ({reais((equipe.livre * pctNovo) / 100)}/mês)</span>
+        {soma > 100 && <span className="mini" style={{ color: 'var(--terracota-texto)' }}>Com isso, os planos somam {soma}% do valor livre (mais de 100%).</span>}
+        {feitoOu(<button type="button" className="botao pequeno" onClick={async () => { await db.planos.update(p.id!, { percentual: pctNovo }); aoFazer(); }}>Mudar porcentagem</button>)}
+      </div>
+    );
+  }
+
+  if (acao.tipo === 'investimento' && acao.nome) {
+    const tipos: TipoInvestimento[] = ['cofrinho', 'cdb', 'tesouro-selic', 'tesouro-ipca', 'tesouro-prefixado', 'lci-lca', 'poupanca', 'fundo', 'acoes-etf', 'cripto', 'outro'];
+    const tipo = tipos.includes(acao.tipoInvestimento as TipoInvestimento) ? (acao.tipoInvestimento as TipoInvestimento) : 'outro';
+    const existente = acharPlano(equipe.investimentos, acao.nome);
+    const plano = acharPlano(equipe.planos, acao.plano);
+    return (
+      <div className="acao">
+        <span className="pequeno">
+          {existente ? 'Atualizar' : 'Novo'} investimento <strong>{existente?.nome ?? acao.nome}</strong>
+          {acao.saldo !== undefined && acao.saldo !== null ? <> · saldo {reais(acao.saldo)}</> : ''}
+          {acao.aporteMensal ? <> · {reais(acao.aporteMensal)}/mês</> : ''}
+          {plano ? <> · plano {plano.nome}</> : ''}
+        </span>
+        {feitoOu(
+          <button
+            type="button"
+            className="botao pequeno"
+            onClick={async () => {
+              const agora = new Date().toISOString();
+              if (existente) await db.investimentos.update(existente.id!, { ...(acao.saldo != null ? { saldo: acao.saldo } : {}), ...(acao.aporteMensal != null ? { aporte: acao.aporteMensal, frequencia: 'mensal' as const } : {}), ...(plano ? { planoId: plano.id } : {}), atualizadoEm: agora });
+              else await db.investimentos.add({ nome: acao.nome!, tipo, instituicao: '', saldo: acao.saldo ?? 0, aporte: acao.aporteMensal ?? 0, frequencia: 'mensal', planoId: plano?.id, atualizadoEm: agora });
+              aoFazer();
+            }}
+          >
+            {existente ? 'Atualizar investimento' : 'Adicionar investimento'}
+          </button>,
+        )}
+      </div>
+    );
+  }
+
+  if (acao.tipo === 'cartao' && (acao.limite || acao.usado != null)) {
+    return (
+      <div className="acao">
+        <span className="pequeno">
+          Cartão: {acao.limite ? <>limite <strong>{reais(acao.limite)}</strong></> : ''}
+          {acao.limite && acao.usado != null ? ' · ' : ''}
+          {acao.usado != null ? <>usado <strong>{reais(acao.usado)}</strong></> : ''}
+        </span>
+        {feitoOu(
+          <button
+            type="button"
+            className="botao pequeno"
+            onClick={async () => {
+              await db.perfil.update('eu', { ...(acao.limite ? { limiteCartao: acao.limite } : {}), ...(acao.usado != null ? { limiteUsado: acao.usado, limiteUsadoEm: new Date().toISOString() } : {}) });
+              aoFazer();
+            }}
+          >
+            Salvar no app
+          </button>,
+        )}
+      </div>
+    );
+  }
+
+  if (acao.tipo === 'tela' && acao.tela && TELAS[acao.tela]) {
+    return (
+      <div className="acao">
+        <button type="button" className="botao secundario pequeno" onClick={() => navegar(TELAS[acao.tela!].rota)}>Abrir {TELAS[acao.tela].nome}</button>
       </div>
     );
   }

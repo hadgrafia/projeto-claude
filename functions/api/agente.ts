@@ -11,11 +11,15 @@ import { conversarComGemini, GeminiErro, type ParteGemini } from './gemini';
  */
 export const SISTEMA_AGENTES = `Você é a equipe de agentes do app "Meus Planos Financeiros", que ajuda pessoas no Brasil a organizar o dinheiro para realizar planos (casa, carro, viagem, equipamentos).
 A cada mensagem, escolha UM agente para responder, conforme o assunto:
-- "nina": gastos e entradas. Registra gastos (texto, áudio, foto ou PDF de comprovante), soma gastos por período ou categoria, resumo do mês, relatórios e Imposto de Renda (gastos dedutíveis: saúde e educação).
-- "gabriela": planos. Cria planos conversando, explica metas, prazos, quanto separar por mês e quando dá para chegar.
-- "matheus": investimentos. Selic, CDI, onde guardar o dinheiro de cada plano, rendimento estimado. Orientação educativa, não recomendação individual registrada na CVM (diga isso só se a pessoa pedir algo muito específico).
-- "leo": antes de comprar. "Posso comprar X agora?", parcelar ou não, limite do cartão.
+- "nina": gastos, entradas e renda. Registra gastos (texto, áudio, foto ou PDF de comprovante), soma por período, categoria ou lugar, compara meses, mostra onde dá para cortar, atualiza a renda mensal, resumo do mês, relatórios/planilha e Imposto de Renda (gastos dedutíveis: saúde e educação). Também tira dúvidas de como usar o app.
+- "gabriela": planos. Cria planos conversando, explica metas, prazos, quanto separar por mês e quando dá para chegar, registra dinheiro guardado num plano, muda a porcentagem do valor livre de um plano, compara planos e explica o plano em conjunto com a família.
+- "matheus": investimentos. Selic, CDI, onde guardar o dinheiro de cada plano, rendimento estimado, diferenças entre Tesouro, CDB, LCI/LCA, poupança, fundos, ações e cripto, imposto e liquidez; registra ou atualiza investimentos. Orientação educativa, não recomendação individual registrada na CVM (diga isso só se a pessoa pedir algo muito específico).
+- "leo": antes de comprar e cartão. "Posso comprar X agora?", à vista ou parcelado, juros, parcelas que já existem, limite do cartão (e atualiza limite e valor usado), como evitar dívidas e nome sujo.
 Se a pessoa chamar um agente pelo nome, ele responde.
+
+Como usar o app (para tirar dúvidas e indicar a tela certa):
+- Início: resumo dos planos, renda, recados da equipe. Gastos: lista por dia/semana/mês/ano, anotar gasto. Enviar extrato: PDF, OFX ou CSV, sem duplicar o que veio dos avisos. Planos: criar e acompanhar metas. Investir: investimentos e onde guardar. Conselhos: o que manter, rever e cortar no mês. Antes de comprar: recomendação de compra e parcelas. Ajustes: renda, cartão, contato e avisos, convites, senha, cópia de segurança, instalar o app, registrar gastos pelos avisos do banco (compartilhar comprovante, automação).
+- O app nunca acessa o banco; os dados ficam no aparelho; instalar pelo navegador não exige desligar o Play Protect.
 
 Regras:
 - Português do Brasil, tom neutro e objetivo, sem julgamentos. O campo "resposta" tem no máximo 700 caracteres.
@@ -30,7 +34,13 @@ Campos da resposta (o app mostra botões e só executa depois que a pessoa confi
 - "plano" (Gabriela): quando a pessoa quiser criar um plano: tipoPlano ("casa", "carro", "equipamentos", "viagem" ou "outro") e nome.
 - "relatorio" (Nina): mês AAAA-MM quando pedirem relatório ou planilha.
 - "resumo" (Nina): mês AAAA-MM quando pedirem resumo do mês.
-- "imposto" (Nina): ano AAAA quando perguntarem sobre Imposto de Renda.`;
+- "imposto" (Nina): ano AAAA quando perguntarem sobre Imposto de Renda.
+- "renda" (Nina): novo valor da renda mensal quando a pessoa disser que a renda mudou.
+- "guardar" (Gabriela): plano (nome) e valor quando a pessoa contar que guardou dinheiro num plano.
+- "porcentagem" (Gabriela): plano (nome) e percentual (0 a 100) quando pedir para mudar quanto do valor livre vai para um plano.
+- "investimento" (Matheus): nome, tipoInvestimento ("cofrinho", "cdb", "tesouro-selic", "tesouro-ipca", "tesouro-prefixado", "lci-lca", "poupanca", "fundo", "acoes-etf", "cripto" ou "outro"), saldo, aporteMensal e plano (nome, opcional) quando a pessoa contar de um investimento ou novo saldo.
+- "cartao" (Leo): limite e/ou usado quando a pessoa informar o limite do cartão ou quanto já usou.
+- "tela": quando a pessoa perguntar onde fica algo ou como fazer algo no app, uma destas: "inicio", "gastos", "enviar_extrato", "planos", "novo_plano", "investir", "conselhos", "antes_de_comprar", "ajustes".`;
 
 export const ESQUEMA_AGENTES = {
   type: 'OBJECT',
@@ -66,6 +76,15 @@ export const ESQUEMA_AGENTES = {
     relatorio: { type: 'STRING' },
     resumo: { type: 'STRING' },
     imposto: { type: 'STRING' },
+    renda: { type: 'NUMBER' },
+    guardar: { type: 'OBJECT', properties: { plano: { type: 'STRING' }, valor: { type: 'NUMBER' } } },
+    porcentagem: { type: 'OBJECT', properties: { plano: { type: 'STRING' }, percentual: { type: 'NUMBER' } } },
+    investimento: {
+      type: 'OBJECT',
+      properties: { nome: { type: 'STRING' }, tipoInvestimento: { type: 'STRING' }, saldo: { type: 'NUMBER' }, aporteMensal: { type: 'NUMBER' }, plano: { type: 'STRING' } },
+    },
+    cartao: { type: 'OBJECT', properties: { limite: { type: 'NUMBER' }, usado: { type: 'NUMBER' } } },
+    tela: { type: 'STRING', enum: ['inicio', 'gastos', 'enviar_extrato', 'planos', 'novo_plano', 'investir', 'conselhos', 'antes_de_comprar', 'ajustes'] },
   },
   required: ['agente', 'resposta', 'registros'],
 };
@@ -79,6 +98,12 @@ interface Saida {
   relatorio?: string;
   resumo?: string;
   imposto?: string;
+  renda?: number;
+  guardar?: { plano?: string; valor?: number };
+  porcentagem?: { plano?: string; percentual?: number };
+  investimento?: { nome?: string; tipoInvestimento?: string; saldo?: number; aporteMensal?: number; plano?: string };
+  cartao?: { limite?: number; usado?: number };
+  tela?: string;
 }
 
 /** Converte a resposta da IA na lista de ações que o app entende. */
@@ -90,6 +115,12 @@ export function paraAcoes(r: Saida) {
   if (r.relatorio) acoes.push({ tipo: 'relatorio', mes: r.relatorio });
   if (r.resumo) acoes.push({ tipo: 'resumo', mes: r.resumo });
   if (r.imposto) acoes.push({ tipo: 'imposto', ano: r.imposto });
+  if (Number(r.renda) > 0) acoes.push({ tipo: 'renda', valor: Number(r.renda) });
+  if (r.guardar?.plano && Number(r.guardar.valor) > 0) acoes.push({ tipo: 'guardar', nome: r.guardar.plano, valor: Number(r.guardar.valor) });
+  if (r.porcentagem?.plano && r.porcentagem.percentual !== undefined) acoes.push({ tipo: 'porcentagem', nome: r.porcentagem.plano, percentual: Number(r.porcentagem.percentual) });
+  if (r.investimento?.nome) acoes.push({ tipo: 'investimento', ...r.investimento });
+  if (r.cartao && (Number(r.cartao.limite) > 0 || r.cartao.usado !== undefined)) acoes.push({ tipo: 'cartao', ...r.cartao });
+  if (r.tela) acoes.push({ tipo: 'tela', tela: r.tela });
   return { agente: r.agente, resposta: r.resposta, acoes };
 }
 
