@@ -30,7 +30,7 @@ export default function Feedback() {
   return (
     <main className="tela">
       <div className="coluna" style={{ gap: 2 }}>
-        <h1 className="titulo">Feedback de {mesLongo(mesAtual)}</h1>
+        <h1 className="titulo">Conselhos de {mesLongo(mesAtual)}</h1>
         <span className="subtitulo">{movimentos.filter((m) => m.data.startsWith(mesAtual)).length} lançamentos analisados neste mês</span>
       </div>
 

@@ -3,8 +3,8 @@
 //  1. confere o token
 //  2. banco D1 + tabelas
 //  3. projeto do Cloudflare Pages
-//  4. Cloudflare Access: código no e-mail (confirmação do cadastro), grupo de convidados, política
-// Saídas (para os próximos passos do workflow): d1_id, grupo_id, access_equipe, access_aud.
+//  4. Cloudflare Access: só protege as versões de teste (o app usa a conta com convite pessoal)
+// Saídas (para os próximos passos do workflow): d1_id, grupo_id.
 import { appendFileSync } from 'node:fs';
 import { readFileSync } from 'node:fs';
 
@@ -99,37 +99,24 @@ if (!politica)
   );
 
 const apps = exigir(await cf(`/accounts/${CONTA}/access/apps`), 'Listar aplicativos do Access');
-// O app e a API são protegidos pela CONTA do app (e-mail + senha, ver functions/auth.ts).
-// O Access fica só na confirmação do e-mail do cadastro (/conta/confirmar): ele envia o código
-// e só deixa passar e-mails do grupo de convidados. As versões de teste continuam fechadas.
+// O app e a API são protegidos pela CONTA do app (e-mail + senha, ver functions/auth.ts),
+// e a conta só é criada por convite pessoal. O Access fica só nas versões de teste
+// (*.meus-planos-financeiros.pages.dev), que ninguém de fora precisa abrir.
 let app = apps.find((a) => a.name === 'Meus Planos Financeiros' || a.domain === DOMINIO);
 const configApp = {
   name: 'Meus Planos Financeiros',
   type: 'self_hosted',
-  domain: `${DOMINIO}/conta/confirmar`,
-  self_hosted_domains: [`${DOMINIO}/conta/confirmar`, `*.${DOMINIO}`],
-  session_duration: '15m',
+  domain: `*.${DOMINIO}`,
+  self_hosted_domains: [`*.${DOMINIO}`],
+  session_duration: '720h',
   allowed_idps: [otp.id],
   auto_redirect_to_identity: true,
   app_launcher_visible: false,
   policies: [{ id: politica.id, precedence: 1 }],
 };
-if (!app) app = exigir(await cf(`/accounts/${CONTA}/access/apps`, { method: 'POST', body: JSON.stringify(configApp) }), 'Proteger a confirmação de e-mail com o Access');
-else app = exigir(await cf(`/accounts/${CONTA}/access/apps/${app.id}`, { method: 'PUT', body: JSON.stringify(configApp) }), 'Atualizar a confirmação de e-mail');
-saida('access_equipe', org.result.auth_domain);
-saida('access_aud', app.aud);
-console.log(`✅ Access: só e-mails do grupo "${NOME_GRUPO}" conseguem confirmar o cadastro (https://${DOMINIO}/entrar/)`);
-
-// Tela do código por e-mail com as cores do app (se o token tiver permissão; senão, segue normal).
-const design = {
-  background_color: '#1C1E1A',
-  text_color: '#F0EBE1',
-  logo_path: `https://${DOMINIO}/apple-touch-icon.png`,
-  header_text: 'Meus Planos Financeiros · confirme seu e-mail',
-  footer_text: 'Digite o seu e-mail e depois o código de 6 números que chegar na caixa de entrada.',
-};
-const visual = await cf(`/accounts/${CONTA}/access/organizations`, { method: 'PUT', body: JSON.stringify({ ...org.result, login_design: design }) });
-console.log(visual.ok ? '✅ Tela do código com as cores do app' : `ℹ️  Tela do código com visual padrão (${JSON.stringify(visual.errors ?? visual.status).slice(0, 160)})`);
+if (!app) app = exigir(await cf(`/accounts/${CONTA}/access/apps`, { method: 'POST', body: JSON.stringify(configApp) }), 'Proteger as versões de teste');
+else app = exigir(await cf(`/accounts/${CONTA}/access/apps/${app.id}`, { method: 'PUT', body: JSON.stringify(configApp) }), 'Atualizar a proteção das versões de teste');
+console.log(`✅ App e API: só com a conta de convidado (https://${DOMINIO}/entrar/). Versões de teste fechadas.`);
 
 // Páginas públicas: política de privacidade (exigida pela Play Store) e verificação automática
 // (que tem o próprio código secreto). Todo o resto continua exigindo login.
@@ -149,11 +136,8 @@ for (const caminho of ['api/saude', 'api/pedido-convite']) {
 }
 console.log(`✅ Página de apresentação pública: https://${DOMINIO}/ (com pedido de convite)`);
 
-// Quantos e-mails estão liberados (sem mostrar quais).
-const g = exigir(await cf(`/accounts/${CONTA}/access/groups/${grupo.id}`), 'Ler grupo de convidados');
-console.log(`✅ E-mails liberados no grupo: ${g.include.length}`);
 
 // Segredos do app na Cloudflare (só os nomes, nunca os valores).
 const proj = exigir(await cf(`/accounts/${CONTA}/pages/projects/${PROJETO}`), 'Ler projeto Pages');
 const vars = Object.keys(proj.deployment_configs?.production?.env_vars ?? {});
-for (const nome of ['ADMIN_EMAIL', 'GCP_SA_KEY', 'CF_ACCESS_TOKEN']) console.log(`${vars.includes(nome) ? '✅' : '⚠️ '} Segredo ${nome}: ${vars.includes(nome) ? 'configurado' : 'NÃO configurado'}`);
+for (const nome of ['ADMIN_EMAIL', 'GCP_SA_KEY']) console.log(`${vars.includes(nome) ? '✅' : '⚠️ '} Segredo ${nome}: ${vars.includes(nome) ? 'configurado' : 'NÃO configurado'}`);

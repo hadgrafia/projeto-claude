@@ -168,7 +168,7 @@ export default function BoasVindas() {
         <div className={`cartao ${gasto >= renda ? 'areia' : 'verde'}`}>
           <span className="suave pequeno">Sobra por mês para os seus planos</span>
           <strong className="valor-grande" style={{ fontSize: 28 }}>{reais(Math.max(0, renda - gasto))}</strong>
-          {gasto >= renda && <span className="pequeno">Seus gastos estão iguais ou maiores que a renda. O Feedback vai mostrar onde dá para economizar.</span>}
+          {gasto >= renda && <span className="pequeno">Seus gastos estão iguais ou maiores que a renda. A aba Conselhos vai mostrar onde dá para economizar.</span>}
         </div>
       ) : null}
     </>,

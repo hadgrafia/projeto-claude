@@ -9,21 +9,28 @@ interface Pedido {
   mensagem?: string;
   criado_em: number;
 }
+interface Pronto {
+  nome: string;
+  email: string;
+  link: string;
+  tipo: 'conta' | 'senha';
+}
 
-const ENDERECO = 'https://meus-planos-financeiros.pages.dev';
-
-/** Texto do convite para enviar pelo e-mail da própria administradora (sem custo, sem domínio). */
-export function linkConvite(nome: string, email: string) {
-  const assunto = 'Seu convite para o Meus Planos Financeiros';
-  const corpo = `Oi, ${nome.split(' ')[0]}!
+/** Texto do convite (ou do link de senha nova) para enviar pelo e-mail da própria administradora. */
+export function emailConvite(nome: string, email: string, link: string, tipo: 'conta' | 'senha' = 'conta') {
+  const primeiro = nome.split(' ')[0] || nome;
+  const assunto = tipo === 'conta' ? 'Seu convite para o Meus Planos Financeiros' : 'Link para criar uma senha nova no Meus Planos';
+  const corpo =
+    tipo === 'conta'
+      ? `Oi, ${primeiro}!
 
 Seu acesso ao Meus Planos Financeiros foi liberado. É um app gratuito e privado para planejar seus sonhos (casa nova, carro, viagem), entender seus gastos e saber quanto guardar por mês.
 
 Como entrar:
-1. Abra ${ENDERECO}/entrar pelo celular ou computador e toque em "Criar conta".
-2. Use este e-mail (${email}) e escolha uma senha.
-3. Para confirmar que o e-mail é seu, digite o código de 6 números que chegar na sua caixa de entrada.
-4. Pronto: responda às perguntas iniciais do app. Das próximas vezes, é só entrar com e-mail e senha.
+1. Abra este link pelo celular ou computador (ele é só seu, vale por 14 dias e funciona uma única vez):
+${link}
+2. Escolha uma senha para a sua conta.
+3. Pronto: responda às perguntas iniciais do app. Das próximas vezes, é só entrar com o seu e-mail (${email}) e a senha.
 
 Para ter o ícone na tela inicial:
 - Android (Chrome): menu ⋮ > Instalar app.
@@ -31,17 +38,32 @@ Para ter o ícone na tela inicial:
 
 Seus dados ficam só no seu celular e o app nunca acessa o seu banco.
 
-Até logo!`;
+Até logo!`
+      : `Oi, ${primeiro}!
+
+Aqui está o link para criar uma senha nova no Meus Planos Financeiros. Ele é só seu, vale por 24 horas e funciona uma única vez:
+${link}
+
+Se você não pediu, é só ignorar este e-mail: sua senha atual continua valendo.`;
   return `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
 }
 
-/** Só aparece para a administradora: pedidos feitos pela página de apresentação. */
+async function postar<T>(url: string, corpo: unknown) {
+  const r = await fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
+  const c = (await r.json().catch(() => ({}))) as T & { erro?: string };
+  if (!r.ok) throw new Error(c.erro ?? 'Não foi possível agora.');
+  return c;
+}
+
+/** Só aparece para a administradora: convidar pessoas, aprovar pedidos e gerar links de senha nova. */
 export function PedidosConvite() {
   const online = useOnline();
   const [admin, setAdmin] = useState(false);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
-  const [automatico, setAutomatico] = useState(false);
-  const [aprovados, setAprovados] = useState<Pedido[]>([]);
+  const [prontos, setProntos] = useState<Pronto[]>([]);
+  const [nome, setNome] = useState('');
+  const [email, setEmail] = useState('');
+  const [emailSenha, setEmailSenha] = useState('');
   const [msg, setMsg] = useState('');
 
   async function carregar() {
@@ -49,9 +71,8 @@ export function PedidosConvite() {
       const eu = (await (await fetch('/api/eu', { credentials: 'same-origin' })).json()) as { admin: boolean };
       setAdmin(eu.admin);
       if (!eu.admin) return;
-      const r = (await (await fetch('/api/pedidos', { credentials: 'same-origin' })).json()) as { pedidos: Pedido[]; convitesAutomaticos: boolean };
+      const r = (await (await fetch('/api/pedidos', { credentials: 'same-origin' })).json()) as { pedidos: Pedido[] };
       setPedidos(r.pedidos);
-      setAutomatico(r.convitesAutomaticos);
     } catch {
       setAdmin(false);
     }
@@ -62,19 +83,51 @@ export function PedidosConvite() {
 
   async function decidir(p: Pedido, acao: 'aprovar' | 'recusar') {
     setMsg('');
-    const r = await fetch(`/api/pedidos/${p.id}`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ acao }) });
-    const c = (await r.json().catch(() => ({}))) as { erro?: string };
-    if (!r.ok) return setMsg(c.erro ?? 'Não foi possível agora.');
-    if (acao === 'aprovar') setAprovados((a) => [...a, p]);
-    setPedidos((l) => l.filter((x) => x.id !== p.id));
+    try {
+      const c = await postar<{ link?: string }>(`/api/pedidos/${p.id}`, { acao });
+      if (acao === 'aprovar' && c.link) setProntos((a) => [...a, { nome: p.nome, email: p.email, link: c.link!, tipo: 'conta' }]);
+      setPedidos((l) => l.filter((x) => x.id !== p.id));
+    } catch (e) {
+      setMsg((e as Error).message);
+    }
+  }
+
+  async function convidar(tipo: 'conta' | 'senha') {
+    setMsg('');
+    const alvo = (tipo === 'conta' ? email : emailSenha).trim().toLowerCase();
+    try {
+      const c = await postar<{ link?: string; jaTemConta?: boolean }>('/api/acesso/convidar', { email: alvo, tipo });
+      if (c.jaTemConta) return setMsg('Este e-mail já tem conta. Se a pessoa esqueceu a senha, gere um link de senha nova abaixo.');
+      setProntos((a) => [...a, { nome: tipo === 'conta' ? nome.trim() || alvo.split('@')[0] : alvo.split('@')[0], email: alvo, link: c.link!, tipo }]);
+      setNome('');
+      setEmail('');
+      setEmailSenha('');
+    } catch (e) {
+      setMsg((e as Error).message);
+    }
   }
 
   if (!admin) return null;
   return (
     <section className="cartao">
-      <h2 style={{ fontSize: 15, fontWeight: 800 }}>Pedidos de convite ({pedidos.length})</h2>
-      <p className="mini suave">Pedidos feitos pela página de apresentação. Só você vê esta seção.</p>
-      {!automatico && <p className="cartao areia pequeno">Para aprovar por aqui, falta o segredo CLOUDFLARE_ACCESS_TOKEN no GitHub. Até lá, mande os e-mails ao Claude para liberar.</p>}
+      <h2 style={{ fontSize: 15, fontWeight: 800 }}>Convites</h2>
+      <p className="mini suave">Só você vê esta seção. Cada convite é um link pessoal: vale por 14 dias, funciona uma única vez e só cria conta para aquele e-mail.</p>
+
+      <div className="coluna" style={{ gap: 10 }}>
+        <label className="campo">
+          Nome
+          <input value={nome} onChange={(e) => setNome(e.target.value)} autoComplete="off" maxLength={80} placeholder="Ex.: Ana" />
+        </label>
+        <label className="campo">
+          E-mail
+          <input type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="off" placeholder="nome@exemplo.com" />
+        </label>
+        <button type="button" className="botao pequeno" disabled={!online || !email.includes('@')} onClick={() => convidar('conta')}>
+          <Icone nome="mais" /> Criar convite
+        </button>
+      </div>
+
+      <h3 style={{ fontSize: 14, fontWeight: 800, marginTop: 8 }}>Pedidos feitos pelo site ({pedidos.length})</h3>
       {pedidos.length === 0 && <p className="pequeno suave">Nenhum pedido pendente.</p>}
       {pedidos.map((p) => (
         <div key={p.id} className="coluna" style={{ gap: 6, padding: 12, borderRadius: 18, background: 'var(--bg)' }}>
@@ -83,16 +136,30 @@ export function PedidosConvite() {
           {p.mensagem && <span className="pequeno suave">“{p.mensagem}”</span>}
           <span className="mini suave">{new Date(p.criado_em).toLocaleString('pt-BR')}</span>
           <div className="grade-2">
-            <button type="button" className="botao pequeno" disabled={!automatico} onClick={() => decidir(p, 'aprovar')}><Icone nome="check" /> Aprovar</button>
+            <button type="button" className="botao pequeno" onClick={() => decidir(p, 'aprovar')}><Icone nome="check" /> Aprovar</button>
             <button type="button" className="botao secundario pequeno" onClick={() => decidir(p, 'recusar')}>Recusar</button>
           </div>
         </div>
       ))}
-      {aprovados.map((p) => (
-        <a key={p.id} className="botao terracota pequeno" href={linkConvite(p.nome, p.email)}>
-          Enviar convite por e-mail para {p.nome.split(' ')[0]}
-        </a>
+
+      {prontos.map((p) => (
+        <div key={p.link} className="coluna" style={{ gap: 8, padding: 12, borderRadius: 18, background: 'var(--bg)' }}>
+          <strong className="pequeno">{p.tipo === 'conta' ? `Convite pronto para ${p.nome}` : `Link de senha nova para ${p.email}`}</strong>
+          <a className="botao terracota pequeno" href={emailConvite(p.nome, p.email, p.link, p.tipo)}>Enviar por e-mail</a>
+          <button type="button" className="botao secundario pequeno" onClick={() => navigator.clipboard.writeText(p.link).then(() => setMsg('Link copiado.'))}>Copiar o link</button>
+        </div>
       ))}
+
+      <details>
+        <summary className="pequeno" style={{ cursor: 'pointer', fontWeight: 700 }}>Alguém esqueceu a senha?</summary>
+        <div className="coluna" style={{ gap: 10, marginTop: 10 }}>
+          <label className="campo">
+            E-mail da conta
+            <input type="email" inputMode="email" value={emailSenha} onChange={(e) => setEmailSenha(e.target.value)} autoComplete="off" placeholder="nome@exemplo.com" />
+          </label>
+          <button type="button" className="botao secundario pequeno" disabled={!online || !emailSenha.includes('@')} onClick={() => convidar('senha')}>Gerar link de senha nova</button>
+        </div>
+      </details>
       {msg && <p className="pequeno" role="status">{msg}</p>}
     </section>
   );

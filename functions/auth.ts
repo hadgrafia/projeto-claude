@@ -105,39 +105,35 @@ export async function excedeu(env: Env, chave: string, limite: number, janelaMs:
 export const zerarTentativas = (env: Env, chave: string) => env.DB.prepare('DELETE FROM tentativas WHERE chave = ?').bind(chave).run();
 export const chaveIp = async (req: Request) => `ip:${(await sha256(`${req.headers.get('CF-Connecting-IP') ?? '?'}-meus-planos`)).slice(0, 32)}`;
 
-/* ---------- Confirmação do e-mail pelo Cloudflare Access (JWT assinado) ---------- */
+/* ---------- Convites pessoais (criar conta) e links para criar senha nova ---------- */
 
-type Jwk = JsonWebKey & { kid: string };
-let certs: { chaves: Jwk[]; em: number } | undefined;
-
-const deB64url = (s: string) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+export type TipoConvite = 'conta' | 'senha';
+const DIA = 24 * 3600 * 1000;
 
 /**
- * Confere o token que o Cloudflare Access entrega depois do código no e-mail:
- * assinatura RS256 com as chaves públicas da equipe, emissor, público (AUD) e validade.
- * Devolve o e-mail confirmado ou vazio.
+ * Cria um link de uso único, preso a um e-mail. Quem recebe o link no próprio e-mail comprova
+ * que o e-mail é dele: não é preciso código nem tela de terceiros. O servidor guarda só o hash.
+ * Convite para criar conta vale 14 dias; link de senha nova vale 24 horas.
  */
-export async function emailConfirmadoPeloAccess(env: Env, req: Request): Promise<string> {
-  const jwt = req.headers.get('Cf-Access-Jwt-Assertion') ?? req.headers.get('Cookie')?.match(/(?:^|;\s*)CF_Authorization=([^;]+)/)?.[1];
-  if (!jwt || !env.ACCESS_EQUIPE || !env.ACCESS_AUD) return '';
-  const [c, p, a] = jwt.split('.');
-  if (!c || !p || !a) return '';
-  try {
-    const cab = JSON.parse(new TextDecoder().decode(deB64url(c))) as { alg: string; kid: string };
-    const dados = JSON.parse(new TextDecoder().decode(deB64url(p))) as { aud: string | string[]; exp: number; iss: string; email?: string };
-    if (cab.alg !== 'RS256') return '';
-    if (!certs || Date.now() - certs.em > 3600_000 || !certs.chaves.some((k) => k.kid === cab.kid)) {
-      const r = (await (await fetch(`https://${env.ACCESS_EQUIPE}/cdn-cgi/access/certs`)).json()) as { keys: Jwk[] };
-      certs = { chaves: r.keys, em: Date.now() };
-    }
-    const jwk = certs.chaves.find((k) => k.kid === cab.kid);
-    if (!jwk) return '';
-    const chave = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
-    const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', chave, deB64url(a), new TextEncoder().encode(`${c}.${p}`));
-    const auds = Array.isArray(dados.aud) ? dados.aud : [dados.aud];
-    if (!ok || !auds.includes(env.ACCESS_AUD) || dados.iss !== `https://${env.ACCESS_EQUIPE}` || dados.exp * 1000 < Date.now()) return '';
-    return (dados.email ?? '').toLowerCase();
-  } catch {
-    return '';
-  }
+export async function criarConvite(env: Env, email: string, tipo: TipoConvite, criadoPor: string, origem: string) {
+  const token = aleatorio();
+  const agora = Date.now();
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM convites_conta WHERE expira < ? OR (email = ? AND tipo = ?)').bind(agora, email, tipo),
+    env.DB.prepare('INSERT INTO convites_conta (hash, email, tipo, criado_por, criado_em, expira) VALUES (?, ?, ?, ?, ?, ?)').bind(
+      await sha256(token),
+      email,
+      tipo,
+      criadoPor,
+      agora,
+      agora + (tipo === 'conta' ? 14 : 1) * DIA,
+    ),
+  ]);
+  return `${origem}/entrar/?${tipo === 'conta' ? 'convite' : 'senha'}=${token}`;
+}
+
+export async function lerConvite(env: Env, token: string) {
+  if (!/^[A-Za-z0-9_-]{20,}$/.test(token)) return null;
+  const c = await env.DB.prepare('SELECT email, tipo, expira FROM convites_conta WHERE hash = ?').bind(await sha256(token)).first<{ email: string; tipo: TipoConvite; expira: number }>();
+  return c && c.expira > Date.now() ? c : null;
 }

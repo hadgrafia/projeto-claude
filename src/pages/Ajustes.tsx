@@ -4,7 +4,7 @@ import { Icone } from '../components/Icone';
 import { Folha, Segmentado } from '../components/Ui';
 import { CriarSenha, TecladoPin } from '../components/Bloqueio';
 import { EditarRenda } from '../components/EditarRenda';
-import { AjustesCartao, AjustesContato } from '../components/AjustesExtras';
+import { AjustesCartao, AjustesContato, TrocarSenha } from '../components/AjustesExtras';
 import { PedidosConvite } from '../components/PedidosConvite';
 import { ativarBiometria, biometriaDisponivel, cifrar, conferirPin, decifrar, definirTempo, lerBloqueio, removerBiometria, type ConfigBloqueio } from '../lib/bloqueio';
 import { db, exportarTudo, importarTudo, type Tema } from '../db';
@@ -185,6 +185,7 @@ export default function Ajustes() {
             Sair da conta
           </button>
         </div>
+        <TrocarSenha aoSalvar={aviso} />
       </section>
 
       <section className="cartao">

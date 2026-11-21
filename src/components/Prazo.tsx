@@ -64,7 +64,7 @@ export function CartaoPrazo({
           <p className="pequeno">
             Com a sua renda e os seus gastos de hoje, mesmo colocando todo o valor livre neste plano, a data mais próxima é <strong>{a.dataMinima ? mesCurto(a.dataMinima) : 'indefinida'}</strong>. Para chegar em {mesCurto(prazo!)}, faltam <strong>{reaisCurto(a.faltaPorMes!)}/mês</strong>.
           </p>
-          <p className="mini">Caminhos: cortar gastos (o Feedback mostra onde), aumentar a renda, reduzir a meta ou mudar a data.</p>
+          <p className="mini">Caminhos: cortar gastos (a aba Conselhos mostra onde), aumentar a renda, reduzir a meta ou mudar a data.</p>
           <div className="grade-2">
             {aoUsarData && a.dataMinima && (
               <button type="button" className="botao secundario pequeno" onClick={() => aoUsarData(a.dataMinima!)}>Usar {mesCurto(a.dataMinima)}</button>

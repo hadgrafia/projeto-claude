@@ -102,7 +102,7 @@ export default function Investimentos() {
           <p className="pequeno suave">
             {livre >= sugerido
               ? 'Você já consegue reservar 20% ou mais. Mantenha os aportes automáticos no dia em que o dinheiro entra.'
-              : `Faltam ${reaisCurto(sugerido - livre)}/mês para chegar aos 20%. O Feedback mostra onde cortar.`}
+              : `Faltam ${reaisCurto(sugerido - livre)}/mês para chegar aos 20%. A aba Conselhos mostra onde cortar.`}
           </p>
           <div className="entre pequeno" style={{ borderTop: '1px solid var(--linha)', paddingTop: 8 }}>
             <span>Reserva de emergência (6 meses de gastos)</span>

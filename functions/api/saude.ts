@@ -19,7 +19,12 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
   r.emailAdministradora = env.ADMIN_EMAIL ? 'ok' : 'não configurado';
   r.exigeLogin = env.EXIGIR_ACCESS === '1' ? 'ok' : 'DESLIGADO';
-  r.confirmacaoEmail = env.ACCESS_EQUIPE && env.ACCESS_AUD ? 'ok' : 'falta ACCESS_EQUIPE/ACCESS_AUD';
+  try {
+    await env.DB.prepare('SELECT COUNT(*) AS n FROM convites_conta').first();
+    r.convitesPessoais = 'ok';
+  } catch (e) {
+    r.convitesPessoais = `erro: ${(e as Error).message}`;
+  }
   try {
     const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM contas').first<{ n: number }>();
     r.contas = `ok (${n?.n ?? 0} contas criadas)`;
@@ -75,16 +80,5 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     }
   }
 
-  if (!env.CF_ACCESS_TOKEN || !env.CF_ACCOUNT_ID || !env.CF_ACCESS_GROUP_ID) r.convitesAutomaticos = 'desligado (familiares são liberados à mão no Zero Trust)';
-  else {
-    try {
-      const g = (await (
-        await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/access/groups/${env.CF_ACCESS_GROUP_ID}`, { headers: { Authorization: `Bearer ${env.CF_ACCESS_TOKEN}` } })
-      ).json()) as { success: boolean; result?: { include: unknown[] }; errors?: unknown };
-      r.convitesAutomaticos = g.success ? `ok (${g.result?.include.length ?? 0} e-mails liberados)` : `token sem permissão: ${JSON.stringify(g.errors).slice(0, 200)}`;
-    } catch (e) {
-      r.convitesAutomaticos = `erro: ${(e as Error).message}`;
-    }
-  }
   return json(r);
 };

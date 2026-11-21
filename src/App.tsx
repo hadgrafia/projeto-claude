@@ -26,7 +26,7 @@ const ABAS: { para: string; rotulo: string; icone: NomeIcone }[] = [
   { para: '/gastos', rotulo: 'Gastos', icone: 'lista' },
   { para: '/planos', rotulo: 'Planos', icone: 'bandeira' },
   { para: '/investir', rotulo: 'Investir', icone: 'grafico' },
-  { para: '/feedback', rotulo: 'Feedback', icone: 'lampada' },
+  { para: '/feedback', rotulo: 'Conselhos', icone: 'lampada' },
 ];
 
 function Nav() {

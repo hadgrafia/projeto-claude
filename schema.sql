@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS pedidos (
   criado_em INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS pedidos_status ON pedidos (status, criado_em);
--- Contas do app (e-mail + hash da senha). Só e-mails convidados conseguem confirmar o cadastro.
+-- Contas do app (e-mail + hash da senha). Só cria conta quem tem um convite pessoal.
 CREATE TABLE IF NOT EXISTS contas (
   email TEXT PRIMARY KEY,
   senha TEXT NOT NULL,
@@ -53,13 +53,17 @@ CREATE TABLE IF NOT EXISTS sessoes (
   criada_em INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS sessoes_email ON sessoes (email);
--- Cadastros (ou trocas de senha) esperando a confirmação do e-mail. Valem 30 minutos.
-CREATE TABLE IF NOT EXISTS cadastros (
+-- Convites pessoais de uso único (criar conta) e links para criar senha nova.
+-- O servidor guarda só o hash do código do link.
+CREATE TABLE IF NOT EXISTS convites_conta (
   hash TEXT PRIMARY KEY,
   email TEXT NOT NULL,
-  senha TEXT NOT NULL,
+  tipo TEXT NOT NULL,
+  criado_por TEXT NOT NULL,
+  criado_em INTEGER NOT NULL,
   expira INTEGER NOT NULL
 );
+CREATE INDEX IF NOT EXISTS convites_conta_email ON convites_conta (email);
 -- Limite de tentativas de login e cadastro (contra quem tenta adivinhar senhas).
 CREATE TABLE IF NOT EXISTS tentativas (
   chave TEXT PRIMARY KEY,

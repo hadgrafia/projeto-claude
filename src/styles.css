@@ -71,7 +71,15 @@
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; background: var(--bg); color: var(--texto); }
+html { background: var(--bg); }
+html, body { margin: 0; color: var(--texto); }
+body { background: transparent; }
+/* Fundo orgânico bem suave em todas as telas (o mesmo do site), para o fundo não ficar chapado. */
+:root { --org: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 900' preserveAspectRatio='xMidYMid slice'%3E%3Cg fill='%233B4A3A' fill-opacity='0.05'%3E%3Cpath d=%22M0 0H300C360 0 380 80 340 150C300 220 200 250 120 230C60 214 24 176 0 160Z%22/%3E%3Cpath d=%22M420 110C480 40 590 60 640 140C690 220 790 240 880 190C980 135 1090 170 1100 270C1110 370 1010 430 910 420C810 410 750 450 730 530C710 620 600 670 520 610C450 560 480 470 430 400C380 330 360 180 420 110Z%22/%3E%3Cpath d=%22M0 560C90 520 210 560 260 650C310 740 260 840 170 900H0Z%22/%3E%3Cpath d=%22M1200 600C1110 590 1040 660 1060 760C1075 840 1130 900 1170 900H1200Z%22/%3E%3Cpath d=%22M700 900C720 820 800 790 870 820C930 845 960 880 970 900Z%22/%3E%3Cpath d=%22M1200 0V120C1150 130 1090 100 1080 60C1072 30 1090 0 1110 0Z%22/%3E%3Ccircle cx=%221000%22 cy=%22610%22 r=%2262%22/%3E%3Ccircle cx=%22250%22 cy=%22420%22 r=%2238%22/%3E%3C/g%3E%3C/svg%3E"); }
+@media (prefers-color-scheme: dark) { :root:not([data-tema='claro']) { --org: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 900' preserveAspectRatio='xMidYMid slice'%3E%3Cg fill='%23F0EBE1' fill-opacity='0.03'%3E%3Cpath d=%22M0 0H300C360 0 380 80 340 150C300 220 200 250 120 230C60 214 24 176 0 160Z%22/%3E%3Cpath d=%22M420 110C480 40 590 60 640 140C690 220 790 240 880 190C980 135 1090 170 1100 270C1110 370 1010 430 910 420C810 410 750 450 730 530C710 620 600 670 520 610C450 560 480 470 430 400C380 330 360 180 420 110Z%22/%3E%3Cpath d=%22M0 560C90 520 210 560 260 650C310 740 260 840 170 900H0Z%22/%3E%3Cpath d=%22M1200 600C1110 590 1040 660 1060 760C1075 840 1130 900 1170 900H1200Z%22/%3E%3Cpath d=%22M700 900C720 820 800 790 870 820C930 845 960 880 970 900Z%22/%3E%3Cpath d=%22M1200 0V120C1150 130 1090 100 1080 60C1072 30 1090 0 1110 0Z%22/%3E%3Ccircle cx=%221000%22 cy=%22610%22 r=%2262%22/%3E%3Ccircle cx=%22250%22 cy=%22420%22 r=%2238%22/%3E%3C/g%3E%3C/svg%3E"); } }
+:root[data-tema='escuro'] { --org: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 900' preserveAspectRatio='xMidYMid slice'%3E%3Cg fill='%23F0EBE1' fill-opacity='0.03'%3E%3Cpath d=%22M0 0H300C360 0 380 80 340 150C300 220 200 250 120 230C60 214 24 176 0 160Z%22/%3E%3Cpath d=%22M420 110C480 40 590 60 640 140C690 220 790 240 880 190C980 135 1090 170 1100 270C1110 370 1010 430 910 420C810 410 750 450 730 530C710 620 600 670 520 610C450 560 480 470 430 400C380 330 360 180 420 110Z%22/%3E%3Cpath d=%22M0 560C90 520 210 560 260 650C310 740 260 840 170 900H0Z%22/%3E%3Cpath d=%22M1200 600C1110 590 1040 660 1060 760C1075 840 1130 900 1170 900H1200Z%22/%3E%3Cpath d=%22M700 900C720 820 800 790 870 820C930 845 960 880 970 900Z%22/%3E%3Cpath d=%22M1200 0V120C1150 130 1090 100 1080 60C1072 30 1090 0 1110 0Z%22/%3E%3Ccircle cx=%221000%22 cy=%22610%22 r=%2262%22/%3E%3Ccircle cx=%22250%22 cy=%22420%22 r=%2238%22/%3E%3C/g%3E%3C/svg%3E"); }
+body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--org) center / cover no-repeat; }
+
 body {
   font-family: 'Plus Jakarta Sans Variable', system-ui, sans-serif;
   font-size: 15px;
@@ -226,7 +234,7 @@ h1, h2, h3, p { margin: 0; }
 
 /* ---------- Computador e tablet deitado ---------- */
 @media (min-width: 900px) {
-  body { background: var(--bg); }
+  body { background: transparent; }
   .app { max-width: none; }
   .app.com-menu { padding-left: 264px; }
   .tela { max-width: 640px; margin: 0 auto; padding: 40px 32px 64px; }

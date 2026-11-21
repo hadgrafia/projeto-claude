@@ -27,7 +27,7 @@ const rotulos = {
   banco: 'Banco do plano em conjunto',
   emailAdministradora: 'E-mail da administradora',
   exigeLogin: 'Login obrigatório (só convidados)',
-  confirmacaoEmail: 'Confirmação do e-mail no cadastro',
+  convitesPessoais: 'Convites pessoais (link para criar conta)',
   contas: 'Contas (e-mail e senha)',
   paginaInicial: 'Página inicial',
   paginaEntrar: 'Página Entrar',
@@ -36,7 +36,6 @@ const rotulos = {
   reserva: 'IA reserva (Gemini, do Google)',
   googleCloud: 'Acesso ao Google Cloud',
   ia: 'IA (Claude no Vertex AI)',
-  convitesAutomaticos: 'Convite automático de familiares',
 };
 // Páginas principais: o site abre, a página Entrar abre e o app pede login.
 for (const [nome, caminho, esperado] of [
@@ -52,13 +51,13 @@ for (const [nome, caminho, esperado] of [
   }
 }
 // Itens que, se falharem, fazem o robô voltar para a versão anterior (o site não pode ficar quebrado).
-const CRITICOS = ['banco', 'exigeLogin', 'confirmacaoEmail', 'contas', 'paginaInicial', 'paginaEntrar', 'appProtegido'];
+const CRITICOS = ['banco', 'exigeLogin', 'convitesPessoais', 'contas', 'paginaInicial', 'paginaEntrar', 'appProtegido'];
 let critico = false;
 let falhou = false;
 console.log('\n===== Relatório do app publicado =====');
 for (const [k, v] of Object.entries(r)) {
   const ok = v === 'ok' || v.startsWith('ok ');
-  const opcional = (k === 'convitesAutomaticos' && v.startsWith('desligado')) || k === 'modelos';
+  const opcional = k === 'modelos';
   if (!ok && !opcional) falhou = true;
   if (!ok && CRITICOS.includes(k)) critico = true;
   console.log(`${ok ? '✅' : opcional ? 'ℹ️ ' : '❌'} ${rotulos[k] ?? k}: ${v}`);

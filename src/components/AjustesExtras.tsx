@@ -82,3 +82,43 @@ export function AjustesContato({ perfil, aoSalvar }: { perfil: Perfil; aoSalvar:
     </section>
   );
 }
+
+/** Trocar a senha da conta (e-mail + senha). Os outros aparelhos são desconectados. */
+export function TrocarSenha({ aoSalvar }: { aoSalvar: (m: string) => void }) {
+  const [atual, setAtual] = useState('');
+  const [nova, setNova] = useState('');
+  const [repetir, setRepetir] = useState('');
+  const [erro, setErro] = useState('');
+  const [ocupado, setOcupado] = useState(false);
+  async function salvar() {
+    setErro('');
+    if (nova.length < 8 || !/[a-zA-ZÀ-ú]/.test(nova) || !/\d/.test(nova)) return setErro('A senha nova precisa ter pelo menos 8 caracteres, com letras e números.');
+    if (nova !== repetir) return setErro('As duas senhas novas não estão iguais.');
+    setOcupado(true);
+    try {
+      const r = await fetch('/api/conta/senha', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ atual, nova }) });
+      const c = (await r.json().catch(() => ({}))) as { erro?: string };
+      if (!r.ok) throw new Error(c.erro ?? 'Não foi possível agora.');
+      setAtual('');
+      setNova('');
+      setRepetir('');
+      aoSalvar('Senha trocada. Os outros aparelhos foram desconectados.');
+    } catch (e) {
+      setErro((e as Error).message);
+    } finally {
+      setOcupado(false);
+    }
+  }
+  return (
+    <details>
+      <summary className="pequeno" style={{ cursor: 'pointer', fontWeight: 700 }}>Trocar a senha da conta</summary>
+      <div className="coluna" style={{ gap: 10, marginTop: 10 }}>
+        <label className="campo">Senha atual<input type="password" autoComplete="current-password" value={atual} onChange={(e) => setAtual(e.target.value)} /></label>
+        <label className="campo">Senha nova<input type="password" autoComplete="new-password" value={nova} onChange={(e) => setNova(e.target.value)} /></label>
+        <label className="campo">Repita a senha nova<input type="password" autoComplete="new-password" value={repetir} onChange={(e) => setRepetir(e.target.value)} /></label>
+        <button type="button" className="botao pequeno" disabled={ocupado || !atual || !nova || !navigator.onLine} onClick={salvar}>{ocupado ? 'Salvando…' : 'Salvar senha nova'}</button>
+        {erro && <p className="pequeno" role="alert">{erro}</p>}
+      </div>
+    </details>
+  );
+}

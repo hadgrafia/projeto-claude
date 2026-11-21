@@ -47,10 +47,11 @@ npm run build    # gera a versão final em dist/
 ### Como funciona o acesso (só convidados)
 
 - A página de apresentação (`/`) é pública. O app (`/app`) e a API (`/api`) só abrem com a **conta do app**: e-mail + senha (`/entrar/`).
-- **Criar conta:** a pessoa escolhe a senha e confirma o e-mail com um código enviado pelo Cloudflare Access (`/conta/confirmar`). O Access só manda código para e-mails da lista de convidados, então ninguém de fora consegue criar conta. O app confere a assinatura desse token (`functions/auth.ts`).
-- **Esqueci minha senha:** o mesmo caminho do cadastro, com um código novo no e-mail. Trocar a senha encerra as sessões em todos os aparelhos.
+- **Criar conta:** só por **convite pessoal**. A administradora cria o convite em **Ajustes → Convites** (ou aprova um pedido feito pelo site) e toca em "Enviar por e-mail". O link vale 14 dias, funciona uma única vez e só cria conta para aquele e-mail. Quem usa o app pode convidar até 5 familiares pelo plano em conjunto.
+- **Esqueci minha senha:** a administradora gera um link de senha nova (24 horas, uso único) em Ajustes → Convites. Trocar a senha desconecta os outros aparelhos.
 - A senha é guardada só como hash PBKDF2-SHA256 com sal; a sessão é um cookie `HttpOnly`/`Secure` de 30 dias (o servidor guarda só o hash). Há limite de tentativas por e-mail e por endereço de internet.
-- **Liberar ou remover pessoas:** Actions → **Liberar e-mails** (`liberar.yml`). Remover também apaga a conta e desconecta a pessoa.
+- **Remover alguém:** Actions → **Liberar e-mails** (`liberar.yml`) com "remover": apaga a conta e desconecta a pessoa. Com "liberar", o e-mail aparece em Ajustes → Convites pronto para aprovar (o link nunca aparece no GitHub, que é público).
+- **Atualizações:** cada publicação é testada; se algo grave falhar, o robô volta sozinho para a versão anterior. No app, a versão nova aparece como "Atualizar" (os dados ficam no aparelho).
 
 ## Análise com IA (Claude no Google Cloud)
 

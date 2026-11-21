@@ -2,9 +2,6 @@ export interface Env {
   DB: D1Database;
   /** "1" em produção: o app e a API só abrem com a conta (e-mail + senha) de um convidado. */
   EXIGIR_ACCESS?: string;
-  /** Equipe e público (AUD) do Cloudflare Access, usado só para confirmar o e-mail no cadastro. */
-  ACCESS_EQUIPE?: string;
-  ACCESS_AUD?: string;
   /** E-mail de quem administra o app (pode convidar sem limite). */
   ADMIN_EMAIL?: string;
   /** Análise com IA pelo Google Cloud (Vertex AI): JSON da chave da conta de serviço. */

@@ -92,14 +92,6 @@ p { margin: 0 0 12px; }
 .secao-terracota { background: var(--terracota-fundo) var(--org-terra) center / cover no-repeat; }
 .pagina-conta { background: var(--areia) var(--org) center / cover no-repeat fixed; }
 
-/* Ícones desenhados à mão: brancos e um pouco transparentes, sobre o verde. */
-.icone-mao { display: block; width: 64px; height: 64px; color: #fff; opacity: 0.78; flex: none; }
-.icone-mao use { fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.recurso .icone-mao { margin: -6px 0 10px -6px; transition: transform 0.3s ease, opacity 0.3s ease; }
-.recurso:hover .icone-mao { transform: translateY(-3px) rotate(-3deg); opacity: 0.92; }
-.planos-icones { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; max-width: 460px; }
-.planos-icones li { display: grid; justify-items: center; gap: 6px; text-align: center; font-size: 13px; font-weight: 600; color: rgba(240, 235, 225, 0.75); }
-.planos-icones .icone-mao { width: 72px; height: 72px; }
 
 .passos { list-style: none; padding: 0; margin: 32px 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
 .cartao { background: var(--cartao); border-radius: 28px; padding: 28px; }
@@ -109,6 +101,7 @@ p { margin: 0 0 12px; }
 .grade-recursos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin-top: 32px; }
 .recurso { background: var(--verde-2); border-radius: 28px; padding: 26px; }
 .recurso h3 { color: #f0ebe1; }
+.recurso h3::before { content: ''; display: block; width: 36px; height: 6px; border-radius: 999px; background: #d9774f; margin-bottom: 16px; }
 
 .duas-colunas { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 48px; align-items: start; }
 .lista-check { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
@@ -184,8 +177,6 @@ main.conta-caixa { margin: 12vh auto; text-align: center; justify-items: center;
 .regras li.ok::before { content: '✓'; color: #5f8a5a; }
 .links-conta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 15px; }
 .links-conta a, .links-conta button { color: var(--terracota-escuro); font: 600 15px 'Plus Jakarta Sans', sans-serif; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
-.passos-codigo { margin: 0; padding-left: 22px; display: grid; gap: 8px; color: var(--suave); }
-.passos-codigo strong { color: var(--texto); }
 .aviso-seguro { font-size: 14px; color: var(--suave); display: flex; gap: 10px; align-items: flex-start; }
 .aviso-seguro::before { content: '🔒'; }
 .voltar-site { color: var(--suave); font-size: 14px; text-align: center; }
@@ -194,8 +185,6 @@ main.conta-caixa { margin: 12vh auto; text-align: center; justify-items: center;
   .conta { grid-template-columns: 1fr; }
   .conta-arte { padding: 24px 20px 28px; gap: 16px; }
   .conta-arte h1 { margin: 0; font-size: 30px; }
-  .planos-icones .icone-mao { width: 52px; height: 52px; }
-  .planos-icones li { font-size: 12px; }
   .conta-arte .some-celular { display: none; }
   .conta-lado { align-items: flex-start; padding: 28px 20px 48px; }
 }

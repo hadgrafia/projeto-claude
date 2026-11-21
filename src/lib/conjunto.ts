@@ -113,10 +113,13 @@ export async function criarConjunto(plano: Plano, d: DadosLocais) {
   return c;
 }
 
-/** Libera o e-mail no Cloudflare Access (se a administradora ativou os convites automáticos). */
-export async function liberarEmail(email: string) {
-  return api<{ ok: boolean; jaTinha?: boolean }>('/acesso/convidar', { method: 'POST', body: JSON.stringify({ email }) });
+/** Convite pessoal para o familiar criar a conta no app (se ainda não tiver). */
+export async function convidarParaConta(email: string) {
+  return api<{ ok: boolean; link?: string; jaTemConta?: boolean }>('/acesso/convidar', { method: 'POST', body: JSON.stringify({ email }) });
 }
+
+/** Junta o convite da conta com o convite do plano: a pessoa cria a conta e cai direto no plano. */
+export const juntarConvites = (linkConta: string, linkPlano: string) => `${linkConta}&volta=%2Fapp%2F${linkPlano.slice(linkPlano.indexOf('#'))}`;
 
 /** Link de convite de uso único (48 h). A chave vai depois do "#": nunca chega ao servidor. */
 export async function gerarConvite(c: Conjunto) {

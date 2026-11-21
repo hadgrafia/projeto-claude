@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { db, type Plano } from '../db';
 import { useDados, useOnline } from '../hooks';
-import { criarConjunto, entrarDeNovo, gerarConvite, liberarEmail, sairDoConjunto, SessaoExpirada, sincronizarConjunto } from '../lib/conjunto';
+import { convidarParaConta, criarConjunto, entrarDeNovo, gerarConvite, juntarConvites, sairDoConjunto, SessaoExpirada, sincronizarConjunto } from '../lib/conjunto';
 import { reaisCurto } from '../lib/format';
 import { Icone } from './Icone';
 import { Entra, Folha } from './Ui';
@@ -149,18 +149,15 @@ function Convidar({ plano }: { plano: Plano }) {
   async function gerar() {
     setErro(undefined);
     try {
+      let linkConta = '';
       if (email.trim()) {
-        setEstado('Liberando o e-mail…');
-        try {
-          await liberarEmail(email.trim());
-        } catch (e) {
-          if (e instanceof SessaoExpirada) throw e;
-          setEstado(`Não foi possível liberar o e-mail automaticamente (${(e as Error).message}). Peça para a administradora liberar.`);
-        }
+        setEstado('Preparando o convite…');
+        const r = await convidarParaConta(email.trim());
+        if (r.link) linkConta = r.link;
       }
       const l = await gerarConvite(plano.conjunto!);
-      setLink(l);
-      setEstado((s) => (s.startsWith('Não') ? s : ''));
+      setLink(linkConta ? juntarConvites(linkConta, l) : l);
+      setEstado('');
     } catch (e) {
       setErro({ msg: (e as Error).message, sessao: e instanceof SessaoExpirada });
       setEstado('');
@@ -180,7 +177,7 @@ function Convidar({ plano }: { plano: Plano }) {
     <>
       {!link ? (
         <>
-          <p className="pequeno suave">Só e-mails convidados conseguem abrir o app. Informe o e-mail do familiar para liberá-lo e gerar o convite.</p>
+          <p className="pequeno suave">Informe o e-mail do familiar. Se ele ainda não usa o app, o convite já inclui a criação da conta dele.</p>
           <label className="campo">
             E-mail do familiar
             <input type="email" inputMode="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nome@exemplo.com" />
@@ -191,7 +188,7 @@ function Convidar({ plano }: { plano: Plano }) {
         <>
           <div className="cartao manter">
             <strong>Convite pronto</strong>
-            <span className="pequeno">Vale por 48 horas e funciona uma única vez. Quem receber precisa entrar com o e-mail liberado.</span>
+            <span className="pequeno">Vale por 48 horas e funciona uma única vez. Envie só para essa pessoa.</span>
           </div>
           <button type="button" className="botao terracota" onClick={compartilhar}><Icone nome="link" /> Enviar convite</button>
         </>
