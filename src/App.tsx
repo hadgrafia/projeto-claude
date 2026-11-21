@@ -11,6 +11,7 @@ import { useDados, useOnline } from './hooks';
 import Ajustes from './pages/Ajustes';
 import Convite from './pages/Convite';
 import Compra from './pages/Compra';
+import Lancar from './pages/Lancar';
 import BoasVindas from './pages/BoasVindas';
 import Feedback from './pages/Feedback';
 import Gastos from './pages/Gastos';
@@ -179,6 +180,7 @@ export default function App() {
                   <Route path="/feedback" element={<Feedback />} />
                   <Route path="/ajustes" element={<Ajustes />} />
                   <Route path="/compra" element={<Compra />} />
+                  <Route path="/lancar" element={<Lancar />} />
                   <Route path="*" element={<Navigate to="/inicio" replace />} />
                 </>
               ) : (

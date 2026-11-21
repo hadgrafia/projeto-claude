@@ -6,7 +6,7 @@ import type { Env } from '../tipos';
  * Sem sessão, a pessoa vai para a página "Entrar" (e volta para onde estava depois).
  * Ícones e o manifesto ficam livres: o navegador os busca sem cookie e não têm dados.
  */
-const LIVRES = /^\/app\/(manifest\.webmanifest|[\w.-]+\.(png|svg|ico))$/;
+const LIVRES = /^\/app\/(manifest\.webmanifest|compartilhar-sw\.js|[\w.-]+\.(png|svg|ico))$/;
 
 /**
  * Política de segurança do app: só roda código do próprio app (nenhum script de terceiros,

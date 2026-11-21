@@ -21,6 +21,8 @@ export default defineConfig({
         // /api, a página Entrar e a confirmação do e-mail sempre vão para a rede.
         navigateFallbackDenylist: [/^\/api\//, /^\/cdn-cgi\//, /^\/entrar/, /^\/conta\//],
         cleanupOutdatedCaches: true,
+        // Recebe o que for compartilhado com o app (comprovante, extrato ou texto).
+        importScripts: ['compartilhar-sw.js'],
       },
       manifest: {
         name: 'Meus Planos Financeiros',
@@ -33,6 +35,18 @@ export default defineConfig({
         orientation: 'portrait',
         background_color: '#F0EBE1',
         theme_color: '#3B4A3A',
+        // Aparece em "Compartilhar" do celular: comprovantes e extratos vão direto para o app.
+        share_target: {
+          action: './compartilhar',
+          method: 'POST',
+          enctype: 'multipart/form-data',
+          params: {
+            title: 'titulo',
+            text: 'texto',
+            url: 'link',
+            files: [{ name: 'arquivo', accept: ['application/pdf', 'text/plain', 'text/csv', '.pdf', '.txt', '.csv', '.ofx', 'image/*'] }],
+          },
+        },
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },

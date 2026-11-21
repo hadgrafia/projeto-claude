@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { pegarArquivoParaImportar } from '../lib/compartilhar';
 import { useNavigate } from 'react-router-dom';
 import { Icone } from '../components/Icone';
 import { Entra } from '../components/Ui';
@@ -12,6 +13,13 @@ export default function Importar() {
   const [itens, setItens] = useState<(NovoMovimento & { ok: boolean; repetido: boolean })[]>([]);
   const [estado, setEstado] = useState<'' | 'lendo' | 'erro' | 'pronto'>('');
   const [msg, setMsg] = useState('');
+
+  // Extrato que chegou por "Compartilhar" no app do banco.
+  useEffect(() => {
+    const f = pegarArquivoParaImportar();
+    if (f) ler(f);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function ler(arquivo: File) {
     setEstado('lendo');

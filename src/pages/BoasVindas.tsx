@@ -91,7 +91,15 @@ export default function BoasVindas() {
       <h2 style={{ fontSize: 16, fontWeight: 800 }}>Como você quer registrar os gastos?</h2>
       {(
         [
-          { v: 'notificacoes', t: 'Ler notificações de pagamento', d: 'Qualquer banco ou app de pagamento. Basta as notificações estarem ativadas. Disponível no app para Android.', ic: 'sino', ok: ehAndroidNativo() },
+          {
+            v: 'notificacoes',
+            t: 'Registrar pelos avisos do banco',
+            d: ehAndroidNativo()
+              ? 'Qualquer banco ou app de pagamento: o app lê o aviso de pagamento na hora. Basta as notificações estarem ativadas.'
+              : 'Compartilhe o comprovante com o Meus Planos ou use uma automação do celular, e o gasto chega preenchido. Passo a passo em Ajustes.',
+            ic: 'sino',
+            ok: true,
+          },
           { v: 'extrato', t: 'Enviar o extrato do mês', d: 'Android e iPhone. PDF, OFX ou CSV que você baixa do seu banco. Você continua com 100% do controle.', ic: 'documento', ok: true },
           { v: 'manual', t: 'Anotar eu mesma', d: 'Registro rápido: valor e categoria.', ic: 'lapis', ok: true },
         ] as const
@@ -114,8 +122,12 @@ export default function BoasVindas() {
           </span>
         </button>
       ))}
-      {ehIPhone() && (
-        <p className="cartao areia pequeno">No iPhone, a Apple não permite que um app leia notificações de outros apps. Use o extrato do mês ou anote os gastos.</p>
+      {metodo === 'notificacoes' && !ehAndroidNativo() && (
+        <p className="cartao areia pequeno">
+          {ehIPhone()
+            ? 'No iPhone, use o app Atalhos: cada compra com Apple Pay abre o Meus Planos já preenchida. O passo a passo fica em Ajustes.'
+            : 'Pelo navegador, o celular não deixa nenhum site ler notificações sozinho. Por isso, o app usa o "Compartilhar comprovante" do seu banco ou uma automação gratuita. O passo a passo fica em Ajustes.'}
+        </p>
       )}
     </>,
 

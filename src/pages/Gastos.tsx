@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icone, ICONE_CATEGORIA } from '../components/Icone';
 import { CampoDinheiro, Dinheiro, Folha, Segmentado } from '../components/Ui';
-import { db, type Movimento, type TipoMov } from '../db';
+import { db, type Movimento, type OrigemMov, type TipoMov } from '../db';
 import { useDados } from '../hooks';
 import { categorizar, ehEssencial, NOMES_CATEGORIAS } from '../lib/categorias';
 import { analisarMes, type Status } from '../lib/feedback';
@@ -177,7 +177,7 @@ export default function Gastos() {
   );
 }
 
-function FormMovimento({ mov, aoSalvar }: { mov?: Movimento; aoSalvar: () => void }) {
+export function FormMovimento({ mov, aoSalvar, origem = 'manual' }: { mov?: Partial<Movimento>; aoSalvar: () => void; origem?: OrigemMov }) {
   const [tipo, setTipo] = useState<TipoMov>(mov?.tipo ?? 'saida');
   const [valor, setValor] = useState<number | undefined>(mov?.valor);
   const [local, setLocal] = useState(mov?.local ?? '');
@@ -185,20 +185,20 @@ function FormMovimento({ mov, aoSalvar }: { mov?: Movimento; aoSalvar: () => voi
   const [categoria, setCategoria] = useState(mov?.categoria ?? '');
   const agora = new Date();
   const paraCampo = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-  const [quando, setQuando] = useState(paraCampo(mov ? new Date(mov.data) : agora));
+  const [quando, setQuando] = useState(paraCampo(mov?.data ? new Date(mov.data) : agora));
 
   async function salvar() {
     if (!valor || !local.trim()) return;
     const data = new Date(quando).toISOString();
     const lugar = local.trim();
     const auto = categorizar(lugar, tipo);
-    const cat = tipo === 'entrada' ? 'Entrada' : categoria || (mov && mov.categoria !== 'Outros' && auto === 'Outros' ? mov.categoria : auto);
-    const dados = { data, valor, tipo, descricao: mov?.descricao && mov.origem !== 'manual' ? mov.descricao : lugar, local: lugar, localPendente: false, categoria: cat };
+    const cat = tipo === 'entrada' ? 'Entrada' : categoria || (mov?.categoria && mov.categoria !== 'Outros' && auto === 'Outros' ? mov.categoria : auto);
+    const dados = { data, valor, tipo, descricao: mov?.id && mov.descricao && mov.origem !== 'manual' ? mov.descricao : lugar, local: lugar, localPendente: false, categoria: cat };
     if (mov?.id) {
       await db.movimentos.update(mov.id, dados);
-      if (mov.localPendente) lugarInformadoNoApp(mov.chave);
+      if (mov.localPendente && mov.chave) lugarInformadoNoApp(mov.chave);
     }
-    else await db.movimentos.add({ ...dados, origem: 'manual', chave: `${chaveMovimento(data, valor, lugar, tipo)}-${Date.now()}` });
+    else await db.movimentos.add({ ...dados, origem, chave: `${chaveMovimento(data, valor, lugar, tipo)}-${Date.now()}` });
     aoSalvar();
   }
 

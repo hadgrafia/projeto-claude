@@ -64,6 +64,13 @@ Configuração (uma vez):
 4. Na Cloudflare: **Workers & Pages → meus-planos-financeiros → Settings → Variables and Secrets**, crie o segredo `GCP_SA_KEY` com o conteúdo do arquivo JSON.
 5. Recomendado: em **Faturamento → Orçamentos e alertas** do Google Cloud, crie um alerta mensal (por exemplo, R$ 50).
 
+## Avisos do banco também pelo navegador
+
+O sistema (Android e iPhone) não deixa nenhum site ler notificações. Para quem usa o app pelo navegador:
+- **Compartilhar comprovante** → Meus Planos (o app instalado aparece no menu Compartilhar; `share_target` no manifesto e `public/compartilhar-sw.js`).
+- **Link de lançamento rápido** `/app/#/lancar?app=…&texto=…` (texto da notificação, lido pelo mesmo leitor do Android) ou `?valor=…&local=…` (Atalhos do iPhone). Usado por apps de automação. Nada é salvo sem a pessoa confirmar.
+- Passo a passo em Ajustes → "Registrar gastos sozinho".
+
 ## Nome do lugar de cada gasto
 
 Todo lançamento mostra **onde** o dinheiro foi gasto (loja, estabelecimento ou pessoa do Pix) ou de quem veio, nas entradas.

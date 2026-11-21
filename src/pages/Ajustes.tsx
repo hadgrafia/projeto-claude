@@ -6,6 +6,7 @@ import { CriarSenha, TecladoPin } from '../components/Bloqueio';
 import { EditarRenda } from '../components/EditarRenda';
 import { AjustesCartao, AjustesContato, TrocarSenha } from '../components/AjustesExtras';
 import { Instalar } from '../components/Instalar';
+import { RegistroAutomatico } from '../components/RegistroAutomatico';
 import { PedidosConvite } from '../components/PedidosConvite';
 import { ativarBiometria, biometriaDisponivel, cifrar, conferirPin, decifrar, definirTempo, lerBloqueio, removerBiometria, type ConfigBloqueio } from '../lib/bloqueio';
 import { db, exportarTudo, importarTudo, type Tema } from '../db';
@@ -219,6 +220,8 @@ export default function Ajustes() {
           </label>
         </div>
       </section>
+
+      <RegistroAutomatico />
 
       <section className="cartao areia">
         <Instalar />
