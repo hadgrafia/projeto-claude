@@ -8,6 +8,8 @@ export interface Env {
   GCP_SA_KEY?: string;
   GCP_PROJECT_ID?: string;
   GCP_REGION?: string;
+  /** Código da verificação automática (definido pelo robô de publicação). */
+  VERIFICACAO?: string;
   /** Convite automático no Cloudflare Access (token só com permissão de grupos do Access). */
   CF_ACCESS_TOKEN?: string;
   CF_ACCOUNT_ID?: string;

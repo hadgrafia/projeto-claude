@@ -114,3 +114,30 @@ const configApp = {
 if (!app) app = exigir(await cf(`/accounts/${CONTA}/access/apps`, { method: 'POST', body: JSON.stringify(configApp) }), 'Proteger o app com o Access');
 else exigir(await cf(`/accounts/${CONTA}/access/apps/${app.id}`, { method: 'PUT', body: JSON.stringify(configApp) }), 'Atualizar proteção do app');
 console.log(`✅ Access: só e-mails do grupo "${NOME_GRUPO}" abrem https://${DOMINIO}`);
+
+// Páginas públicas: política de privacidade (exigida pela Play Store) e verificação automática
+// (que tem o próprio código secreto). Todo o resto continua exigindo login.
+const NOME_PUBLICA = 'Público (sem login)';
+let publica = exigir(await cf(`/accounts/${CONTA}/access/policies`), 'Listar políticas').find((p) => p.name === NOME_PUBLICA);
+if (!publica)
+  publica = exigir(
+    await cf(`/accounts/${CONTA}/access/policies`, { method: 'POST', body: JSON.stringify({ name: NOME_PUBLICA, decision: 'bypass', include: [{ everyone: {} }] }) }),
+    'Criar política pública',
+  );
+for (const caminho of ['privacidade.html', 'api/saude']) {
+  const dominio = `${DOMINIO}/${caminho}`;
+  const atual = apps.find((a) => a.domain === dominio);
+  const cfg = { name: `Meus Planos · ${caminho}`, type: 'self_hosted', domain: dominio, self_hosted_domains: [dominio], app_launcher_visible: false, policies: [{ id: publica.id, precedence: 1 }] };
+  if (!atual) exigir(await cf(`/accounts/${CONTA}/access/apps`, { method: 'POST', body: JSON.stringify(cfg) }), `Liberar ${caminho}`);
+  else exigir(await cf(`/accounts/${CONTA}/access/apps/${atual.id}`, { method: 'PUT', body: JSON.stringify(cfg) }), `Atualizar ${caminho}`);
+}
+console.log(`✅ Política de privacidade pública: https://${DOMINIO}/privacidade.html`);
+
+// Quantos e-mails estão liberados (sem mostrar quais).
+const g = exigir(await cf(`/accounts/${CONTA}/access/groups/${grupo.id}`), 'Ler grupo de convidados');
+console.log(`✅ E-mails liberados no grupo: ${g.include.length}`);
+
+// Segredos do app na Cloudflare (só os nomes, nunca os valores).
+const proj = exigir(await cf(`/accounts/${CONTA}/pages/projects/${PROJETO}`), 'Ler projeto Pages');
+const vars = Object.keys(proj.deployment_configs?.production?.env_vars ?? {});
+for (const nome of ['ADMIN_EMAIL', 'GCP_SA_KEY', 'CF_ACCESS_TOKEN']) console.log(`${vars.includes(nome) ? '✅' : '⚠️ '} Segredo ${nome}: ${vars.includes(nome) ? 'configurado' : 'NÃO configurado'}`);

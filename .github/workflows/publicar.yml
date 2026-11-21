@@ -58,12 +58,20 @@ jobs:
         run: |
           sed -i "s/database_id = \".*\"/database_id = \"${{ steps.cf.outputs.d1_id }}\"/" wrangler.toml
           sed -i "s/^\[vars\]/[vars]\nCF_ACCOUNT_ID = \"$CLOUDFLARE_ACCOUNT_ID\"\nCF_ACCESS_GROUP_ID = \"${{ steps.cf.outputs.grupo_id }}\"/" wrangler.toml
+      - name: Gravar segredos do app (antes de publicar, para já valerem)
+        if: steps.segredos.outputs.ok == 'true'
+        run: |
+          printf '%s' "$ADMIN_EMAIL" | npx wrangler pages secret put ADMIN_EMAIL --project-name meus-planos-financeiros
+          VERIFICACAO=$(printf '%s' "$CLOUDFLARE_API_TOKEN-meus-planos-saude" | sha256sum | cut -d' ' -f1)
+          echo "::add-mask::$VERIFICACAO"
+          echo "VERIFICACAO=$VERIFICACAO" >> "$GITHUB_ENV"
+          printf '%s' "$VERIFICACAO" | npx wrangler pages secret put VERIFICACAO --project-name meus-planos-financeiros
+          if [ -n "$CLOUDFLARE_ACCESS_TOKEN" ]; then
+            printf '%s' "$CLOUDFLARE_ACCESS_TOKEN" | npx wrangler pages secret put CF_ACCESS_TOKEN --project-name meus-planos-financeiros
+          fi
       - name: Publicar
         if: steps.segredos.outputs.ok == 'true'
         run: npx wrangler pages deploy dist --project-name meus-planos-financeiros --branch main --commit-dirty=true
-      - name: Guardar o e-mail da administradora como segredo do app
+      - name: Testar o app publicado (banco, IA, convites)
         if: steps.segredos.outputs.ok == 'true'
-        run: printf '%s' "$ADMIN_EMAIL" | npx wrangler pages secret put ADMIN_EMAIL --project-name meus-planos-financeiros
-      - name: Convites automáticos (opcional)
-        if: steps.segredos.outputs.ok == 'true' && env.CLOUDFLARE_ACCESS_TOKEN != ''
-        run: printf '%s' "$CLOUDFLARE_ACCESS_TOKEN" | npx wrangler pages secret put CF_ACCESS_TOKEN --project-name meus-planos-financeiros
+        run: node scripts/verificar.mjs

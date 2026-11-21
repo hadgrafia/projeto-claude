@@ -14,7 +14,11 @@ const config: CapacitorConfig = {
     // Tela de login por código no e-mail do Cloudflare Access.
     allowNavigation: ['meus-planos-financeiros.pages.dev', '*.cloudflareaccess.com'],
   },
-  android: { allowMixedContent: false },
+  android: {
+    allowMixedContent: false,
+    // Android 15+: o app desenha atrás das barras do sistema; isto mantém o conteúdo fora delas.
+    adjustMarginsForEdgeToEdge: 'auto',
+  },
 };
 
 export default config;

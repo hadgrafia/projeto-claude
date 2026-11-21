@@ -13,7 +13,7 @@ interface Pedido {
   dados: Record<string, unknown>;
 }
 
-interface ContaServico {
+export interface ContaServico {
   client_email: string;
   private_key: string;
   project_id: string;
@@ -62,7 +62,7 @@ const b64url = (dados: ArrayBuffer | string) =>
     .replace(/\//g, '_')
     .replace(/=+$/, '');
 
-async function tokenGoogle(conta: ContaServico): Promise<string> {
+export async function tokenGoogle(conta: ContaServico): Promise<string> {
   if (tokenEmCache && tokenEmCache.expira > Date.now() + 60_000) return tokenEmCache.valor;
   const agora = Math.floor(Date.now() / 1000);
   const cabecalho = b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));

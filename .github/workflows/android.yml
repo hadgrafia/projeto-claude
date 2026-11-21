@@ -1,7 +1,9 @@
 name: App Android
 
-# Gera o APK do app Android de graça, a cada envio de código.
-# O arquivo fica para baixar na aba "Actions" do GitHub (seção Artifacts).
+# Gera o app Android de graça a cada envio de código.
+# - Sempre: testes + APK de teste (Artifacts > meus-planos-apk).
+# - Com os segredos da chave de assinatura: pacote oficial para a Play Store (.aab) e APK assinado.
+# - Com PLAY_SERVICE_ACCOUNT_JSON: envia sozinho para o "Teste interno" da Play Store.
 on:
   push:
     branches: ['**']
@@ -11,6 +13,10 @@ jobs:
   apk:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      VERSION_CODE: ${{ github.run_number }}
+      TEM_CHAVE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+      TEM_PLAY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -29,7 +35,7 @@ jobs:
         run: npm run build
       - name: Copiar para o Android
         run: npx cap sync android
-      - name: Testes do leitor nativo e APK
+      - name: Testes do leitor nativo e APK de teste
         working-directory: android
         run: |
           chmod +x gradlew
@@ -39,3 +45,39 @@ jobs:
           name: meus-planos-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
+
+      - name: Preparar a chave de assinatura
+        if: env.TEM_CHAVE == 'true'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+      - name: Pacote oficial para a Play Store (.aab) e APK assinado
+        if: env.TEM_CHAVE == 'true'
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon bundleRelease assembleRelease
+      - uses: actions/upload-artifact@v4
+        if: env.TEM_CHAVE == 'true'
+        with:
+          name: meus-planos-play-store
+          path: |
+            android/app/build/outputs/bundle/release/app-release.aab
+            android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
+      - name: Enviar para o Teste interno da Play Store
+        if: env.TEM_CHAVE == 'true' && env.TEM_PLAY == 'true'
+        uses: r0adkll/upload-google-play@v1.1.3
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: br.meusplanos.financeiros
+          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed
+      - name: Apagar a chave do servidor
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.jks"
