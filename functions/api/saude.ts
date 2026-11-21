@@ -35,14 +35,15 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       });
       r.ia = m.content.some((b) => b.type === 'text' && /ok/i.test(b.text)) ? 'ok' : `resposta inesperada (${m.stop_reason})`;
     } catch (e) {
-      const msg = (e as Error).message ?? String(e);
-      r.ia = /404|not found/i.test(msg)
+      const msg = ((e as Error).message ?? String(e)).replace(/\s+/g, ' ');
+      const dica = /404|not found/i.test(msg)
         ? 'Claude Opus 5.5 não está ativado no Model Garden do Vertex AI'
         : /403|permission/i.test(msg)
           ? 'a conta de serviço não tem o papel "Vertex AI User" ou a Vertex AI API está desligada'
           : /billing/i.test(msg)
             ? 'o projeto do Google Cloud está sem faturamento (cartão)'
-            : `erro: ${msg.slice(0, 300)}`;
+            : 'erro';
+      r.ia = `${dica} · resposta do Google: ${msg.slice(0, 400)}`;
     }
   }
 
