@@ -99,6 +99,11 @@ export async function clienteVertex(env: Env, conta: ContaServico, extras: Parti
   return new AnthropicVertex({ region: env.GCP_REGION || 'global', projectId: projeto, authClient, ...extras });
 }
 
+/** Regiões tentadas: a cota do Google é separada por região (a "global" pode estar zerada e outra não). */
+export const regioes = (env: Env) => [...new Set([env.GCP_REGION || 'global', 'us-east5', 'europe-west1', 'asia-southeast1'])];
+/** Todas as combinações modelo × região, na ordem de preferência. */
+export const tentativas = (env: Env) => ordemModelos(env).flatMap((modelo) => regioes(env).map((regiao) => ({ modelo, regiao })));
+
 /**
  * Modelos do Claude tentados em ordem: o primeiro que o Google Cloud aceitar (ativado no
  * Model Garden e com cota) é usado. GCP_MODELO, se definido, vai na frente.
@@ -111,11 +116,11 @@ const antigo = (m: string) => m.startsWith('claude-3');
 export const indisponivel = (e: unknown) =>
   e instanceof Anthropic.NotFoundError || e instanceof Anthropic.RateLimitError || e instanceof Anthropic.PermissionDeniedError;
 
-let modeloBom: { id: string; em: number } | undefined;
+let modeloBom: { modelo: string; regiao: string; em: number } | undefined;
 
 /** Pergunta curtinha para testar cada modelo (usada pela verificação automática). */
-export async function testarModelo(env: Env, conta: ContaServico, modelo: string) {
-  const client = await clienteVertex(env, conta, { maxRetries: 0 });
+export async function testarModelo(env: Env, conta: ContaServico, modelo: string, regiao: string) {
+  const client = await clienteVertex(env, conta, { maxRetries: 0, region: regiao });
   const m = await client.messages.create({
     model: modelo,
     max_tokens: antigo(modelo) ? 64 : 2048,
@@ -125,10 +130,11 @@ export async function testarModelo(env: Env, conta: ContaServico, modelo: string
   return m.content.some((b) => b.type === 'text' && /ok/i.test(b.text));
 }
 
-async function analisarCom(env: Env, conta: ContaServico, modelo: string, pergunta: string, comPesquisa: boolean) {
+async function analisarCom(env: Env, conta: ContaServico, modelo: string, regiao: string, pergunta: string, comPesquisa: boolean) {
   // Só o Opus 5.5 tem reserva para recusas: se ele recusar, tenta de novo no Claude Opus 4.8.
   const client = await clienteVertex(env, conta, {
     maxRetries: 0,
+    region: regiao,
     ...(modelo === 'claude-opus-5-5' ? { middleware: [betaRefusalFallbackMiddleware([{ model: 'claude-opus-4-8' }])] } : {}),
   });
   const fallbackState = new BetaFallbackState();
@@ -182,23 +188,24 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     'Pesquise os valores atuais e monte a análise no formato pedido.';
 
   // O modelo que funcionou por último vai primeiro (por 1 hora); depois volta a tentar a ordem preferida.
-  let ordem = ordemModelos(env);
-  if (modeloBom && Date.now() - modeloBom.em < 3600_000) ordem = [modeloBom.id, ...ordem.filter((m) => m !== modeloBom!.id)];
+  let ordem = tentativas(env);
+  const bom = modeloBom && Date.now() - modeloBom.em < 3600_000 ? modeloBom : undefined;
+  if (bom) ordem = [bom, ...ordem.filter((t) => t.modelo !== bom.modelo || t.regiao !== bom.regiao)];
 
   let ultimoErro: unknown;
-  for (const modelo of ordem) {
+  for (const { modelo, regiao } of ordem) {
     try {
       let resposta: Anthropic.Message | undefined;
       let semPesquisa = false;
       try {
-        resposta = await analisarCom(env, conta, modelo, pergunta, true);
+        resposta = await analisarCom(env, conta, modelo, regiao, pergunta, true);
       } catch (e) {
         // Alguns modelos antigos não têm a pesquisa na web no Vertex: faz a análise sem ela.
         if (!(e instanceof Anthropic.BadRequestError) || !antigo(modelo)) throw e;
-        resposta = await analisarCom(env, conta, modelo, pergunta, false);
+        resposta = await analisarCom(env, conta, modelo, regiao, pergunta, false);
         semPesquisa = true;
       }
-      modeloBom = { id: modelo, em: Date.now() };
+      modeloBom = { modelo, regiao, em: Date.now() };
       if (!resposta) return json({ erro: 'Sem resposta.' }, 502);
       if (resposta.stop_reason === 'refusal') return json({ erro: 'A análise não pôde ser feita para este pedido.' }, 422);
 

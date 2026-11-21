@@ -1,5 +1,5 @@
 import { json, type Env } from '../tipos';
-import { ordemModelos, testarModelo, tokenGoogle, type ContaServico } from './analise';
+import { ordemModelos, regioes, testarModelo, tokenGoogle, type ContaServico } from './analise';
 
 /**
  * Verificação automática, chamada só pelo robô de publicação (exige o código VERIFICACAO).
@@ -36,18 +36,23 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       // Testa cada modelo: diz qual está funcionando e por que os outros não.
       const estados: string[] = [];
       let usando = '';
+      // Para cada modelo, tenta as regiões até achar uma com cota.
       for (const modelo of ordemModelos(env)) {
-        try {
-          if (await testarModelo(env, conta, modelo)) {
-            estados.push(`${modelo}: ok`);
-            if (!usando) usando = modelo;
-          } else estados.push(`${modelo}: resposta inesperada`);
-        } catch (e) {
-          const st = (e as { status?: number }).status;
-          const motivo =
-            st === 429 ? 'sem cota' : st === 404 ? 'não ativado no Model Garden' : st === 403 ? 'sem permissão' : st === 400 ? `recusado (${((e as Error).message ?? '').replace(/\s+/g, ' ').slice(0, 120)})` : `erro ${st ?? ''} ${((e as Error).message ?? '').slice(0, 80)}`;
-          estados.push(`${modelo}: ${motivo}`);
+        const motivos: string[] = [];
+        for (const regiao of regioes(env)) {
+          try {
+            if (await testarModelo(env, conta, modelo, regiao)) {
+              usando = `${modelo} na região ${regiao}`;
+              break;
+            }
+            motivos.push(`${regiao}: resposta inesperada`);
+          } catch (e) {
+            const st = (e as { status?: number }).status;
+            motivos.push(`${regiao}: ${st === 429 ? 'sem cota' : st === 404 ? 'não ativado' : st === 403 ? 'sem permissão' : `erro ${st ?? ''} ${((e as Error).message ?? '').replace(/\s+/g, ' ').slice(0, 100)}`}`);
+            if (st === 404 && regiao === regioes(env)[0] && modelo.startsWith('claude-3')) break; // modelo aposentado: não insiste
+          }
         }
+        estados.push(usando ? `${modelo}: ok` : `${modelo} (${motivos.join(', ')})`);
         if (usando) break; // achou um que funciona: não precisa gastar testando os demais
       }
       r.ia = usando ? `ok (usando ${usando})` : 'nenhum modelo do Claude respondeu';
