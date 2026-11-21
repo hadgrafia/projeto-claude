@@ -134,7 +134,13 @@ export async function conversarComGemini(env: Env, conta: ContaServico, sistema:
         const j = await chamar(env, conta, modelo, regiao, {
           systemInstruction: { parts: [{ text: sistema }] },
           contents: mensagens,
-          generationConfig: { maxOutputTokens: 4096, responseMimeType: 'application/json', responseSchema: esquema },
+          generationConfig: {
+            maxOutputTokens: 4096,
+            responseMimeType: 'application/json',
+            responseSchema: esquema,
+            // Pensar pouco: respostas curtas e no formato (evita respostas que se repetem sem fim).
+            ...(modelo.startsWith('gemini-3') ? { thinkingConfig: { thinkingLevel: 'low' } } : {}),
+          },
         });
         bom = { modelo, regiao, em: Date.now() };
         const texto = (j.candidates?.[0]?.content?.parts ?? []).filter((p) => p.text && !p.thought).map((p) => p.text).join('');

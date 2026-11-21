@@ -74,7 +74,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       try {
         const { json: a } = await conversarComGemini(env, conta, SISTEMA_AGENTES, [{ role: 'user', parts: [{ text: 'CONTEXTO: {"rendaMensal": 4000}\n\nMENSAGEM:\ngastei 25 reais no sorvete da Borelli' }] }], ESQUEMA_AGENTES);
         const x = a as { agente?: string; acoes?: { tipo?: string; valor?: number }[] };
-        r.agentes = x.agente && x.acoes?.some((c) => c.tipo === 'registrar' && c.valor === 25) ? `ok (${x.agente} registrou R$ 25)` : `resposta inesperada: ${JSON.stringify(a).slice(0, 160)}`;
+        r.agentes = x.agente && x.acoes?.some((c) => c.tipo === 'registrar' && Number(c.valor) === 25) ? `ok (${x.agente} preparou o registro de R$ 25)` : `resposta inesperada: agente=${x.agente} acoes=${JSON.stringify(x.acoes ?? null).slice(0, 300)}`;
       } catch (e) {
         r.agentes = `erro: ${((e as Error).message ?? '').slice(0, 200)}`;
       }
