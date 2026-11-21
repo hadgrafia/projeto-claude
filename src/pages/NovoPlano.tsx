@@ -8,7 +8,7 @@ import { useDados, useSelic } from '../hooks';
 import * as fipe from '../lib/fipe';
 import { enviarDefinicao } from '../lib/conjunto';
 import { CartaoPrazo } from '../components/Prazo';
-import { analisarPrazo, taxaMensal } from '../lib/finance';
+import { analisarPrazo, mesmoValorDosInvestimentos, somarGuardado, taxaMensal } from '../lib/finance';
 import { chaveMes, mesesEntre } from '../lib/format';
 import { cdiDaSelic, liquidoAnual } from '../lib/invest';
 import { lerValor, pct, reais, reaisCurto } from '../lib/format';
@@ -64,7 +64,7 @@ export default function NovoPlano() {
   const horizonte = prazo ? Math.max(1, mesesEntre(chaveMes(new Date()), prazo)) : 24;
   const rendimentoAa = selic ? liquidoAnual(cdiDaSelic(selic.valor), 100, horizonte) : 0;
   const daLista = id ? investimentos.filter((i) => i.planoId === Number(id)).reduce((a, i) => a + i.saldo, 0) : 0;
-  const analise = analisarPrazo({ meta, guardado: (guardado ?? 0) + daLista, livre, percentual, prazo, rendimentoMensal: taxaMensal(rendimentoAa) });
+  const analise = analisarPrazo({ meta, guardado: somarGuardado(guardado ?? 0, daLista), livre, percentual, prazo, rendimentoMensal: taxaMensal(rendimentoAa) });
   const faltando = [!meta && 'a meta (preencha as perguntas acima)', !prazo && 'quando você quer atingir o plano'].filter(Boolean) as string[];
   const set = (k: string, v: unknown) => setResp((r) => ({ ...r, [k]: v }));
 
@@ -149,7 +149,24 @@ export default function NovoPlano() {
       {resultado?.notas.map((n) => <p key={n} className="cartao areia pequeno">{n}</p>)}
 
       <CampoDinheiro rotulo="Prefere definir a meta por conta própria?" valor={metaManual} aoMudar={setMetaManual} dica="Deixe vazio para usar a meta calculada." />
-      <CampoDinheiro rotulo="Quanto já tem guardado para este plano?" valor={guardado} aoMudar={setGuardado} dica="Investimentos ligados ao plano somam automaticamente." />
+      <CampoDinheiro
+        rotulo={daLista > 0 ? 'Guardado fora dos investimentos (conta, cofrinho em casa…)' : 'Quanto já tem guardado para este plano?'}
+        valor={guardado}
+        aoMudar={setGuardado}
+        dica={
+          daLista > 0
+            ? `Os investimentos ligados a este plano já somam ${reais(daLista)} e entram sozinhos. Coloque aqui só o que está guardado fora deles.`
+            : 'Se o dinheiro estiver num investimento, ligue o investimento a este plano na aba Investir: ele soma sozinho.'
+        }
+      />
+      {mesmoValorDosInvestimentos(guardado ?? 0, daLista) && (
+        <p className="cartao areia pequeno">
+          Esse é o mesmo valor dos investimentos ligados ({reais(daLista)}). Contamos uma vez só. Se for outro dinheiro, além do investimento, ajuste o valor.{' '}
+          <button type="button" className="pequeno" style={{ background: 'none', border: 0, padding: 0, textDecoration: 'underline', cursor: 'pointer', color: 'inherit' }} onClick={() => setGuardado(0)}>
+            É o mesmo dinheiro: zerar este campo
+          </button>
+        </p>
+      )}
 
       <section className="cartao verde">
         <div className="entre">

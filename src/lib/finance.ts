@@ -44,9 +44,20 @@ export function valorLivreMensal(perfil: Perfil | undefined, movs: Movimento[], 
   return Math.max(0, renda - gasto);
 }
 
-/** Total já reservado para um plano: valor guardado + saldo dos investimentos ligados a ele. */
+/**
+ * Soma o guardado "fora dos investimentos" com o saldo dos investimentos ligados ao plano.
+ * Se a pessoa digitou no plano o MESMO valor dos investimentos ligados, é o mesmo dinheiro
+ * contado duas vezes: conta uma vez só.
+ */
+export function somarGuardado(manual: number, investimentos: number) {
+  if (investimentos > 0 && Math.abs(manual - investimentos) < 0.01) return investimentos;
+  return manual + investimentos;
+}
+export const mesmoValorDosInvestimentos = (manual: number, investimentos: number) => investimentos > 0 && Math.abs(manual - investimentos) < 0.01;
+
+/** Total já reservado para um plano: valor guardado + saldo dos investimentos ligados a ele (sem duplicar). */
 export function totalGuardado(plano: Plano, invs: Investimento[]) {
-  return plano.guardado + invs.filter((i) => i.planoId === plano.id).reduce((a, i) => a + i.saldo, 0);
+  return somarGuardado(plano.guardado, invs.filter((i) => i.planoId === plano.id).reduce((a, i) => a + i.saldo, 0));
 }
 
 export const aporteDoPlano = (plano: Plano, livre: number) => (livre * plano.percentual) / 100;

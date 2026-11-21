@@ -39,3 +39,15 @@ describe('extrato não duplica o que já veio pelos avisos', () => {
     expect(jaRegistrado({ valor: 25, tipo: 'saida', data: '2026-11-10T20:00:00.000Z', local: 'Borelli' }, [mov({ valor: 25, local: 'Borelli' })])).toBeDefined();
   });
 });
+
+import { somarGuardado, totalGuardado } from './finance';
+describe('guardado do plano não duplica o investimento', () => {
+  it('mesmo valor no plano e no CDB ligado conta uma vez', () => {
+    const plano = { id: 1, guardado: 5000 } as never;
+    expect(totalGuardado(plano, [{ planoId: 1, saldo: 5000 } as never])).toBe(5000);
+  });
+  it('dinheiro fora do investimento soma normalmente', () => {
+    expect(somarGuardado(800, 5000)).toBe(5800);
+    expect(somarGuardado(800, 0)).toBe(800);
+  });
+});
