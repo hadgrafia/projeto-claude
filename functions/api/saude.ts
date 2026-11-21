@@ -1,5 +1,6 @@
 import { json, type Env } from '../tipos';
 import { ordemModelos, regioes, testarModelo, tokenGoogle, type ContaServico } from './analise';
+import { testarGemini } from './gemini';
 
 /**
  * Verificação automática, chamada só pelo robô de publicação (exige o código VERIFICACAO).
@@ -55,8 +56,14 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
         estados.push(usando ? `${modelo}: ok` : `${modelo} (${motivos.join(', ')})`);
         if (usando) break; // achou um que funciona: não precisa gastar testando os demais
       }
-      r.ia = usando ? `ok (usando ${usando})` : 'nenhum modelo do Claude respondeu';
       r.modelos = estados.join(' · ');
+      if (usando) r.ia = `ok (usando ${usando})`;
+      else {
+        // Reserva: o Gemini, do próprio Google.
+        const g = await testarGemini(env, conta);
+        r.ia = g.usando ? `ok (usando a reserva ${g.usando}; o Claude está sem cota)` : 'nenhum modelo do Claude nem do Gemini respondeu';
+        r.reserva = g.usando ? `ok (${g.usando})` : g.motivos.join(' · ');
+      }
     } catch (e) {
       const msg = ((e as Error).message ?? String(e)).replace(/\s+/g, ' ');
       const dica = /403|permission/i.test(msg)

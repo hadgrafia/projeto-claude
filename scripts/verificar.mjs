@@ -30,6 +30,7 @@ const rotulos = {
   confirmacaoEmail: 'Confirmação do e-mail no cadastro',
   contas: 'Contas (e-mail e senha)',
   modelos: 'Modelos testados',
+  reserva: 'IA reserva (Gemini, do Google)',
   googleCloud: 'Acesso ao Google Cloud',
   ia: 'IA (Claude no Vertex AI)',
   convitesAutomaticos: 'Convite automático de familiares',

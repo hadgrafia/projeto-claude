@@ -13,11 +13,6 @@
   --sombra: 0 18px 40px rgba(28, 30, 26, 0.14);
   --alt: #e6dccb;
   --terracota-fundo: #b4552d;
-  /* Desenhos geométricos */
-  --a1: #3b4a3a;
-  --a2: #6b7f63;
-  --a3: #b4552d;
-  --a4: #d9774f;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -32,10 +27,6 @@
     --sombra: 0 18px 40px rgba(0, 0, 0, 0.45);
     --alt: #2a2e27;
     --terracota-fundo: #9a4523;
-    --a1: #56684f;
-    --a2: #8fa585;
-    --a3: #d9774f;
-    --a4: #b4552d;
     color-scheme: dark;
   }
   .secao-areia .cartao { background: var(--areia); }
@@ -90,23 +81,33 @@ p { margin: 0 0 12px; }
 .secao-terracota .lead { color: rgba(255, 247, 239, 0.86); }
 .secao-terracota .formulario { color: var(--texto); box-shadow: 0 24px 50px rgba(28, 30, 26, 0.25); }
 
-/* Desenhos geométricos (inspirados em azulejos e formas da Bauhaus), só com a paleta do app */
-.arte { display: block; width: 100%; max-width: 400px; height: auto; margin-top: 40px; }
-.arte g { transform-box: fill-box; transform-origin: center; }
-.a1 { fill: var(--a1); } .a2 { fill: var(--a2); } .a3 { fill: var(--a3); } .a4 { fill: var(--a4); }
-.visivel .arte-meias .t { animation: meia-entra 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; animation-delay: calc(var(--i) * 45ms); }
-.visivel .arte-meias .t.gira { animation: meia-entra 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) backwards, meia-vira 12s ease-in-out 2s infinite; animation-delay: calc(var(--i) * 45ms), calc(2s + var(--i) * 300ms); }
-@keyframes meia-entra { from { opacity: 0; transform: rotate(-90deg) scale(0.6); } }
-@keyframes meia-vira { 0%, 20% { transform: rotate(0); } 25%, 45% { transform: rotate(90deg); } 50%, 70% { transform: rotate(180deg); } 75%, 95% { transform: rotate(270deg); } 100% { transform: rotate(360deg); } }
-.b1 { fill: #f0ebe1; } .b2 { fill: #3b4a3a; } .b3 { fill: #d9774f; } .b4 { fill: #1c1e1a; } .b5 { fill: #e3d8c3; } .b6 { fill: #56684f; }
-.f-terra { fill: #b4552d; } .f-areia { fill: #f0ebe1; } .f-verde { fill: #3b4a3a; } .f-terra-clara { fill: #d9774f; }
-.f-grafite { fill: #1c1e1a; stroke: #1c1e1a; stroke-width: 3.5; stroke-linecap: round; }
-.arte-azulejos { filter: drop-shadow(0 10px 18px rgba(28, 30, 26, 0.22)); }
-.visivel .arte-azulejos .az { animation: azulejo-entra 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; animation-delay: calc(0.15s + var(--i) * 90ms); }
-.arte-azulejos .forma { animation: rodar 36s linear infinite; }
-.arte-azulejos .forma.anti { animation-direction: reverse; }
-@keyframes azulejo-entra { from { opacity: 0; transform: translateY(16px) scale(0.85); } }
-@keyframes rodar { to { transform: rotate(360deg); } }
+/* Fundos com a identidade do app: a casa, as barras subindo e a seta do logotipo,
+   em tamanho grande e tom suave, atrás do conteúdo. */
+.com-fundo { position: relative; overflow: hidden; isolation: isolate; }
+.com-fundo > .conteudo, .com-fundo > :not(.fundo-arte) { position: relative; z-index: 1; }
+.fundo-arte { position: absolute; z-index: 0; pointer-events: none; height: auto; overflow: visible; }
+.fundo-arte.revelar { transform: none; }
+.fundo-casa { width: 620px; left: -70px; bottom: -110px; }
+.fundo-casa .traco { fill: none; stroke: var(--fundo-traco); stroke-width: 44; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
+.fundo-casa .barra { fill: var(--fundo-traco); }
+.fundo-casa .seta { fill: var(--fundo-seta); stroke: var(--fundo-recorte); stroke-width: 26; stroke-linejoin: round; paint-order: stroke; }
+.fundo-fita { width: 640px; left: -110px; bottom: -40px; }
+.fundo-fita .fita { fill: none; stroke: var(--fundo-fita); stroke-width: 58; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
+.fundo-fita .ponta { fill: var(--fundo-fita); stroke: var(--fundo-fita); stroke-width: 26; stroke-linejoin: round; }
+.fundo-heroi { left: auto; right: -40px; top: -40px; bottom: auto; width: 700px; --fundo-fita: var(--fundo-traco); }
+:root { --fundo-traco: #e3d8c3; --fundo-seta: #e6c4ae; --fundo-recorte: #f0ebe1; --fundo-fita: #c2673f; }
+@media (prefers-color-scheme: dark) { :root { --fundo-traco: #272a25; --fundo-seta: #3b2a21; --fundo-recorte: #1c1e1a; --fundo-fita: #a9532e; } }
+.conta-arte { --fundo-traco: #46574a; --fundo-seta: #7a5a42; --fundo-recorte: #3b4a3a; }
+.conta-arte .fundo-casa { width: 560px; left: auto; right: -110px; bottom: -90px; }
+/* Animação: os traços se desenham quando aparecem na tela; a seta e as barras sobem. */
+.fundo-arte.visivel .traco, .fundo-arte.visivel .fita { animation: desenhar 2.2s cubic-bezier(0.3, 0.7, 0.2, 1) backwards; }
+.fundo-arte.visivel .traco + .traco { animation-delay: 0.35s; }
+.fundo-arte.visivel .barra, .fundo-arte.visivel .seta, .fundo-arte.visivel .ponta { transform-box: fill-box; transform-origin: bottom; animation: subir 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+.fundo-arte.visivel .b1 { animation-delay: 0.9s; } .fundo-arte.visivel .b2 { animation-delay: 1.05s; } .fundo-arte.visivel .seta { animation-delay: 1.2s; }
+.fundo-arte.visivel .ponta { transform-origin: center; animation: aparecer 0.6s ease 1.7s backwards; }
+@keyframes desenhar { from { stroke-dashoffset: 1; } }
+@keyframes subir { from { transform: scaleY(0); } }
+@keyframes aparecer { from { opacity: 0; transform: scale(0.4); } }
 
 .passos { list-style: none; padding: 0; margin: 32px 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
 .cartao { background: var(--cartao); border-radius: 28px; padding: 28px; }
@@ -153,7 +154,7 @@ p { margin: 0 0 12px; }
 .revelar.visivel { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) {
   .revelar { opacity: 1; transform: none; transition: none; }
-  .flutua, .arte g, .visivel .arte g { animation: none !important; }
+  .flutua, .fundo-arte * { animation: none !important; }
   html { scroll-behavior: auto; }
 }
 
@@ -167,18 +168,18 @@ p { margin: 0 0 12px; }
   .celular-atras { right: auto; left: calc(50% - 20px); top: 50px; }
   .passos, .grade-recursos, .grade-instalar { grid-template-columns: 1fr; }
   .secao { padding: 64px 0; }
-  .arte { max-width: 320px; margin-top: 28px; }
+  .fundo-casa { width: 420px; left: auto; right: -120px; bottom: -90px; }
+  .fundo-fita { width: 460px; left: auto; right: -160px; }
+  .fundo-heroi { width: 520px; right: -200px; top: auto; bottom: -60px; }
 }
 
 /* ---------- Página Entrar (conta com e-mail e senha) ---------- */
 .pagina-conta { min-height: 100vh; min-height: 100dvh; }
 .conta { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; min-height: 100dvh; }
-.conta-arte { background: var(--verde); color: #f0ebe1; padding: 40px clamp(24px, 5vw, 64px); display: flex; flex-direction: column; justify-content: space-between; gap: 32px; overflow: hidden; }
+.conta-arte { background: var(--verde); color: #f0ebe1; padding: 40px clamp(24px, 5vw, 64px); display: flex; flex-direction: column; justify-content: flex-start; gap: 12vh; overflow: hidden; }
 .conta-arte .marca { color: #f0ebe1; }
 .conta-arte h1 { font-size: clamp(32px, 4vw, 48px); max-width: 520px; }
 .conta-arte p { color: #c9cfc0; max-width: 460px; }
-.conta-arte .arte { max-width: min(400px, 44vh); margin: 0; }
-.conta-arte { --a1: #56684f; --a2: #8fa585; --a3: #d9774f; --a4: #b4552d; }
 .conta-lado { display: flex; align-items: center; justify-content: center; padding: 40px 20px; }
 .conta-caixa { width: min(440px, 100%); display: grid; gap: 18px; }
 main.conta-caixa { margin: 12vh auto; text-align: center; justify-items: center; }
@@ -203,10 +204,9 @@ main.conta-caixa { margin: 12vh auto; text-align: center; justify-items: center;
 [hidden] { display: none !important; }
 @media (max-width: 900px) {
   .conta { grid-template-columns: 1fr; }
-  .conta-arte { padding: 24px 20px; gap: 16px 20px; display: grid; grid-template-columns: 1fr 104px; align-items: center; }
-  .conta-arte .marca { grid-column: 1 / -1; }
+  .conta-arte { padding: 24px 20px 28px; gap: 16px; }
   .conta-arte h1 { margin: 0; font-size: 30px; }
-  .conta-arte .arte { max-width: 104px; }
+  .conta-arte .fundo-casa { width: 300px; right: -70px; bottom: -70px; }
   .conta-arte .some-celular { display: none; }
   .conta-lado { align-items: flex-start; padding: 28px 20px 48px; }
 }

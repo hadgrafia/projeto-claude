@@ -1,6 +1,7 @@
 import Anthropic, { BetaFallbackState, betaRefusalFallbackMiddleware } from '@anthropic-ai/sdk';
 import { AnthropicVertex } from '@anthropic-ai/vertex-sdk';
 import { json, type Env } from '../tipos';
+import { analisarComGemini } from './gemini';
 
 /**
  * Análise aprimorada com IA: Claude no Google Cloud (Vertex AI), cobrado pelo Google
@@ -117,6 +118,8 @@ export const indisponivel = (e: unknown) =>
   e instanceof Anthropic.NotFoundError || e instanceof Anthropic.RateLimitError || e instanceof Anthropic.PermissionDeniedError;
 
 let modeloBom: { modelo: string; regiao: string; em: number } | undefined;
+/** Quando nenhum Claude tem cota, pula direto para a reserva por 30 minutos (evita esperar à toa). */
+let claudeSemCotaAte = 0;
 
 /** Pergunta curtinha para testar cada modelo (usada pela verificação automática). */
 export async function testarModelo(env: Env, conta: ContaServico, modelo: string, regiao: string) {
@@ -193,6 +196,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (bom) ordem = [bom, ...ordem.filter((t) => t.modelo !== bom.modelo || t.regiao !== bom.regiao)];
 
   let ultimoErro: unknown;
+  if (Date.now() < claudeSemCotaAte) ordem = [];
   for (const { modelo, regiao } of ordem) {
     try {
       let resposta: Anthropic.Message | undefined;
@@ -225,6 +229,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       ultimoErro = e;
       if (indisponivel(e)) continue;
       break;
+    }
+  }
+  // Nenhum Claude disponível (sem cota ou não ativado): usa o Gemini, do próprio Google, como reserva.
+  if (ultimoErro === undefined || indisponivel(ultimoErro)) {
+    if (ultimoErro !== undefined) claudeSemCotaAte = Date.now() + 30 * 60_000;
+    try {
+      const g = await analisarComGemini(env, conta, SISTEMA, pergunta);
+      return json({ texto: `${g.texto}\n\n_Análise feita pelo Gemini, a IA do Google, enquanto o Claude está sem cota no Google Cloud._`, fontes: g.fontes, geradaEm: new Date().toISOString(), modelo: g.modelo });
+    } catch (eg) {
+      if (ultimoErro === undefined) ultimoErro = eg;
     }
   }
   const e = ultimoErro;
