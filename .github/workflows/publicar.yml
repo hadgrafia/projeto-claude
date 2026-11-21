@@ -1,0 +1,65 @@
+name: Publicar na Cloudflare
+
+# Publica o app e configura a Cloudflare (banco, proteção por e-mail).
+# Precisa de dois segredos no GitHub (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN  e  ADMIN_EMAIL
+# Opcional: CLOUDFLARE_ACCESS_TOKEN (só "Access: Organizations, Identity Providers, and Groups: Edit")
+# para cada pessoa poder liberar o e-mail de um familiar direto pelo app.
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+concurrency:
+  group: publicar
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 28653809fc1af49b5c9a587a86992a09
+      ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+      CLOUDFLARE_ACCESS_TOKEN: ${{ secrets.CLOUDFLARE_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verificar segredos
+        id: segredos
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$ADMIN_EMAIL" ]; then
+            echo "::warning::Faltam os segredos CLOUDFLARE_API_TOKEN e/ou ADMIN_EMAIL. Publicação pulada."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.segredos.outputs.ok == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - name: Instalar e testar
+        if: steps.segredos.outputs.ok == 'true'
+        run: |
+          npm ci
+          npm test
+          npm run build
+      - name: Configurar Cloudflare (banco, Access)
+        if: steps.segredos.outputs.ok == 'true'
+        id: cf
+        run: node scripts/cloudflare.mjs
+      - name: Ligar o banco e o grupo de convidados
+        if: steps.segredos.outputs.ok == 'true'
+        run: |
+          sed -i "s/database_id = \".*\"/database_id = \"${{ steps.cf.outputs.d1_id }}\"/" wrangler.toml
+          sed -i "s/^\[vars\]/[vars]\nCF_ACCOUNT_ID = \"$CLOUDFLARE_ACCOUNT_ID\"\nCF_ACCESS_GROUP_ID = \"${{ steps.cf.outputs.grupo_id }}\"/" wrangler.toml
+      - name: Publicar
+        if: steps.segredos.outputs.ok == 'true'
+        run: npx wrangler pages deploy dist --project-name meus-planos-financeiros --branch main --commit-dirty=true
+      - name: Guardar o e-mail da administradora como segredo do app
+        if: steps.segredos.outputs.ok == 'true'
+        run: printf '%s' "$ADMIN_EMAIL" | npx wrangler pages secret put ADMIN_EMAIL --project-name meus-planos-financeiros
+      - name: Convites automáticos (opcional)
+        if: steps.segredos.outputs.ok == 'true' && env.CLOUDFLARE_ACCESS_TOKEN != ''
+        run: printf '%s' "$CLOUDFLARE_ACCESS_TOKEN" | npx wrangler pages secret put CF_ACCESS_TOKEN --project-name meus-planos-financeiros
