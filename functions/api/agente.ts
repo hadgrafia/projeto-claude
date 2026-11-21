@@ -9,7 +9,7 @@ import { conversarComGemini, GeminiErro, type ParteGemini } from './gemini';
  * pessoa (nunca senha, banco ou dados de conta). A IA escolhe o agente, responde e sugere ações,
  * que o app executa só depois de a pessoa confirmar.
  */
-const SISTEMA = `Você é a equipe de agentes do app "Meus Planos Financeiros", que ajuda pessoas no Brasil a organizar o dinheiro para realizar planos (casa, carro, viagem, equipamentos).
+export const SISTEMA_AGENTES = `Você é a equipe de agentes do app "Meus Planos Financeiros", que ajuda pessoas no Brasil a organizar o dinheiro para realizar planos (casa, carro, viagem, equipamentos).
 A cada mensagem, escolha UM agente para responder, conforme o assunto:
 - "nina": gastos e entradas. Registra gastos (texto, áudio, foto ou PDF de comprovante), soma gastos por período ou categoria, resumo do mês, relatórios e Imposto de Renda (gastos dedutíveis: saúde e educação).
 - "gabriela": planos. Cria planos conversando, explica metas, prazos, quanto separar por mês e quando dá para chegar.
@@ -32,7 +32,7 @@ Ações (campo "acoes"; o app pede confirmação antes de executar):
 - "imposto" (Nina): quando perguntarem sobre Imposto de Renda. Preencha ano (AAAA).
 Se não houver ação, devolva "acoes": [].`;
 
-const ESQUEMA = {
+export const ESQUEMA_AGENTES = {
   type: 'OBJECT',
   properties: {
     agente: { type: 'STRING', enum: ['nina', 'gabriela', 'matheus', 'leo'] },
@@ -93,7 +93,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   try {
     const conta = JSON.parse(env.GCP_SA_KEY) as ContaServico;
-    const { json: r } = await conversarComGemini(env, conta, SISTEMA, [...historico, { role: 'user', parts: partes }], ESQUEMA);
+    const { json: r } = await conversarComGemini(env, conta, SISTEMA_AGENTES, [...historico, { role: 'user', parts: partes }], ESQUEMA_AGENTES);
     return json(r);
   } catch (e) {
     if (e instanceof GeminiErro && e.status === 429) return json({ erro: 'Muita gente conversando agora. Tente em um minuto.' }, 429);

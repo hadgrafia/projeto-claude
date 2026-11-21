@@ -34,6 +34,7 @@ const rotulos = {
   appProtegido: 'App só abre com login',
   modelos: 'Modelos testados',
   reserva: 'IA reserva (Gemini, do Google)',
+  agentes: 'Agentes (Nina, Gabriela, Matheus e Leo)',
   googleCloud: 'Acesso ao Google Cloud',
   ia: 'IA (Claude no Vertex AI)',
 };
