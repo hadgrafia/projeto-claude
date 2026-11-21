@@ -4,9 +4,13 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Icone, ICONE_PLANO } from '../components/Icone';
 import { CampoDinheiro, Dinheiro, Folha } from '../components/Ui';
 import { db, type TipoPlano } from '../db';
-import { useDados } from '../hooks';
+import { useDados, useSelic } from '../hooks';
 import * as fipe from '../lib/fipe';
 import { enviarDefinicao } from '../lib/conjunto';
+import { CartaoPrazo } from '../components/Prazo';
+import { analisarPrazo, taxaMensal } from '../lib/finance';
+import { chaveMes, mesesEntre } from '../lib/format';
+import { cdiDaSelic, liquidoAnual } from '../lib/invest';
 import { lerValor, pct, reais, reaisCurto } from '../lib/format';
 import { PLANOS, respostasPadrao, type Campo } from '../lib/planos';
 
@@ -14,7 +18,8 @@ export default function NovoPlano() {
   const navegar = useNavigate();
   const { id } = useParams();
   const [busca] = useSearchParams();
-  const { livre, somaPct } = useDados();
+  const { livre, somaPct, renda, gasto, investimentos } = useDados();
+  const selic = useSelic();
   const [tipo, setTipo] = useState<TipoPlano | undefined>((busca.get('tipo') as TipoPlano) || undefined);
   const [nome, setNome] = useState('');
   const [resp, setResp] = useState<Record<string, unknown>>({});
@@ -55,6 +60,12 @@ export default function NovoPlano() {
   const def = tipo ? PLANOS[tipo] : undefined;
   const resultado = useMemo(() => (def ? def.calcular(resp) : undefined), [def, resp]);
   const meta = metaManual ?? resultado?.meta ?? 0;
+  const prazo = (resp.prazo as string) || undefined;
+  const horizonte = prazo ? Math.max(1, mesesEntre(chaveMes(new Date()), prazo)) : 24;
+  const rendimentoAa = selic ? liquidoAnual(cdiDaSelic(selic.valor), 100, horizonte) : 0;
+  const daLista = id ? investimentos.filter((i) => i.planoId === Number(id)).reduce((a, i) => a + i.saldo, 0) : 0;
+  const analise = analisarPrazo({ meta, guardado: (guardado ?? 0) + daLista, livre, percentual, prazo, rendimentoMensal: taxaMensal(rendimentoAa) });
+  const faltando = [!meta && 'a meta (preencha as perguntas acima)', !prazo && 'quando você quer atingir o plano'].filter(Boolean) as string[];
   const set = (k: string, v: unknown) => setResp((r) => ({ ...r, [k]: v }));
 
   async function salvar() {
@@ -149,7 +160,19 @@ export default function NovoPlano() {
         <span className="suave pequeno">= {reaisCurto((livre * percentual) / 100)} por mês, com base no seu valor livre de {reaisCurto(livre)}.</span>
       </section>
 
-      <motion.button type="button" whileTap={{ scale: 0.97 }} className="botao seta" onClick={salvar} disabled={!meta}>
+      <CartaoPrazo
+        a={analise}
+        prazo={prazo}
+        percentual={percentual}
+        renda={renda.mensal}
+        gasto={gasto}
+        rendimentoAa={rendimentoAa}
+        aoUsarPct={(v) => { setPctTocado(true); setPercentual(v); }}
+        aoUsarData={(m) => set('prazo', m)}
+      />
+      {faltando.length > 0 && <p className="cartao areia pequeno" role="status">Para continuar, responda: {faltando.join(' e ')}.</p>}
+
+      <motion.button type="button" whileTap={{ scale: 0.97 }} className="botao seta" onClick={salvar} disabled={faltando.length > 0}>
         {editando ? 'Salvar alterações' : 'Criar plano'}
         <span className="ponta"><Icone nome="check" /></span>
       </motion.button>

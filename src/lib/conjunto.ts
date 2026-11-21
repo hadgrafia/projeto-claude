@@ -78,7 +78,7 @@ export interface DadosLocais {
 /** O que esta pessoa compartilha com o grupo sobre este plano. */
 export function meuResumo(plano: Plano, d: DadosLocais, membroId: string, mostrarRenda: boolean): ResumoMembro {
   const livre = valorLivreMensal(d.perfil, d.movimentos);
-  const renda = resumoRenda(d.perfil, d.movimentos).media;
+  const renda = resumoRenda(d.perfil, d.movimentos).mensal;
   return {
     membroId,
     apelido: d.perfil?.nome?.trim() || 'Participante',

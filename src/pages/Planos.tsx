@@ -5,6 +5,7 @@ import { Barra, Dinheiro, Entra } from '../components/Ui';
 import { db } from '../db';
 import { situacaoPlano, useDados, useSelic } from '../hooks';
 import { mesCurto, pct, reaisCurto } from '../lib/format';
+import { analisarPrazo, taxaMensal } from '../lib/finance';
 
 const CORES = ['#B4552D', '#3B4A3A', '#D9774F', '#8A9A86', '#6B4E3D', '#C9CFC0'];
 
@@ -71,11 +72,17 @@ export default function Planos() {
                 <span className="entre"><span>Porcentagem fixa do valor livre</span><strong>{pct(p.percentual)}</strong></span>
                 <input type="range" min={0} max={100} step={5} value={p.percentual} onChange={(e) => mudarPct(p.id!, Number(e.target.value))} style={{ minHeight: 32, padding: 0, accentColor: 'var(--terracota)' }} />
               </label>
-              {s.necessario !== undefined && s.necessario > s.aporte + 1 && (
-                <span className="pilula rever" style={{ whiteSpace: 'normal' }}>
-                  Para cumprir o prazo ({mesCurto(p.prazo!)}): {reaisCurto(s.necessario)}/mês
-                </span>
-              )}
+              {(() => {
+                const a = analisarPrazo({ meta: p.meta, guardado: s.guardado, livre, percentual: p.percentual, prazo: p.prazo, rendimentoMensal: taxaMensal(s.rendimentoAa), outrosAporte: s.aporte - s.meuAporte });
+                if (a.situacao === 'sem-prazo') return null;
+                return (
+                  <span className={`pilula ${a.situacao === 'ok' ? 'manter' : a.situacao === 'ajustar' ? 'rever' : 'cortar'}`} style={{ whiteSpace: 'normal' }}>
+                    {a.situacao === 'ok' && `Chega até ${mesCurto(p.prazo!)}, como você deseja`}
+                    {a.situacao === 'ajustar' && `Para ${mesCurto(p.prazo!)}: separe ${reaisCurto(a.necessario!)}/mês (${pct(Math.ceil(a.pctNecessario!))} do livre)`}
+                    {a.situacao === 'impossivel' && `${mesCurto(p.prazo!)} não dá com a renda atual · possível em ${a.dataMinima ? mesCurto(a.dataMinima) : '—'}`}
+                  </span>
+                );
+              })()}
             </div>
           </Entra>
         );

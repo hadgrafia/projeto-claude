@@ -13,8 +13,11 @@ export type Tema = 'claro' | 'escuro' | 'sistema';
 export interface Perfil {
   id: 'eu';
   nome: string;
-  /** Renda informada dos últimos 6 meses (mês no formato AAAA-MM). Pode variar: PJ, freela etc. */
-  rendaMeses: { mes: string; valor: number }[];
+  /** Renda mensal, com base no salário (ou recebimento) mais recente. Pode ser ajustada a qualquer momento. */
+  rendaMensal: number;
+  rendaAtualizadaEm?: string;
+  /** Formato antigo (6 meses). Só lido na atualização do banco. */
+  rendaMeses?: { mes: string; valor: number }[];
   /** Estimativa de gasto mensal, usada até existirem gastos registrados suficientes. */
   gastoMensalEstimado: number;
   perfilRisco?: PerfilRisco;
@@ -151,6 +154,22 @@ class BancoLocal extends Dexie {
           .toCollection()
           .modify((m: Movimento) => {
             if (!m.local) m.local = m.descricao;
+          }),
+      );
+    // v3: renda mensal única (o valor mais recente informado) no lugar dos 6 meses.
+    this.version(3)
+      .stores({})
+      .upgrade((tx) =>
+        tx
+          .table('perfil')
+          .toCollection()
+          .modify((p: Perfil) => {
+            if (!p.rendaMensal) {
+              const lista = [...(p.rendaMeses ?? [])].sort((a, b) => a.mes.localeCompare(b.mes));
+              p.rendaMensal = lista.length ? lista[lista.length - 1].valor : 0;
+              p.rendaAtualizadaEm = new Date().toISOString();
+            }
+            delete p.rendaMeses;
           }),
       );
   }

@@ -11,6 +11,7 @@ import {
   type ConfigBloqueio,
 } from '../lib/bloqueio';
 import { Icone } from './Icone';
+import { Logo } from './Logo';
 
 /** Controla quando o app fica bloqueado: ao abrir e ao voltar depois de um tempo fora. */
 export function useBloqueio() {
@@ -146,12 +147,7 @@ export function TelaBloqueio({ config, aoDestravar }: { config: ConfigBloqueio; 
 
   return (
     <motion.main className="tela sem-nav" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, scale: 1.04 }} style={{ minHeight: '100dvh', justifyContent: 'center', alignItems: 'center', gap: 28 }}>
-      <div className="circulo verde" style={{ width: 72, height: 72, borderRadius: 22 }}>
-        <svg width={40} height={40} viewBox="0 0 48 48" aria-hidden="true">
-          <path d="M8 22 L24 9 L40 22 V40 H8 Z" fill="#F0EBE1" />
-          <path d="M8 29 H40 V40 H8 Z" fill="#B4552D" />
-        </svg>
-      </div>
+      <Logo tamanho={76} />
       <div className="coluna" style={{ alignItems: 'center', gap: 6 }}>
         <h1 className="titulo" style={{ fontSize: 22 }}>Digite sua senha</h1>
         <p className="pequeno suave" role="status" style={{ minHeight: 20, textAlign: 'center' }}>
@@ -248,9 +244,6 @@ export function CriarSenha({ aoConcluir, atual }: { aoConcluir: () => void; atua
 /** Capa que esconde os valores quando o app vai para segundo plano. */
 export const CapaPrivacidade = () => (
   <div style={{ position: 'fixed', inset: 0, background: 'var(--verde)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-    <svg width={64} height={64} viewBox="0 0 48 48" aria-hidden="true">
-      <path d="M8 22 L24 9 L40 22 V40 H8 Z" fill="#F0EBE1" />
-      <path d="M8 29 H40 V40 H8 Z" fill="#B4552D" />
-    </svg>
+    <Logo tamanho={120} fundo={false} />
   </div>
 );

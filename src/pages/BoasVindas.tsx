@@ -4,9 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { Icone, ICONE_PLANO } from '../components/Icone';
 import { CampoDinheiro, Segmentado } from '../components/Ui';
 import { CriarSenha } from '../components/Bloqueio';
+import { Logo } from '../components/Logo';
+import { PerguntasPerfil } from '../components/PerguntasPerfil';
 import { convitePendente } from './Convite';
 import { db, type Perfil, type Tema, type TipoPlano } from '../db';
-import { mesLongo, reais, ultimosMeses } from '../lib/format';
+import { reais } from '../lib/format';
 import { calcularPerfil, PERGUNTAS_PERFIL } from '../lib/invest';
 import { PLANOS } from '../lib/planos';
 import { ehAppAndroid, Leitor } from '../lib/nativo';
@@ -17,33 +19,46 @@ const ehIPhone = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 export default function BoasVindas() {
   const navegar = useNavigate();
   const [passo, setPasso] = useState(0);
-  const [metodo, setMetodo] = useState<Perfil['metodo']>(ehAndroidNativo() ? 'notificacoes' : 'extrato');
+  const [metodo, setMetodo] = useState<Perfil['metodo']>();
   const [nome, setNome] = useState('');
   const [tema, setTema] = useState<Tema>('sistema');
-  const meses = ultimosMeses(6);
-  const [renda, setRenda] = useState<(number | undefined)[]>(meses.map(() => undefined));
+  const [renda, setRenda] = useState<number>();
   const [gasto, setGasto] = useState<number>();
-  const [respostas, setRespostas] = useState<number[]>([]);
+  const [respostas, setRespostas] = useState<(number | undefined)[]>([]);
   const [senhaCriada, setSenhaCriada] = useState(false);
+  const [aviso, setAviso] = useState('');
+  const convite = convitePendente();
 
-  const media = (() => {
-    const v = renda.filter((x): x is number => !!x);
-    return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0;
-  })();
+  /** Todas as respostas são obrigatórias: diz o que falta em cada etapa. */
+  const falta = (p: number): string => {
+    if (p === 0 && !metodo) return 'Escolha como você quer registrar os gastos.';
+    if (p === 1 && nome.trim().length < 2) return 'Diga como podemos te chamar.';
+    if (p === 2 && !senhaCriada) return 'Crie a senha do app para continuar.';
+    if (p === 3 && !(renda && renda > 0)) return 'Informe quanto você recebe por mês.';
+    if (p === 3 && !(gasto && gasto > 0)) return 'Informe quanto você gasta por mês, mais ou menos.';
+    if (p === 4 && PERGUNTAS_PERFIL.some((_, i) => respostas[i] === undefined)) return 'Responda as 3 perguntas.';
+    return '';
+  };
+  const avancar = () => {
+    const f = falta(passo);
+    if (f) return setAviso(f);
+    setAviso('');
+    setPasso(passo + 1);
+  };
 
   async function concluir(tipo?: TipoPlano) {
     await db.perfil.put({
       id: 'eu',
       nome: nome.trim(),
-      rendaMeses: meses.map((mes, i) => ({ mes, valor: renda[i] ?? 0 })).filter((r) => r.valor > 0),
+      rendaMensal: renda ?? 0,
+      rendaAtualizadaEm: new Date().toISOString(),
       gastoMensalEstimado: gasto ?? 0,
-      perfilRisco: respostas.length === PERGUNTAS_PERFIL.length ? calcularPerfil(respostas) : undefined,
+      perfilRisco: calcularPerfil(respostas.map((r) => r ?? 0)),
       tema,
-      metodo,
+      metodo: metodo ?? 'manual',
       concluiuInicio: true,
       criadoEm: new Date().toISOString(),
     });
-    const convite = convitePendente();
     navegar(convite ?? (tipo ? `/planos/novo?tipo=${tipo}&primeiro=1` : '/inicio'), { replace: true });
     if (metodo === 'notificacoes' && ehAppAndroid()) {
       // Permissão para avisar "Onde foi este gasto?" e para ler as notificações de pagamento.
@@ -57,12 +72,7 @@ export default function BoasVindas() {
     // 0 — privacidade e forma de registrar
     <>
       <div className="linha">
-        <div className="circulo verde" style={{ borderRadius: 14 }}>
-          <svg width={26} height={26} viewBox="0 0 48 48" aria-hidden="true">
-            <path d="M8 22 L24 9 L40 22 V40 H8 Z" fill="#F0EBE1" />
-            <path d="M8 29 H40 V40 H8 Z" fill="#B4552D" />
-          </svg>
-        </div>
+        <Logo tamanho={44} />
         <strong>Meus Planos Financeiros</strong>
       </div>
       <h1 className="titulo" style={{ fontSize: 30 }}>Seus dados ficam com você</h1>
@@ -91,7 +101,7 @@ export default function BoasVindas() {
           type="button"
           disabled={!o.ok}
           aria-pressed={metodo === o.v}
-          onClick={() => setMetodo(o.v)}
+          onClick={() => { setMetodo(o.v); setAviso(''); }}
           className="cartao"
           style={{ flexDirection: 'row', alignItems: 'flex-start', textAlign: 'left', border: metodo === o.v ? '2px solid var(--verde)' : '1px solid var(--borda)', cursor: o.ok ? 'pointer' : 'default', opacity: o.ok ? 1 : 0.6 }}
         >
@@ -114,8 +124,8 @@ export default function BoasVindas() {
       <h1 className="titulo">Como podemos te chamar?</h1>
       <label className="campo">
         Seu nome ou apelido
-        <input value={nome} onChange={(e) => setNome(e.target.value)} autoComplete="given-name" placeholder="Opcional" />
-        <span className="dica">Fica só no seu celular.</span>
+        <input value={nome} onChange={(e) => { setNome(e.target.value); setAviso(''); }} autoComplete="given-name" placeholder="Ex.: Ana" required aria-required="true" />
+        <span className="dica">Obrigatório. Fica só no seu celular e aparece para o grupo nos planos em conjunto.</span>
       </label>
       <span className="campo" style={{ marginBottom: 0 }}>Tema do app</span>
       <Segmentado
@@ -144,62 +154,41 @@ export default function BoasVindas() {
           <strong>Senha criada</strong>
         </div>
       ) : (
-        <CriarSenha aoConcluir={() => { setSenhaCriada(true); setPasso(3); }} />
+        <CriarSenha aoConcluir={() => { setSenhaCriada(true); setAviso(''); setPasso(3); }} />
       )}
     </>,
 
     // 3 — renda e gastos
     <>
-      <h1 className="titulo">Quanto você recebeu nos últimos 6 meses?</h1>
-      <p className="subtitulo">Pode variar de mês a mês (PJ, freela, comissão). O app usa a média para planejar, e atualiza sozinho com as entradas detectadas.</p>
-      <div className="grade-2">
-        {meses.map((m, i) => (
-          <CampoDinheiro
-            key={m}
-            rotulo={mesLongo(m).replace(/^./, (c) => c.toUpperCase())}
-            valor={renda[i]}
-            aoMudar={(v) => setRenda((r) => r.map((x, j) => (j === i ? v : x)))}
-          />
-        ))}
-      </div>
-      {media > 0 && (
-        <div className="cartao verde">
-          <span className="suave pequeno">Renda média</span>
-          <strong className="valor-grande" style={{ fontSize: 28 }}>{reais(media)}</strong>
+      <h1 className="titulo">Quanto você recebe por mês?</h1>
+      <p className="subtitulo">Use o valor do seu salário (ou recebimento) mais recente. Se mudar, é só ajustar quando quiser no Início ou em Ajustes.</p>
+      <CampoDinheiro rotulo="Renda mensal" valor={renda} aoMudar={(v) => { setRenda(v); setAviso(''); }} dica="Obrigatório." />
+      <CampoDinheiro rotulo="Quanto você gasta por mês, mais ou menos?" valor={gasto} aoMudar={(v) => { setGasto(v); setAviso(''); }} dica="Obrigatório. Uma estimativa basta: quando houver gastos registrados, o app usa os reais." />
+      {renda && gasto ? (
+        <div className={`cartao ${gasto >= renda ? 'areia' : 'verde'}`}>
+          <span className="suave pequeno">Sobra por mês para os seus planos</span>
+          <strong className="valor-grande" style={{ fontSize: 28 }}>{reais(Math.max(0, renda - gasto))}</strong>
+          {gasto >= renda && <span className="pequeno">Seus gastos estão iguais ou maiores que a renda. O Feedback vai mostrar onde dá para economizar.</span>}
         </div>
-      )}
-      <CampoDinheiro rotulo="Quanto você gasta por mês, mais ou menos?" valor={gasto} aoMudar={setGasto} dica="Uma estimativa basta. Assim que houver gastos registrados, o app usa os reais." />
+      ) : null}
     </>,
 
     // 4 — perfil de investidor
     <>
       <h1 className="titulo">Seu jeito de investir</h1>
       <p className="subtitulo">3 perguntas para o app sugerir onde guardar o dinheiro de cada plano.</p>
-      {PERGUNTAS_PERFIL.map((p, i) => (
-        <fieldset key={p.id} className="cartao" style={{ border: 0, margin: 0 }}>
-          <legend style={{ fontWeight: 700, padding: 0, marginBottom: 8 }}>{p.texto}</legend>
-          <div className="coluna">
-            {p.opcoes.map((o) => (
-              <button
-                key={o.rotulo}
-                type="button"
-                className="chip"
-                style={{ textAlign: 'left', minHeight: 44 }}
-                aria-pressed={respostas[i] === o.pontos}
-                onClick={() => setRespostas((r) => Object.assign([...r], { [i]: o.pontos }))}
-              >
-                {o.rotulo}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-      ))}
+      <PerguntasPerfil respostas={respostas} aoResponder={(i, v) => { setRespostas((r) => Object.assign([...r], { [i]: v })); setAviso(''); }} />
     </>,
 
     // 5 — primeiro plano
     <>
       <h1 className="titulo">Qual é o seu primeiro plano?</h1>
-      <p className="subtitulo">Você pode criar quantos planos quiser depois, cada um com sua meta.</p>
+      <p className="subtitulo">Escolha um para começar. Depois você pode criar quantos quiser, cada um com sua meta.</p>
+      {convite && (
+        <button type="button" className="botao terracota" onClick={() => concluir()}>
+          Entrar no plano do convite
+        </button>
+      )}
       <div className="grade-2">
         {(Object.keys(PLANOS) as TipoPlano[]).map((t) => (
           <motion.button key={t} type="button" whileTap={{ scale: 0.96 }} className="cartao" style={{ border: '1px solid var(--borda)', cursor: 'pointer', textAlign: 'left' }} onClick={() => concluir(t)}>
@@ -210,9 +199,6 @@ export default function BoasVindas() {
           </motion.button>
         ))}
       </div>
-      <button type="button" className="botao secundario" onClick={() => concluir()}>
-        Criar depois
-      </button>
     </>,
   ];
 
@@ -228,14 +214,19 @@ export default function BoasVindas() {
           {passos[passo]}
         </motion.div>
       </AnimatePresence>
+      {aviso && (
+        <motion.p key={aviso} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="cartao areia pequeno" role="alert">
+          {aviso}
+        </motion.p>
+      )}
       {passo < passos.length - 1 && (passo !== 2 || senhaCriada) && (
         <div className="linha" style={{ marginTop: 8 }}>
           {passo > 0 && (
-            <button type="button" className="circulo escuro" style={{ width: 52, height: 52 }} aria-label="Voltar" onClick={() => setPasso(passo - 1)}>
+            <button type="button" className="circulo escuro" style={{ width: 52, height: 52 }} aria-label="Voltar" onClick={() => { setAviso(''); setPasso(passo - 1); }}>
               <Icone nome="voltar" />
             </button>
           )}
-          <motion.button type="button" whileTap={{ scale: 0.97 }} className="botao seta cresce" onClick={() => setPasso(passo + 1)}>
+          <motion.button type="button" whileTap={{ scale: 0.97 }} className="botao seta cresce" onClick={avancar} aria-disabled={Boolean(falta(passo))} style={{ opacity: falta(passo) ? 0.55 : 1 }}>
             {passo === 0 ? 'Começar' : 'Continuar'}
             <span className="ponta">
               <Icone nome="seta" />

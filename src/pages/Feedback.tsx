@@ -13,7 +13,7 @@ const ROTULO = { cortar: 'Cortar', rever: 'Rever', manter: 'Manter' } as const;
 export default function Feedback() {
   const { movimentos, renda, planos, investimentos, livre } = useDados();
   const selic = useSelic();
-  const sugestoes = analisarMes(movimentos, renda.media);
+  const sugestoes = analisarMes(movimentos, renda.mensal);
   const acoes = sugestoes.filter((s) => s.status !== 'manter');
   const manter = sugestoes.filter((s) => s.status === 'manter');
   const ganho = acoes.reduce((a, s) => a + s.ganhoMensal, 0);

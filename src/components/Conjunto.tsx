@@ -77,7 +77,7 @@ export function SecaoConjunto({ plano }: { plano: Plano }) {
               <span className="num">{reaisCurto(m.guardado)} guardados</span>
             </div>
             <span className="mini suave">
-              Separa {reaisCurto(m.aporteMensal)}/mês · sobra {reaisCurto(m.livreMensal)}/mês{m.rendaMedia ? ` · renda média ${reaisCurto(m.rendaMedia)}` : ''}
+              Separa {reaisCurto(m.aporteMensal)}/mês · sobra {reaisCurto(m.livreMensal)}/mês{m.rendaMedia ? ` · renda mensal ${reaisCurto(m.rendaMedia)}` : ''}
             </span>
             {m.sugestoes.length > 0 && (
               <span className="mini">
@@ -99,7 +99,7 @@ export function SecaoConjunto({ plano }: { plano: Plano }) {
           onChange={(e) => db.planos.update(plano.id!, { conjunto: { ...c, mostrarRenda: e.target.checked } })}
           style={{ width: 20, height: 20, accentColor: '#D9774F' }}
         />
-        Mostrar minha renda média para o grupo
+        Mostrar minha renda mensal para o grupo
       </label>
       <div className="grade-2">
         <button type="button" className="botao terracota pequeno" disabled={!online} onClick={() => setConvidando(true)}>

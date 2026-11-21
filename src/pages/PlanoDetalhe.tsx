@@ -3,6 +3,9 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Icone } from '../components/Icone';
 import { SecaoConjunto } from '../components/Conjunto';
+import { CartaoPrazo } from '../components/Prazo';
+import { analisarPrazo, taxaMensal } from '../lib/finance';
+import { enviarDefinicao } from '../lib/conjunto';
 import { Barra, Casa, CampoDinheiro, Dinheiro, Entra, Folha, Markdown } from '../components/Ui';
 import { db } from '../db';
 import { situacaoPlano, useDados, useOnline, useSelic } from '../hooks';
@@ -15,7 +18,7 @@ export default function PlanoDetalhe() {
   const { id } = useParams();
   const navegar = useNavigate();
   const online = useOnline();
-  const { planos, investimentos, livre, renda, perfil } = useDados();
+  const { planos, investimentos, livre, renda, gasto, perfil } = useDados();
   const selic = useSelic();
   const [deposito, setDeposito] = useState(false);
   const [valorDep, setValorDep] = useState<number>();
@@ -40,7 +43,7 @@ export default function PlanoDetalhe() {
         metaAtual: Math.round(plano!.meta),
         jaGuardado: Math.round(s.guardado),
         aporteMensalPlanejado: Math.round(s.aporte),
-        rendaMediaMensal: Math.round(renda.media),
+        rendaMensal: Math.round(renda.mensal),
         perfilInvestidor: perfil?.perfilRisco ?? 'não informado',
         prazoMeses: s.prazoMeses ?? 'não definido',
       });
@@ -89,13 +92,20 @@ export default function PlanoDetalhe() {
           <span className="mini suave">{Number.isFinite(s.meses) ? `${s.meses} meses${s.rendimentoAa > 0 ? ', com rendimento' : ''}` : 'Defina a porcentagem'}</span>
         </div>
       </div>
-      {s.necessario !== undefined && (
-        <p className={`cartao ${s.necessario > s.aporte + 1 ? 'areia' : 'manter'} pequeno`}>
-          {s.necessario > s.aporte + 1
-            ? `Para chegar em ${mesCurto(plano.prazo!)}, separe ${reaisCurto(s.necessario)}/mês (${reaisCurto(s.necessario - s.aporte)} a mais). Veja o Feedback para achar esse valor.`
-            : `No ritmo atual você chega antes de ${mesCurto(plano.prazo!)}.`}
-        </p>
-      )}
+      <CartaoPrazo
+        a={analisarPrazo({ meta: plano.meta, guardado: s.guardado, livre, percentual: plano.percentual, prazo: plano.prazo, rendimentoMensal: taxaMensal(s.rendimentoAa), outrosAporte: s.aporte - s.meuAporte })}
+        prazo={plano.prazo}
+        percentual={plano.percentual}
+        renda={renda.mensal}
+        gasto={gasto}
+        rendimentoAa={s.rendimentoAa}
+        aoUsarPct={(v) => db.planos.update(plano.id!, { percentual: v })}
+        aoUsarData={async (m) => {
+          await db.planos.update(plano.id!, { prazo: m, respostas: { ...plano.respostas, prazo: m } });
+          const salvo = await db.planos.get(plano.id!);
+          if (salvo?.conjunto) enviarDefinicao(salvo).catch(() => undefined);
+        }}
+      />
 
       <motion.button type="button" whileTap={{ scale: 0.97 }} className="botao" onClick={() => setDeposito(true)}>
         <Icone nome="mais" /> Guardei dinheiro neste plano
@@ -117,11 +127,11 @@ export default function PlanoDetalhe() {
             <div key={c.rotulo} className="entre pequeno"><span>{c.rotulo}</span><strong className="num">{reaisCurto(c.valor)}</strong></div>
           ))}
           <div className="entre"><strong>Total</strong><strong className="num">{reaisCurto(custoMensal)}/mês</strong></div>
-          {renda.media > 0 && (
+          {renda.mensal > 0 && (
             <span className="suave pequeno">
               {plano.tipo === 'casa'
-                ? `Equivale a ${pct((custoMensal / renda.media) * 100)} da sua renda média (${reaisCurto(renda.media)}).${custoMensal > renda.media ? ' Para fechar a conta: outro bairro, imóvel menor, dividir moradia ou aumentar a renda.' : ''}`
-                : `Equivale a ${pct((custoMensal / renda.media) * 100)} da sua renda média. Recomendado: parcela de até 30% da renda.`}
+                ? `Equivale a ${pct((custoMensal / renda.mensal) * 100)} da sua renda mensal (${reaisCurto(renda.mensal)}).${custoMensal > renda.mensal ? ' Para fechar a conta: outro bairro, imóvel menor, dividir moradia ou aumentar a renda.' : ''}`
+                : `Equivale a ${pct((custoMensal / renda.mensal) * 100)} da sua renda mensal. Recomendado: parcela de até 30% da renda.`}
             </span>
           )}
         </section>

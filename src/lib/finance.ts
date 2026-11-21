@@ -1,44 +1,17 @@
 import type { Investimento, Movimento, Perfil, Plano } from '../db';
-import { chaveMes, somarMeses, ultimosMeses } from './format';
+import { chaveMes, mesesEntre, somarMeses } from './format';
 
 export interface ResumoRenda {
-  media: number;
-  minimo: number;
-  maximo: number;
-  meses: { mes: string; valor: number; fonte: 'detectada' | 'informada' }[];
+  /** Renda mensal informada pela pessoa (salário mais recente). É a base de todos os cálculos. */
+  mensal: number;
+  /** Entradas registradas neste mês (notificações, extrato ou manual), só para conferência. */
+  entradasDoMes: number;
 }
 
-/**
- * Renda média dos últimos 6 meses. Para cada mês usa o que foi detectado
- * (notificações/extrato); se não houver nada detectado, usa o valor informado pela pessoa.
- */
 export function resumoRenda(perfil: Perfil | undefined, movs: Movimento[], hoje = new Date()): ResumoRenda {
-  const meses = ultimosMeses(6, hoje);
-  const informada = new Map((perfil?.rendaMeses ?? []).map((r) => [r.mes, r.valor]));
-  const detectada = new Map<string, number>();
-  for (const m of movs) {
-    if (m.tipo !== 'entrada') continue;
-    const k = m.data.slice(0, 7);
-    detectada.set(k, (detectada.get(k) ?? 0) + m.valor);
-  }
-  const lista: ResumoRenda['meses'] = [];
-  for (const mes of meses) {
-    const d = detectada.get(mes);
-    if (d && d > 0) lista.push({ mes, valor: d, fonte: 'detectada' });
-    else if (informada.has(mes)) lista.push({ mes, valor: informada.get(mes)!, fonte: 'informada' });
-  }
-  // Se a pessoa informou meses fora da janela atual (ex.: cadastro antigo), aproveita os mais recentes.
-  if (lista.length === 0 && perfil?.rendaMeses.length) {
-    for (const r of perfil.rendaMeses.slice(-6)) lista.push({ mes: r.mes, valor: r.valor, fonte: 'informada' });
-  }
-  const valores = lista.map((l) => l.valor);
-  const media = valores.length ? valores.reduce((a, b) => a + b, 0) / valores.length : 0;
-  return {
-    media,
-    minimo: valores.length ? Math.min(...valores) : 0,
-    maximo: valores.length ? Math.max(...valores) : 0,
-    meses: lista,
-  };
+  const mes = chaveMes(hoje);
+  const entradasDoMes = movs.filter((m) => m.tipo === 'entrada' && m.data.startsWith(mes)).reduce((a, m) => a + m.valor, 0);
+  return { mensal: perfil?.rendaMensal ?? 0, entradasDoMes };
 }
 
 /** Soma de saídas por mês. */
@@ -66,7 +39,7 @@ export function gastoMensalTipico(perfil: Perfil | undefined, movs: Movimento[],
 
 /** Quanto sobra por mês para dividir entre os planos. */
 export function valorLivreMensal(perfil: Perfil | undefined, movs: Movimento[], hoje = new Date()) {
-  const renda = resumoRenda(perfil, movs, hoje).media;
+  const renda = resumoRenda(perfil, movs, hoje).mensal;
   const gasto = gastoMensalTipico(perfil, movs, hoje);
   return Math.max(0, renda - gasto);
 }
@@ -123,3 +96,50 @@ export function aliquotaIR(dias: number): number {
 
 /** Previsão no formato AAAA-MM a partir de hoje + n meses. */
 export const previsao = (n: number, hoje = new Date()) => (Number.isFinite(n) ? somarMeses(chaveMes(hoje), n) : undefined);
+
+export interface AnalisePrazo {
+  /** Aporte mensal com a porcentagem atual. */
+  aporteAtual: number;
+  /** Meses e data (AAAA-MM) com o aporte atual. */
+  mesesAtual: number;
+  dataAtual?: string;
+  /** Mais cedo possível: colocando 100% do valor livre neste plano. */
+  mesesMinimo: number;
+  dataMinima?: string;
+  /** Para cumprir a data desejada. */
+  prazoMeses?: number;
+  necessario?: number;
+  pctNecessario?: number;
+  /** 'ok' = chega no prazo; 'ajustar' = dá, aumentando a porcentagem; 'impossivel' = nem com 100% do livre; 'sem-prazo'. */
+  situacao: 'ok' | 'ajustar' | 'impossivel' | 'sem-prazo';
+  /** Quanto falta por mês além de todo o valor livre (só quando impossível). */
+  faltaPorMes?: number;
+}
+
+/**
+ * Compara a data que a pessoa deseja com a data realmente possível, considerando a renda
+ * mensal, os gastos típicos, o que já foi guardado e o rendimento do dinheiro guardado.
+ * Recalculado sempre que renda, gastos, investimentos ou a porcentagem mudam.
+ */
+export function analisarPrazo(o: { meta: number; guardado: number; livre: number; percentual: number; prazo?: string; rendimentoMensal?: number; outrosAporte?: number; hoje?: Date }): AnalisePrazo {
+  const r = o.rendimentoMensal ?? 0;
+  const outros = o.outrosAporte ?? 0;
+  const aporteAtual = (o.livre * o.percentual) / 100 + outros;
+  const mesesAtual = mesesParaMeta(o.meta, o.guardado, aporteAtual, r);
+  const mesesMinimo = mesesParaMeta(o.meta, o.guardado, o.livre + outros, r);
+  const base: AnalisePrazo = {
+    aporteAtual,
+    mesesAtual,
+    dataAtual: previsao(mesesAtual, o.hoje),
+    mesesMinimo,
+    dataMinima: previsao(mesesMinimo, o.hoje),
+    situacao: 'sem-prazo',
+  };
+  if (!o.prazo) return base;
+  const prazoMeses = Math.max(1, mesesEntre(chaveMes(o.hoje ?? new Date()), o.prazo));
+  const necessario = aporteNecessario(o.meta, o.guardado, prazoMeses, r);
+  const proprio = Math.max(0, necessario - outros);
+  const pctNecessario = o.livre > 0 ? (proprio / o.livre) * 100 : Infinity;
+  const situacao = mesesAtual <= prazoMeses ? 'ok' : proprio <= o.livre ? 'ajustar' : 'impossivel';
+  return { ...base, prazoMeses, necessario, pctNecessario, situacao, faltaPorMes: situacao === 'impossivel' ? proprio - o.livre : undefined };
+}

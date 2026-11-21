@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Icone, ICONE_PLANO } from '../components/Icone';
-import { Barra, Casa, Dinheiro, Entra } from '../components/Ui';
+import { Barra, Casa, Dinheiro, Entra, Folha } from '../components/Ui';
+import { EditarRenda } from '../components/EditarRenda';
+import { useState } from 'react';
 import { situacaoPlano, useDados, useSelic } from '../hooks';
 import { analisarMes } from '../lib/feedback';
 import { mesCurto, pct, reaisCurto } from '../lib/format';
@@ -17,9 +19,9 @@ export default function Inicio() {
   const situacoes = planos.map((p) => ({ p, s: situacaoPlano(p, investimentos, livre, selic?.valor) }));
   const totalGuardado = situacoes.reduce((a, x) => a + x.s.guardado, 0);
   const totalMeta = planos.reduce((a, p) => a + p.meta, 0);
-  const sugestoes = analisarMes(movimentos, renda.media).filter((s) => s.status !== 'manter');
+  const sugestoes = analisarMes(movimentos, renda.mensal).filter((s) => s.status !== 'manter');
   const ganho = sugestoes.reduce((a, s) => a + s.ganhoMensal, 0);
-  const maxRenda = Math.max(1, ...renda.meses.map((m) => m.valor));
+  const [editandoRenda, setEditandoRenda] = useState(false);
 
   return (
     <main className="tela">
@@ -90,27 +92,17 @@ export default function Inicio() {
       <Entra i={4}>
         <section className="cartao">
           <div className="entre">
-            <span className="pequeno suave" style={{ fontWeight: 600 }}>Renda média · últimos 6 meses</span>
-            <Dinheiro valor={renda.media} className="num" />
+            <span className="pequeno suave" style={{ fontWeight: 600 }}>Renda mensal</span>
+            <Dinheiro valor={renda.mensal} className="num" />
           </div>
-          {renda.meses.length > 0 && (
-            <div className="linha" style={{ alignItems: 'flex-end', height: 56, gap: 8 }} role="img" aria-label={`Renda variou de ${reaisCurto(renda.minimo)} a ${reaisCurto(renda.maximo)}`}>
-              {renda.meses.map((m, i) => (
-                <div key={m.mes} className="coluna cresce" style={{ alignItems: 'center', gap: 4 }}>
-                  <motion.div
-                    initial={{ height: 0 }}
-                    animate={{ height: (m.valor / maxRenda) * 40 }}
-                    transition={{ duration: 0.7, delay: 0.2 + i * 0.06 }}
-                    style={{ width: '100%', borderRadius: 8, background: i === renda.meses.length - 1 ? 'var(--terracota)' : 'var(--verde)' }}
-                  />
-                  <span className="mini suave">{mesCurto(m.mes).split('/')[0]}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          <span className="mini suave">
-            Gasto típico {reaisCurto(gasto)}/mês. Sobra para os planos: <strong>{reaisCurto(livre)}</strong>.
-          </span>
+          <div className="grade-2 pequeno">
+            <div className="coluna" style={{ gap: 0 }}><span className="mini suave">Gasto típico</span><strong className="num">{reaisCurto(gasto)}</strong></div>
+            <div className="coluna" style={{ gap: 0 }}><span className="mini suave">Sobra para os planos</span><strong className="num">{reaisCurto(livre)}</strong></div>
+          </div>
+          {renda.entradasDoMes > 0 && <span className="mini suave">Entradas registradas este mês: {reaisCurto(renda.entradasDoMes)}.</span>}
+          <button type="button" className="botao secundario pequeno" onClick={() => setEditandoRenda(true)}>
+            <Icone nome="lapis" tamanho={18} /> Ajustar renda
+          </button>
         </section>
       </Entra>
 
@@ -135,6 +127,9 @@ export default function Inicio() {
           <Icone nome="direita" />
         </Link>
       </Entra>
+      <Folha aberta={editandoRenda} aoFechar={() => setEditandoRenda(false)} titulo="Ajustar renda">
+        {perfil && <EditarRenda perfil={perfil} aoSalvar={() => setEditandoRenda(false)} />}
+      </Folha>
     </main>
   );
 }

@@ -1,1 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#3B4A3A"/><path d="M160 248 L256 170 L352 248 V364 H160 Z" fill="#F0EBE1"/><path d="M160 296 H352 V364 H160 Z" fill="#B4552D"/><path d="M160 248 L256 170 L352 248 V364 H160 Z" fill="none" stroke="#F0EBE1" stroke-width="18" stroke-linejoin="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-60 -56 632 632">
+<rect x="-60" y="-56" width="632" height="632" fill="#3B4A3A"/>
+<path d="M108 240 L256 124 L404 240" fill="none" stroke="#F0EBE1" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M144 218 V394 H368 V218" fill="none" stroke="#F0EBE1" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="186" y="306" width="38" height="66" rx="11" fill="#F0EBE1" opacity="0.5"/>
+  <rect x="236" y="262" width="38" height="110" rx="11" fill="#F0EBE1" opacity="0.8"/>
+  <!-- seta: contorno na cor do fundo recorta o telhado onde ela passa -->
+  <path d="M286 300 V214 H262 L305 140 L348 214 H324 V300 Z" fill="#3B4A3A" stroke="#3B4A3A" stroke-width="26" stroke-linejoin="round"/>
+  <path d="M286 361 Q286 372 297 372 H313 Q324 372 324 361 V214 H344 Q350 214 347 209 L309 146 Q305 140 301 146 L263 209 Q260 214 266 214 H286 Z" fill="#B4552D"/>
+</svg>

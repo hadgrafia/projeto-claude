@@ -11,11 +11,11 @@ App de planejamento financeiro pessoal. Cada pessoa cria quantos planos quiser (
 
 | Tela | O que faz |
 |---|---|
-| Boas-vindas | Privacidade, forma de registrar gastos, nome, tema, renda dos últimos 6 meses, gasto estimado, perfil de investidor (3 perguntas) e primeiro plano |
-| Início | Total guardado, planos, renda média de 6 meses (variável: PJ e freela), valor livre por mês |
+| Boas-vindas | Todas as respostas obrigatórias: forma de registrar gastos, nome, tema, senha, renda mensal (salário mais recente), gasto estimado, perfil de investidor (3 perguntas) e primeiro plano |
+| Início | Total guardado, planos, renda mensal (ajustável a qualquer momento), gasto típico e valor livre por mês |
 | Gastos | Visão por dia, semana, mês ou ano, sem restrição de horário; entradas e saídas; categorias automáticas; anotar e editar |
 | Enviar extrato | Lê PDF, OFX e CSV **no próprio aparelho**, sem enviar o arquivo para lugar nenhum; ignora duplicados |
-| Planos | Porcentagem fixa do valor livre para cada plano; previsão com rendimento; aporte necessário para cumprir o prazo |
+| Planos | Porcentagem fixa do valor livre para cada plano; data desejada x data realmente possível (renda, gastos e rendimento), recalculada sozinha; quanto separar para cumprir o prazo |
 | Plano | Meta calculada pelo questionário de cada tipo, custo mensal depois, onde guardar o dinheiro, links de compra, análise com IA |
 | Investir | Carteira (cofrinhos, CDB, Tesouro, LCI/LCA, ações, cripto…), aportes mensais ou anuais, Selic do Banco Central, comparação de rendimentos, alocação por plano conforme prazo e perfil, reserva de emergência, planejamento com IA |
 | Feedback | Manter / Rever / Cortar por categoria, quanto rende para os planos e como muda a previsão de cada um |

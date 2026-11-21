@@ -54,7 +54,7 @@ export default function Gastos() {
   const pendentes = movimentos.filter((m) => m.localPendente);
   const entrou = doPeriodo.filter((m) => m.tipo === 'entrada').reduce((a, m) => a + m.valor, 0);
   const saiu = doPeriodo.filter((m) => m.tipo === 'saida').reduce((a, m) => a + m.valor, 0);
-  const status = useMemo(() => new Map(analisarMes(movimentos, renda.media).map((s) => [s.categoria, s.status] as [string, Status])), [movimentos, renda.media]);
+  const status = useMemo(() => new Map(analisarMes(movimentos, renda.mensal).map((s) => [s.categoria, s.status] as [string, Status])), [movimentos, renda.mensal]);
   const porDia = useMemo(() => {
     const g = new Map<string, Movimento[]>();
     for (const m of doPeriodo) {

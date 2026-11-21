@@ -1,21 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icone } from '../components/Icone';
-import { CampoDinheiro, Folha, Segmentado } from '../components/Ui';
+import { Folha, Segmentado } from '../components/Ui';
 import { CriarSenha, TecladoPin } from '../components/Bloqueio';
+import { EditarRenda } from '../components/EditarRenda';
 import { ativarBiometria, biometriaDisponivel, cifrar, conferirPin, decifrar, definirTempo, lerBloqueio, removerBiometria, type ConfigBloqueio } from '../lib/bloqueio';
 import { db, exportarTudo, importarTudo, type Tema } from '../db';
 import { useDados } from '../hooks';
-import { mesLongo, ultimosMeses } from '../lib/format';
 import { entrarDeNovo } from '../lib/conjunto';
 import { ehAppAndroid, Leitor } from '../lib/nativo';
 
 export default function Ajustes() {
   const navegar = useNavigate();
   const { perfil } = useDados();
-  const meses = ultimosMeses(6);
-  const [renda, setRenda] = useState<(number | undefined)[]>([]);
-  const [gasto, setGasto] = useState<number>();
   const [salvo, setSalvo] = useState('');
   const [leitura, setLeitura] = useState<{ permitido: boolean; avisosPermitidos: boolean }>();
   const [seguranca, setSeguranca] = useState<ConfigBloqueio>();
@@ -70,28 +67,12 @@ export default function Ajustes() {
     return () => document.removeEventListener('visibilitychange', ver);
   }, []);
 
-  useEffect(() => {
-    if (!perfil) return;
-    const m = new Map(perfil.rendaMeses.map((r) => [r.mes, r.valor]));
-    setRenda(meses.map((k) => m.get(k)));
-    setGasto(perfil.gastoMensalEstimado || undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [perfil?.id]);
 
   const aviso = (t: string) => {
     setSalvo(t);
     setTimeout(() => setSalvo(''), 2500);
   };
 
-  async function salvarRenda() {
-    if (!perfil) return;
-    const outros = perfil.rendaMeses.filter((r) => !meses.includes(r.mes));
-    await db.perfil.update('eu', {
-      rendaMeses: [...outros, ...meses.map((mes, i) => ({ mes, valor: renda[i] ?? 0 })).filter((r) => r.valor > 0)],
-      gastoMensalEstimado: gasto ?? 0,
-    });
-    aviso('Renda atualizada.');
-  }
 
   async function baixarBackup(senha?: string) {
     const dados = JSON.stringify(await exportarTudo());
@@ -179,15 +160,8 @@ export default function Ajustes() {
       </section>
 
       <section className="cartao">
-        <h2 style={{ fontSize: 15, fontWeight: 800 }}>Renda dos últimos 6 meses</h2>
-        <p className="mini suave">Meses com entradas detectadas usam o valor detectado. Aqui você completa os outros.</p>
-        <div className="grade-2">
-          {meses.map((m, i) => (
-            <CampoDinheiro key={m} rotulo={mesLongo(m).replace(/^./, (c) => c.toUpperCase())} valor={renda[i]} aoMudar={(v) => setRenda((r) => meses.map((_, j) => (j === i ? v : r[j])))} />
-          ))}
-        </div>
-        <CampoDinheiro rotulo="Gasto mensal estimado" valor={gasto} aoMudar={setGasto} />
-        <button type="button" className="botao pequeno" onClick={salvarRenda}>Salvar</button>
+        <h2 style={{ fontSize: 15, fontWeight: 800 }}>Renda mensal</h2>
+        {perfil && <EditarRenda key={perfil.rendaAtualizadaEm} perfil={perfil} aoSalvar={() => aviso('Renda atualizada. Os planos foram recalculados.')} />}
       </section>
 
       <section className="cartao">

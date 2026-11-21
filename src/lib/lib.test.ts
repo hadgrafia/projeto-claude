@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Movimento } from '../db';
 import { analisarMes } from './feedback';
-import { aliquotaIR, aporteNecessario, mesesParaMeta, parcelaPrice, resumoRenda } from './finance';
+import { aliquotaIR, analisarPrazo, aporteNecessario, mesesParaMeta, parcelaPrice, resumoRenda } from './finance';
 import { lerValor } from './format';
 import { lerCSV, lerLinhasExtrato, lerOFX } from './importar';
 import { recomendar } from './invest';
@@ -58,15 +58,15 @@ describe('notificações', () => {
 });
 
 describe('finanças', () => {
-  it('renda média de 6 meses', () => {
+  it('renda mensal: usa o salário mais recente informado', () => {
     const hoje = new Date(2026, 10, 20);
     const r = resumoRenda(
-      { id: 'eu', nome: '', rendaMeses: [{ mes: '2026-06', valor: 2900 }, { mes: '2026-07', valor: 4300 }, { mes: '2026-08', valor: 2600 }, { mes: '2026-09', valor: 3800 }, { mes: '2026-10', valor: 3200 }, { mes: '2026-11', valor: 3900 }], gastoMensalEstimado: 0, tema: 'sistema', metodo: 'extrato', concluiuInicio: true, criadoEm: '' },
-      [],
+      { id: 'eu', nome: '', rendaMensal: 3500, gastoMensalEstimado: 0, tema: 'sistema', metodo: 'extrato', concluiuInicio: true, criadoEm: '' },
+      [{ data: new Date(2026, 10, 5).toISOString(), valor: 1200, tipo: 'entrada', descricao: 'Freela', categoria: 'Entrada', origem: 'manual', chave: 'x' }],
       hoje,
     );
-    expect(r.media).toBe(3450);
-    expect(r.minimo).toBe(2600);
+    expect(r.mensal).toBe(3500);
+    expect(r.entradasDoMes).toBe(1200);
   });
   it('projeções', () => {
     expect(mesesParaMeta(1000, 0, 100)).toBe(10);
@@ -117,5 +117,25 @@ describe('feedback', () => {
     const s = analisarMes(movs, 3000, hoje);
     expect(s[0]).toMatchObject({ categoria: 'Delivery', status: 'cortar' });
     expect(s[0].ganhoMensal).toBeGreaterThan(0);
+  });
+});
+
+describe('prazo desejado x prazo possível', () => {
+  const hoje = new Date(2026, 10, 20);
+  it('chega no prazo com a porcentagem atual', () => {
+    const a = analisarPrazo({ meta: 12000, guardado: 0, livre: 1000, percentual: 100, prazo: '2027-11', hoje });
+    expect(a.situacao).toBe('ok');
+    expect(a.dataAtual).toBe('2027-11');
+  });
+  it('dá para chegar aumentando a porcentagem', () => {
+    const a = analisarPrazo({ meta: 12000, guardado: 0, livre: 1000, percentual: 50, prazo: '2027-11', hoje });
+    expect(a.situacao).toBe('ajustar');
+    expect(Math.round(a.pctNecessario!)).toBe(100);
+  });
+  it('impossível no prazo: mostra a data real e quanto falta', () => {
+    const a = analisarPrazo({ meta: 40000, guardado: 0, livre: 1000, percentual: 100, prazo: '2027-11', hoje });
+    expect(a.situacao).toBe('impossivel');
+    expect(a.dataMinima).toBe('2030-03');
+    expect(Math.round(a.faltaPorMes!)).toBe(2333);
   });
 });

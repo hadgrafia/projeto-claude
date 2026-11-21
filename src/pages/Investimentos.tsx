@@ -8,6 +8,7 @@ import { pct, reais, reaisCurto } from '../lib/format';
 import { pedirAnalise, type RespostaIA } from '../lib/ia';
 import { calcularPerfil, cdiDaSelic, liquidoAnual, metaPoupanca, NOMES_INVESTIMENTO, PERGUNTAS_PERFIL, poupancaAnual, recomendar, reservaEmergencia } from '../lib/invest';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { PerguntasPerfil } from '../components/PerguntasPerfil';
 
 const ROTULO_PERFIL: Record<PerfilRisco, string> = { conservador: 'Conservador', moderado: 'Moderado', arrojado: 'Arrojado' };
 
@@ -25,14 +26,13 @@ export default function Investimentos() {
   const saldoTotal = investimentos.reduce((a, i) => a + i.saldo, 0);
   const reserva = reservaEmergencia(gasto, 6);
   const reservaAtual = investimentos.filter((i) => ['cofrinho', 'cdb', 'tesouro-selic', 'poupanca'].includes(i.tipo) && !i.planoId).reduce((a, i) => a + i.saldo, 0);
-  const sugerido = metaPoupanca(renda.media);
+  const sugerido = metaPoupanca(renda.mensal);
 
   async function analisarIA() {
     setIa({ carregando: true, erro: '' });
     try {
       const r = await pedirAnalise('investimentos', {
-        rendaMediaMensal: Math.round(renda.media),
-        rendaMinima6m: Math.round(renda.minimo),
+        rendaMensal: Math.round(renda.mensal),
         gastoMensalTipico: Math.round(gasto),
         valorLivreMensal: Math.round(livre),
         perfilInvestidor: perfil?.perfilRisco ?? 'não informado',
@@ -97,7 +97,7 @@ export default function Investimentos() {
       <h2 className="secao">Quanto reservar</h2>
       <Entra i={3}>
         <section className="cartao">
-          <div className="entre pequeno"><span>Sugestão para planos e investimentos (20% da renda média)</span><strong className="num">{reaisCurto(sugerido)}/mês</strong></div>
+          <div className="entre pequeno"><span>Sugestão para planos e investimentos (20% da renda mensal)</span><strong className="num">{reaisCurto(sugerido)}/mês</strong></div>
           <div className="entre pequeno"><span>O que sobra hoje (renda − gastos)</span><strong className="num">{reaisCurto(livre)}/mês</strong></div>
           <p className="pequeno suave">
             {livre >= sugerido
@@ -123,7 +123,11 @@ export default function Investimentos() {
                 <strong>{p.nome}</strong>
                 <span className="pilula rever">{r.horizonte === 'curto' ? 'Até 2 anos' : r.horizonte === 'medio' ? '2 a 5 anos' : 'Mais de 5 anos'}</span>
               </div>
-              <span className="pequeno">Aporte: <strong>{reaisCurto(s.aporte)}/mês</strong>{s.necessario !== undefined ? ` · para o prazo: ${reaisCurto(s.necessario)}/mês` : ''}</span>
+              <span className="pequeno">
+                Investir: <strong>{reaisCurto(s.meuAporte)}/mês</strong>
+                {renda.mensal > 0 ? ` (${pct((s.meuAporte / renda.mensal) * 100, 1)} da sua renda mensal)` : ''}
+                {s.necessario !== undefined ? ` · para o prazo: ${reaisCurto(s.necessario)}/mês` : ''}
+              </span>
               <div className="linha" style={{ height: 10, borderRadius: 999, overflow: 'hidden', gap: 2 }} aria-hidden="true">
                 {r.alocacao.map((a, j) => (
                   <motion.div key={a.classe} initial={{ width: 0 }} animate={{ width: `${a.pct}%` }} transition={{ duration: 0.8, delay: j * 0.08 }} style={{ height: '100%', background: ['var(--verde)', 'var(--terracota)', '#D9774F', '#8A9A86'][j] }} />
@@ -270,26 +274,15 @@ function FormInvestimento({ inv, planos, aoSalvar }: { inv?: Investimento; plano
 }
 
 function QuestionarioPerfil({ aoSalvar }: { aoSalvar: () => void }) {
-  const [r, setR] = useState<number[]>([]);
+  const [r, setR] = useState<(number | undefined)[]>([]);
   return (
     <>
-      {PERGUNTAS_PERFIL.map((p, i) => (
-        <fieldset key={p.id} className="cartao" style={{ border: 0, margin: 0 }}>
-          <legend style={{ fontWeight: 700, padding: 0, marginBottom: 8 }}>{p.texto}</legend>
-          <div className="coluna">
-            {p.opcoes.map((o) => (
-              <button key={o.rotulo} type="button" className="chip" style={{ textAlign: 'left', minHeight: 44 }} aria-pressed={r[i] === o.pontos} onClick={() => setR((x) => Object.assign([...x], { [i]: o.pontos }))}>
-                {o.rotulo}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-      ))}
+      <PerguntasPerfil respostas={r} aoResponder={(i, v) => setR((x) => Object.assign([...x], { [i]: v }))} />
       <button
         type="button"
         className="botao"
-        disabled={r.filter((x) => x !== undefined).length < PERGUNTAS_PERFIL.length}
-        onClick={async () => { await db.perfil.update('eu', { perfilRisco: calcularPerfil(r) }); aoSalvar(); }}
+        disabled={PERGUNTAS_PERFIL.some((_, i) => r[i] === undefined)}
+        onClick={async () => { await db.perfil.update('eu', { perfilRisco: calcularPerfil(r.map((x) => x ?? 0)) }); aoSalvar(); }}
       >
         Salvar perfil
       </button>
