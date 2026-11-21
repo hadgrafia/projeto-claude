@@ -44,22 +44,16 @@ npm run build    # gera a versão final em dist/
 1. Crie uma conta gratuita na Cloudflare e, em **Workers & Pages → Pages**, conecte este repositório. Comando de build: `npm run build`; pasta: `dist`.
 2. Em **Zero Trust → Access → Applications**, proteja o endereço do app com uma lista de e-mails permitidos. É grátis para até 50 pessoas: só quem estiver na lista consegue abrir e instalar o app.
 
-## Análise com IA (opcional)
+## Análise com IA (Claude no Google Cloud)
 
-A pasta `worker/` tem um servidor pequeno (Cloudflare Worker, gratuito) que guarda a chave da API do Claude e faz a pesquisa na web. O app envia só os números do plano: nunca nome, banco, extrato ou lista de gastos.
+A análise aprimorada usa o Claude pelo **Google Cloud (Vertex AI)**. A cobrança é do Google, no cartão de débito ou crédito, e não precisa de conta na Anthropic. O servidor fica em `functions/api/analise.ts`, no mesmo endereço do app e protegido pelo Cloudflare Access. O app envia só os números do plano: nunca nome, banco, extrato ou lista de gastos.
 
-```bash
-cd worker
-npm install
-npx wrangler login
-npx wrangler secret put ANTHROPIC_API_KEY   # chave da API do Claude (console.anthropic.com)
-npx wrangler secret put APP_TOKEN           # um código que você passa para as pessoas convidadas
-npx wrangler deploy
-```
-
-Depois, no app, vá em **Ajustes → Análise com IA** e informe o endereço do worker e o código. Para não precisar digitar o endereço, gere o app com `VITE_IA_URL=https://seu-worker.workers.dev npm run build`.
-
-**Custo:** o servidor é gratuito, mas a API do Claude cobra por uso (modelo Claude Opus 5.5 com pesquisa na web). Cada análise custa poucos centavos de dólar; acompanhe o gasto no console da Anthropic.
+Configuração (uma vez):
+1. Em console.cloud.google.com, crie um projeto e uma conta de faturamento com o cartão.
+2. Ative a **Vertex AI API**. No **Model Garden**, ative o **Claude Opus 5.5** e o **Claude Opus 4.8** (usado se o primeiro recusar um pedido).
+3. Em **IAM → Contas de serviço**, crie uma conta com o papel **Vertex AI User** e gere uma chave **JSON**.
+4. Na Cloudflare: **Workers & Pages → meus-planos-financeiros → Settings → Variables and Secrets**, crie o segredo `GCP_SA_KEY` com o conteúdo do arquivo JSON.
+5. Recomendado: em **Faturamento → Orçamentos e alertas** do Google Cloud, crie um alerta mensal (por exemplo, R$ 50).
 
 ## Nome do lugar de cada gasto
 

@@ -4,8 +4,10 @@ export interface Env {
   EXIGIR_ACCESS?: string;
   /** E-mail de quem administra o app (pode convidar sem limite). */
   ADMIN_EMAIL?: string;
-  /** Análise com IA. */
-  ANTHROPIC_API_KEY?: string;
+  /** Análise com IA pelo Google Cloud (Vertex AI): JSON da chave da conta de serviço. */
+  GCP_SA_KEY?: string;
+  GCP_PROJECT_ID?: string;
+  GCP_REGION?: string;
   /** Convite automático no Cloudflare Access (token só com permissão de grupos do Access). */
   CF_ACCESS_TOKEN?: string;
   CF_ACCOUNT_ID?: string;
