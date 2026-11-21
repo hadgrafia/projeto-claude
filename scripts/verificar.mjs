@@ -27,6 +27,9 @@ const rotulos = {
   banco: 'Banco do plano em conjunto',
   emailAdministradora: 'E-mail da administradora',
   exigeLogin: 'Login obrigatório (só convidados)',
+  confirmacaoEmail: 'Confirmação do e-mail no cadastro',
+  contas: 'Contas (e-mail e senha)',
+  modelos: 'Modelos testados',
   googleCloud: 'Acesso ao Google Cloud',
   ia: 'IA (Claude no Vertex AI)',
   convitesAutomaticos: 'Convite automático de familiares',
@@ -35,7 +38,7 @@ let falhou = false;
 console.log('\n===== Relatório do app publicado =====');
 for (const [k, v] of Object.entries(r)) {
   const ok = v === 'ok' || v.startsWith('ok ');
-  const opcional = k === 'convitesAutomaticos' && v.startsWith('desligado');
+  const opcional = (k === 'convitesAutomaticos' && v.startsWith('desligado')) || k === 'modelos';
   if (!ok && !opcional) falhou = true;
   console.log(`${ok ? '✅' : opcional ? 'ℹ️ ' : '❌'} ${rotulos[k] ?? k}: ${v}`);
   if (!ok && !opcional) console.log(`::error::${rotulos[k] ?? k}: ${v}`);

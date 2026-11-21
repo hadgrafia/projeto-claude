@@ -1,7 +1,7 @@
-import { emailAccess, json, type Env } from '../tipos';
+import { json, quemEsta, type Env } from '../tipos';
 
-/** Quem está usando o app (e-mail confirmado pelo Cloudflare Access) e se é a administradora. */
-export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
-  const email = emailAccess(request);
+/** Quem está usando o app (e-mail da conta) e se é a administradora. */
+export const onRequestGet: PagesFunction<Env> = async ({ env, data }) => {
+  const email = quemEsta(data);
   return json({ email, admin: Boolean(email) && email === (env.ADMIN_EMAIL ?? '').toLowerCase() });
 };

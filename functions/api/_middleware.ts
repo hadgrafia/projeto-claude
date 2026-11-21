@@ -1,21 +1,36 @@
-import { emailAccess, json, type Env } from '../tipos';
+import { lerSessao } from '../auth';
+import { json, type Env } from '../tipos';
 
 /**
- * Toda rota /api passa por aqui. Em produção, só aceita quem entrou pelo Cloudflare Access
- * (e-mail convidado). Também limita o tamanho do pedido e adiciona cabeçalhos de segurança.
+ * Toda rota /api passa por aqui. Em produção, só aceita quem entrou com a conta de convidado
+ * (cookie de sessão). Também bloqueia pedidos vindos de outros sites, limita o tamanho
+ * e adiciona cabeçalhos de segurança.
  */
+const PUBLICAS = ['/api/saude', '/api/pedido-convite'];
+
 export const onRequest: PagesFunction<Env> = async (ctx) => {
-  // /api/saude tem o próprio código secreto (usado só pelo robô de publicação).
-  // Rotas públicas: verificação automática (tem código secreto próprio) e pedido de convite.
-  const caminho = new URL(ctx.request.url).pathname;
-  const publica = caminho === '/api/saude' || caminho === '/api/pedido-convite';
-  if (!publica && ctx.env.EXIGIR_ACCESS === '1' && !emailAccess(ctx.request)) return json({ erro: 'Acesso não autorizado.' }, 401);
+  const url = new URL(ctx.request.url);
+  const caminho = url.pathname;
+  const metodo = ctx.request.method;
+  // Pedidos que mudam algo só podem vir do próprio site (contra ataques de outros sites).
+  const origem = ctx.request.headers.get('Origin');
+  if (metodo !== 'GET' && metodo !== 'HEAD' && origem && origem !== url.origin) return json({ erro: 'Origem não permitida.' }, 403);
   const tamanho = Number(ctx.request.headers.get('Content-Length') ?? 0);
   if (tamanho > 64_000) return json({ erro: 'Pedido grande demais.' }, 413);
+
+  let renovar: string | undefined;
+  const publica = PUBLICAS.includes(caminho) || caminho.startsWith('/api/conta/');
+  if (!publica && ctx.env.EXIGIR_ACCESS === '1') {
+    const s = await lerSessao(ctx.env, ctx.request);
+    if (!s.email) return json({ erro: 'Sua sessão expirou. Entre de novo com seu e-mail e senha.', sessao: true }, 401);
+    ctx.data.email = s.email;
+    renovar = s.renovar;
+  }
   const r = await ctx.next();
   const resp = new Response(r.body, r);
   resp.headers.set('X-Content-Type-Options', 'nosniff');
   resp.headers.set('Referrer-Policy', 'no-referrer');
   resp.headers.set('Cache-Control', 'no-store');
+  if (renovar) resp.headers.append('Set-Cookie', renovar);
   return resp;
 };

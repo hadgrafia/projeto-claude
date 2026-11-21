@@ -1,4 +1,4 @@
-import { emailAccess, json, type Env } from '../../tipos';
+import { json, quemEsta, type Env } from '../../tipos';
 
 /**
  * Pedidos de convite: só a administradora (ADMIN_EMAIL, confirmado pelo Cloudflare Access) vê e decide.
@@ -6,8 +6,8 @@ import { emailAccess, json, type Env } from '../../tipos';
  *  POST /api/pedidos/:id        { acao: 'aprovar' | 'recusar' }
  * Aprovar libera o e-mail no grupo de convidados do Access (precisa de CF_ACCESS_TOKEN).
  */
-export const onRequest: PagesFunction<Env> = async ({ request, env, params }) => {
-  const quem = emailAccess(request);
+export const onRequest: PagesFunction<Env> = async ({ request, env, params, data }) => {
+  const quem = quemEsta(data);
   if (!quem || quem !== (env.ADMIN_EMAIL ?? '').toLowerCase()) return json({ erro: 'Só a administradora pode ver os pedidos.' }, 403);
   const [id] = (params.rota as string[] | undefined) ?? [];
 

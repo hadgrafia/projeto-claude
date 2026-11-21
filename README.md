@@ -42,15 +42,23 @@ npm run build    # gera a versão final em dist/
 ## Publicar de graça e com acesso restrito
 
 1. Crie uma conta gratuita na Cloudflare e, em **Workers & Pages → Pages**, conecte este repositório. Comando de build: `npm run build`; pasta: `dist`.
-2. Em **Zero Trust → Access → Applications**, proteja o endereço do app com uma lista de e-mails permitidos. É grátis para até 50 pessoas: só quem estiver na lista consegue abrir e instalar o app.
+2. O robô de publicação (`.github/workflows/publicar.yml`) configura tudo: banco D1, lista de convidados no **Zero Trust → Access** e a proteção do app.
+
+### Como funciona o acesso (só convidados)
+
+- A página de apresentação (`/`) é pública. O app (`/app`) e a API (`/api`) só abrem com a **conta do app**: e-mail + senha (`/entrar/`).
+- **Criar conta:** a pessoa escolhe a senha e confirma o e-mail com um código enviado pelo Cloudflare Access (`/conta/confirmar`). O Access só manda código para e-mails da lista de convidados, então ninguém de fora consegue criar conta. O app confere a assinatura desse token (`functions/auth.ts`).
+- **Esqueci minha senha:** o mesmo caminho do cadastro, com um código novo no e-mail. Trocar a senha encerra as sessões em todos os aparelhos.
+- A senha é guardada só como hash PBKDF2-SHA256 com sal; a sessão é um cookie `HttpOnly`/`Secure` de 30 dias (o servidor guarda só o hash). Há limite de tentativas por e-mail e por endereço de internet.
+- **Liberar ou remover pessoas:** Actions → **Liberar e-mails** (`liberar.yml`). Remover também apaga a conta e desconecta a pessoa.
 
 ## Análise com IA (Claude no Google Cloud)
 
-A análise aprimorada usa o Claude pelo **Google Cloud (Vertex AI)**. A cobrança é do Google, no cartão de débito ou crédito, e não precisa de conta na Anthropic. O servidor fica em `functions/api/analise.ts`, no mesmo endereço do app e protegido pelo Cloudflare Access. O app envia só os números do plano: nunca nome, banco, extrato ou lista de gastos.
+A análise aprimorada usa o Claude pelo **Google Cloud (Vertex AI)**. A cobrança é do Google, no cartão de débito ou crédito, e não precisa de conta na Anthropic. O servidor fica em `functions/api/analise.ts`, no mesmo endereço do app e só para quem entrou com a conta. O app envia só os números do plano: nunca nome, banco, extrato ou lista de gastos.
 
 Configuração (uma vez):
 1. Em console.cloud.google.com, crie um projeto e uma conta de faturamento com o cartão.
-2. Ative a **Vertex AI API**. No **Model Garden**, ative o **Claude Opus 5.5** e o **Claude Opus 4.8** (usado se o primeiro recusar um pedido).
+2. Ative a **Vertex AI API**. No **Model Garden**, ative pelo menos um modelo do Claude. O servidor tenta, nesta ordem, e usa o primeiro que tiver cota: Claude Opus 5.5, Sonnet 5.5, Sonnet 4.6, Haiku 5.5 e, por último, Claude 3.5 Sonnet. Para escolher outro como preferido, crie a variável `GCP_MODELO` na Cloudflare. O relatório da publicação mostra qual está em uso.
 3. Em **IAM → Contas de serviço**, crie uma conta com o papel **Vertex AI User** e gere uma chave **JSON**.
 4. Na Cloudflare: **Workers & Pages → meus-planos-financeiros → Settings → Variables and Secrets**, crie o segredo `GCP_SA_KEY` com o conteúdo do arquivo JSON.
 5. Recomendado: em **Faturamento → Orçamentos e alertas** do Google Cloud, crie um alerta mensal (por exemplo, R$ 50).

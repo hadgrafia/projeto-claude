@@ -1,5 +1,5 @@
 import { json, type Env } from '../tipos';
-import { clienteVertex, tokenGoogle, type ContaServico } from './analise';
+import { ordemModelos, testarModelo, tokenGoogle, type ContaServico } from './analise';
 
 /**
  * Verificação automática, chamada só pelo robô de publicação (exige o código VERIFICACAO).
@@ -18,6 +18,13 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
   r.emailAdministradora = env.ADMIN_EMAIL ? 'ok' : 'não configurado';
   r.exigeLogin = env.EXIGIR_ACCESS === '1' ? 'ok' : 'DESLIGADO';
+  r.confirmacaoEmail = env.ACCESS_EQUIPE && env.ACCESS_AUD ? 'ok' : 'falta ACCESS_EQUIPE/ACCESS_AUD';
+  try {
+    const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM contas').first<{ n: number }>();
+    r.contas = `ok (${n?.n ?? 0} contas criadas)`;
+  } catch (e) {
+    r.contas = `erro: ${(e as Error).message}`;
+  }
 
   if (!env.GCP_SA_KEY) r.ia = 'GCP_SA_KEY não configurado na Cloudflare';
   else {
@@ -26,23 +33,32 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       if (!conta.client_email || !conta.private_key) throw new Error('o texto colado não é o arquivo JSON da conta de serviço');
       await tokenGoogle(conta);
       r.googleCloud = 'ok';
-      const client = await clienteVertex(env, conta);
-      const m = await client.messages.create({
-        model: 'claude-opus-5-5',
-        max_tokens: 2048,
-        output_config: { effort: 'low' },
-        messages: [{ role: 'user', content: 'Responda só com a palavra: ok' }],
-      });
-      r.ia = m.content.some((b) => b.type === 'text' && /ok/i.test(b.text)) ? 'ok' : `resposta inesperada (${m.stop_reason})`;
+      // Testa cada modelo: diz qual está funcionando e por que os outros não.
+      const estados: string[] = [];
+      let usando = '';
+      for (const modelo of ordemModelos(env)) {
+        try {
+          if (await testarModelo(env, conta, modelo)) {
+            estados.push(`${modelo}: ok`);
+            if (!usando) usando = modelo;
+          } else estados.push(`${modelo}: resposta inesperada`);
+        } catch (e) {
+          const st = (e as { status?: number }).status;
+          const motivo =
+            st === 429 ? 'sem cota' : st === 404 ? 'não ativado no Model Garden' : st === 403 ? 'sem permissão' : st === 400 ? `recusado (${((e as Error).message ?? '').replace(/\s+/g, ' ').slice(0, 120)})` : `erro ${st ?? ''} ${((e as Error).message ?? '').slice(0, 80)}`;
+          estados.push(`${modelo}: ${motivo}`);
+        }
+        if (usando) break; // achou um que funciona: não precisa gastar testando os demais
+      }
+      r.ia = usando ? `ok (usando ${usando})` : 'nenhum modelo do Claude respondeu';
+      r.modelos = estados.join(' · ');
     } catch (e) {
       const msg = ((e as Error).message ?? String(e)).replace(/\s+/g, ' ');
-      const dica = /404|not found/i.test(msg)
-        ? 'Claude Opus 5.5 não está ativado no Model Garden do Vertex AI'
-        : /403|permission/i.test(msg)
-          ? 'a conta de serviço não tem o papel "Vertex AI User" ou a Vertex AI API está desligada'
-          : /billing/i.test(msg)
-            ? 'o projeto do Google Cloud está sem faturamento (cartão)'
-            : 'erro';
+      const dica = /403|permission/i.test(msg)
+        ? 'a conta de serviço não tem o papel "Vertex AI User" ou a Vertex AI API está desligada'
+        : /billing/i.test(msg)
+          ? 'o projeto do Google Cloud está sem faturamento (cartão)'
+          : 'erro';
       r.ia = `${dica} · resposta do Google: ${msg.slice(0, 400)}`;
     }
   }

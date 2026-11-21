@@ -9,7 +9,7 @@ import { PedidosConvite } from '../components/PedidosConvite';
 import { ativarBiometria, biometriaDisponivel, cifrar, conferirPin, decifrar, definirTempo, lerBloqueio, removerBiometria, type ConfigBloqueio } from '../lib/bloqueio';
 import { db, exportarTudo, importarTudo, type Tema } from '../db';
 import { useDados } from '../hooks';
-import { entrarDeNovo } from '../lib/conjunto';
+import { entrarDeNovo, sairDaConta } from '../lib/conjunto';
 import { ehAppAndroid, Leitor } from '../lib/nativo';
 
 export default function Ajustes() {
@@ -173,8 +173,18 @@ export default function Ajustes() {
 
       <section className="cartao">
         <h2 style={{ fontSize: 15, fontWeight: 800 }}>Acesso</h2>
-        <p className="mini suave">O app só abre para e-mails convidados. A cada tantos dias, o Cloudflare pede para você confirmar seu e-mail com um código. Se a análise com IA ou o plano em conjunto avisarem que a sessão expirou, toque abaixo.</p>
-        <button type="button" className="botao secundario pequeno" onClick={entrarDeNovo} disabled={!navigator.onLine}>Entrar de novo</button>
+        <p className="mini suave">O app só abre para e-mails convidados, com a sua conta (e-mail e senha). A sessão dura 30 dias e se renova sozinha enquanto você usa. Se a análise com IA ou o plano em conjunto avisarem que a sessão expirou, toque em "Entrar de novo".</p>
+        <div className="grade-2">
+          <button type="button" className="botao secundario pequeno" onClick={entrarDeNovo} disabled={!navigator.onLine}>Entrar de novo</button>
+          <button
+            type="button"
+            className="botao secundario pequeno"
+            disabled={!navigator.onLine}
+            onClick={() => confirm('Sair da conta neste aparelho? Seus dados continuam guardados aqui; para voltar, entre com seu e-mail e senha.') && sairDaConta()}
+          >
+            Sair da conta
+          </button>
+        </div>
       </section>
 
       <section className="cartao">

@@ -1,4 +1,4 @@
-import { emailAccess, json, type Env } from '../../tipos';
+import { json, quemEsta, type Env } from '../../tipos';
 
 /**
  * Libera o e-mail de um familiar no Cloudflare Access para ele conseguir abrir o app.
@@ -8,9 +8,9 @@ import { emailAccess, json, type Env } from '../../tipos';
 const LIMITE = 5;
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i;
 
-export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  const quem = emailAccess(request);
-  if (!quem) return json({ erro: 'Entre no app pelo Cloudflare Access para convidar.' }, 401);
+export const onRequestPost: PagesFunction<Env> = async ({ request, env, data }) => {
+  const quem = quemEsta(data);
+  if (!quem) return json({ erro: 'Entre no app com sua conta para convidar.' }, 401);
   if (!env.CF_ACCESS_TOKEN || !env.CF_ACCOUNT_ID || !env.CF_ACCESS_GROUP_ID) return json({ erro: 'Convites automáticos ainda não foram configurados.' }, 503);
   const { email } = (await request.json().catch(() => ({}))) as { email?: string };
   const novo = String(email ?? '').trim().toLowerCase();

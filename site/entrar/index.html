@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Entrar · Meus Planos Financeiros</title>
+<meta name="description" content="Entre ou crie sua conta no Meus Planos Financeiros (só para convidados).">
+<meta name="theme-color" content="#3B4A3A">
+<meta name="robots" content="noindex">
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../site.css">
+</head>
+<body class="pagina-conta">
+<div class="conta">
+  <aside class="conta-arte revelar">
+    <a href="../" class="marca"><img src="../icon.svg" width="40" height="40" alt=""><span>Meus Planos</span></a>
+    <div>
+      <h1>Cada real com um destino.</h1>
+      <p class="some-celular">Entre com o e-mail que recebeu o convite. Seus gastos continuam guardados só no seu aparelho: a conta serve para garantir que só você abre o app.</p>
+    </div>
+    <svg class="arte arte-meias" aria-hidden="true" viewBox="0 0 306 306" role="img" aria-label="Desenho geométrico de meias-luas nas cores do app"><g class="t" style="--i:0"><path class="a1" d="M0 0A36.0 36.0 0 0 1 0 72Z"/><path class="a2" d="M72 72A36.0 36.0 0 0 1 72 0Z"/></g><g class="t gira" style="--i:1"><path class="a3" d="M150 0A36.0 36.0 0 0 1 78 0Z"/><path class="a4" d="M78 72A36.0 36.0 0 0 1 150 72Z"/></g><g class="t" style="--i:2"><path class="a1" d="M156 0A36.0 36.0 0 0 1 156 72Z"/><path class="a2" d="M228 72A36.0 36.0 0 0 1 228 0Z"/></g><g class="t" style="--i:3"><path class="a2" d="M306 0A36.0 36.0 0 0 1 234 0Z"/><path class="a1" d="M234 72A36.0 36.0 0 0 1 306 72Z"/></g><g class="t" style="--i:4"><path class="a2" d="M72 78A36.0 36.0 0 0 1 0 78Z"/><path class="a1" d="M0 150A36.0 36.0 0 0 1 72 150Z"/></g><g class="t" style="--i:5"><path class="a1" d="M78 78A36.0 36.0 0 0 1 78 150Z"/><path class="a2" d="M150 150A36.0 36.0 0 0 1 150 78Z"/></g><g class="t" style="--i:6"><path class="a2" d="M228 78A36.0 36.0 0 0 1 156 78Z"/><path class="a1" d="M156 150A36.0 36.0 0 0 1 228 150Z"/></g><g class="t gira" style="--i:7"><path class="a3" d="M234 78A36.0 36.0 0 0 1 234 150Z"/><path class="a4" d="M306 150A36.0 36.0 0 0 1 306 78Z"/></g><g class="t gira" style="--i:8"><path class="a3" d="M0 156A36.0 36.0 0 0 1 0 228Z"/><path class="a4" d="M72 228A36.0 36.0 0 0 1 72 156Z"/></g><g class="t" style="--i:9"><path class="a2" d="M150 156A36.0 36.0 0 0 1 78 156Z"/><path class="a1" d="M78 228A36.0 36.0 0 0 1 150 228Z"/></g><g class="t" style="--i:10"><path class="a1" d="M156 156A36.0 36.0 0 0 1 156 228Z"/><path class="a2" d="M228 228A36.0 36.0 0 0 1 228 156Z"/></g><g class="t" style="--i:11"><path class="a2" d="M306 156A36.0 36.0 0 0 1 234 156Z"/><path class="a1" d="M234 228A36.0 36.0 0 0 1 306 228Z"/></g><g class="t" style="--i:12"><path class="a2" d="M72 234A36.0 36.0 0 0 1 0 234Z"/><path class="a1" d="M0 306A36.0 36.0 0 0 1 72 306Z"/></g><g class="t" style="--i:13"><path class="a1" d="M78 234A36.0 36.0 0 0 1 78 306Z"/><path class="a2" d="M150 306A36.0 36.0 0 0 1 150 234Z"/></g><g class="t gira" style="--i:14"><path class="a3" d="M228 234A36.0 36.0 0 0 1 156 234Z"/><path class="a4" d="M156 306A36.0 36.0 0 0 1 228 306Z"/></g><g class="t" style="--i:15"><path class="a1" d="M234 234A36.0 36.0 0 0 1 234 306Z"/><path class="a2" d="M306 306A36.0 36.0 0 0 1 306 234Z"/></g></svg>
+  </aside>
+
+  <main class="conta-lado">
+    <div class="conta-caixa">
+      <!-- Entrar e Criar conta -->
+      <div id="tela-form">
+        <div class="abas" role="tablist" aria-label="Entrar ou criar conta">
+          <button type="button" role="tab" id="aba-entrar" aria-selected="true" aria-controls="form-conta">Entrar</button>
+          <button type="button" role="tab" id="aba-criar" aria-selected="false" aria-controls="form-conta">Criar conta</button>
+        </div>
+        <form id="form-conta" class="cartao formulario" novalidate style="margin-top:18px">
+          <h2 class="conta-titulo" id="titulo">Que bom te ver de novo</h2>
+          <p id="subtitulo" class="nota" style="margin:0">Use o e-mail e a senha da sua conta.</p>
+          <label>E-mail<input name="email" type="email" autocomplete="username" inputmode="email" required maxlength="254"></label>
+          <label>Senha
+            <span class="campo-senha"><input name="senha" type="password" autocomplete="current-password" required maxlength="128"><button type="button" class="mostrar" data-alvo="senha">Mostrar</button></span>
+          </label>
+          <label id="campo-confirmar" hidden>Repita a senha
+            <span class="campo-senha"><input name="confirmar" type="password" autocomplete="new-password" maxlength="128"><button type="button" class="mostrar" data-alvo="confirmar">Mostrar</button></span>
+          </label>
+          <ul class="regras" id="regras" hidden>
+            <li data-regra="tamanho">Pelo menos 8 caracteres</li>
+            <li data-regra="mistura">Letras e números</li>
+            <li data-regra="igual">As duas senhas iguais</li>
+          </ul>
+          <button class="botao botao-terracota" type="submit" id="enviar">Entrar</button>
+          <p class="retorno" role="status" aria-live="polite"></p>
+          <div class="links-conta">
+            <button type="button" id="esqueci">Esqueci minha senha</button>
+            <a href="../#convite">Ainda não tenho convite</a>
+          </div>
+        </form>
+        <p class="aviso-seguro" style="margin-top:18px">Só e-mails convidados conseguem criar conta. A senha é guardada embaralhada: nem a administradora consegue vê-la.</p>
+      </div>
+
+      <!-- Confirmar o e-mail -->
+      <section id="tela-codigo" class="cartao" hidden>
+        <h2 class="conta-titulo">Falta só confirmar seu e-mail</h2>
+        <p>Para ter certeza de que o e-mail é seu, vamos te mandar um código.</p>
+        <ol class="passos-codigo">
+          <li>Na próxima tela (do Cloudflare, nosso parceiro de segurança), digite <strong id="email-codigo">o mesmo e-mail</strong> e toque em <strong>Send me a code</strong>.</li>
+          <li>Abra sua caixa de entrada e copie o <strong>código de 6 números</strong>. Se não chegar em 1 minuto, olhe o spam.</li>
+          <li>Cole o código e toque em <strong>Sign in</strong>. Pronto: sua conta fica ativa e o app abre.</li>
+        </ol>
+        <a class="botao botao-terracota" id="ir-codigo" href="#" style="margin-top:18px">Receber o código</a>
+        <p class="nota">O cadastro vale por 30 minutos. <button type="button" class="link" id="voltar-form" style="background:none;border:0;padding:0;color:inherit;text-decoration:underline;cursor:pointer;font:inherit">Voltar</button></p>
+      </section>
+
+      <!-- Tudo certo -->
+      <section id="tela-pronto" class="cartao" hidden>
+        <h2 class="conta-titulo">Conta pronta!</h2>
+        <p>Abrindo o app…</p>
+        <a class="botao botao-terracota" id="ir-app" href="../app/">Abrir o app</a>
+      </section>
+
+      <p class="voltar-site"><a href="../">Voltar para a página inicial</a></p>
+    </div>
+  </main>
+</div>
+<script src="./entrar.js" defer></script>
+</body>
+</html>

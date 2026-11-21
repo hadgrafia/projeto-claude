@@ -57,7 +57,7 @@ jobs:
         if: steps.segredos.outputs.ok == 'true'
         run: |
           sed -i "s/database_id = \".*\"/database_id = \"${{ steps.cf.outputs.d1_id }}\"/" wrangler.toml
-          sed -i "s/^\[vars\]/[vars]\nCF_ACCOUNT_ID = \"$CLOUDFLARE_ACCOUNT_ID\"\nCF_ACCESS_GROUP_ID = \"${{ steps.cf.outputs.grupo_id }}\"/" wrangler.toml
+          sed -i "s/^\[vars\]/[vars]\nCF_ACCOUNT_ID = \"$CLOUDFLARE_ACCOUNT_ID\"\nCF_ACCESS_GROUP_ID = \"${{ steps.cf.outputs.grupo_id }}\"\nACCESS_EQUIPE = \"${{ steps.cf.outputs.access_equipe }}\"\nACCESS_AUD = \"${{ steps.cf.outputs.access_aud }}\"/" wrangler.toml
       - name: Gravar segredos do app (antes de publicar, para já valerem)
         if: steps.segredos.outputs.ok == 'true'
         run: |

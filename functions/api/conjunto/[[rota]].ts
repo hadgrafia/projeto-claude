@@ -1,4 +1,4 @@
-import { blobValido, emailAccess, idValido, json, sha256, type Env } from '../../tipos';
+import { blobValido, idValido, json, quemEsta, sha256, type Env } from '../../tipos';
 
 /**
  * Planos em conjunto (até 6 pessoas por plano).
@@ -24,13 +24,13 @@ async function autenticar(env: Env, req: Request, planoId: string) {
   return membroId;
 }
 
-export const onRequest: PagesFunction<Env> = async ({ request, env, params }) => {
+export const onRequest: PagesFunction<Env> = async ({ request, env, params, data }) => {
   const partes = (params.rota as string[] | undefined) ?? [];
   const [planoId, acao] = partes;
   const metodo = request.method;
   const agora = Date.now();
   const corpo = metodo === 'GET' || metodo === 'DELETE' ? {} : ((await request.json().catch(() => ({}))) as Record<string, unknown>);
-  const email = emailAccess(request) || null;
+  const email = quemEsta(data) || null;
 
   // Criar
   if (!planoId && metodo === 'POST') {

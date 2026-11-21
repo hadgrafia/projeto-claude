@@ -1,4 +1,5 @@
 // Libera (ou remove) e-mails no grupo "Convidados Meus Planos" do Cloudflare Access.
+// Ao remover, apaga também a conta do app (e-mail e senha) e encerra as sessões.
 // Uso: EMAILS="a@x.com, b@y.com" ACAO=liberar|remover node scripts/liberar.mjs
 const TOKEN = process.env.CLOUDFLARE_API_TOKEN?.trim();
 const CONTA = process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
@@ -41,6 +42,17 @@ if (ACAO === 'remover') {
   for (const e of lista) if (!atuais.has(e)) include = [...include, { email: { email: e } }];
 }
 await cf(`/accounts/${CONTA}/access/groups/${grupo.id}`, { method: 'PUT', body: JSON.stringify({ name: NOME_GRUPO, include }) });
+
+// Quem é removido perde também a conta do app e é desconectado de todos os aparelhos.
+if (ACAO === 'remover') {
+  const bancos = await cf(`/accounts/${CONTA}/d1/database?name=meus-planos`);
+  const banco = bancos.find((b) => b.name === 'meus-planos');
+  if (banco)
+    for (const e of lista) {
+      for (const sql of ['DELETE FROM sessoes WHERE email = ?', 'DELETE FROM contas WHERE email = ?', 'DELETE FROM cadastros WHERE email = ?'])
+        await cf(`/accounts/${CONTA}/d1/database/${banco.uuid}/query`, { method: 'POST', body: JSON.stringify({ sql, params: [e] }) });
+    }
+}
 
 for (const e of lista) {
   const tinha = atuais.has(e);

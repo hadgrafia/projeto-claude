@@ -1,2 +1,2 @@
-/** Depois do login no Cloudflare Access, volta para o app. */
-export const onRequestGet: PagesFunction = async ({ request }) => Response.redirect(new URL('/', request.url).toString(), 302);
+/** Endereço antigo de "entrar de novo": agora leva para a página Entrar. */
+export const onRequestGet: PagesFunction = async ({ request }) => Response.redirect(new URL('/entrar/', request.url).toString(), 302);

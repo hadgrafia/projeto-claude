@@ -3,7 +3,7 @@
  * Análise aprimorada com IA. O app manda só os parâmetros do plano (sem nome,
  * banco ou extrato) para o servidor da IA, que pesquisa preços e taxas atuais.
  * Precisa de internet; o resultado fica salvo no aparelho para ler offline.
- * Fica no mesmo endereço do app (/api/analise), protegido pelo Cloudflare Access.
+ * Fica no mesmo endereço do app (/api/analise), só para quem entrou com a conta.
  */
 export interface RespostaIA {
   texto: string;
@@ -23,9 +23,9 @@ export async function pedirAnalise(tipo: string, dados: Record<string, unknown>)
       body: JSON.stringify({ tipo, dados }),
     });
   } catch {
-    throw new Error('Sua sessão expirou. Abra Ajustes e toque em "Entrar de novo".');
+    throw new Error('Não foi possível falar com o servidor. Confira a internet e tente de novo.');
   }
-  if (r.type === 'opaqueredirect') throw new Error('Sua sessão expirou. Abra Ajustes e toque em "Entrar de novo".');
+  if (r.type === 'opaqueredirect' || r.status === 401) throw new Error('Sua sessão expirou. Abra Ajustes e toque em "Entrar de novo".');
   const corpo = (await r.json().catch(() => ({}))) as Partial<RespostaIA> & { erro?: string };
   if (!r.ok) throw new Error(corpo.erro ?? `Erro ${r.status}`);
   return { texto: corpo.texto ?? '', fontes: corpo.fontes ?? [], geradaEm: corpo.geradaEm ?? new Date().toISOString() };

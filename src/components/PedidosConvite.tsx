@@ -20,9 +20,10 @@ export function linkConvite(nome: string, email: string) {
 Seu acesso ao Meus Planos Financeiros foi liberado. É um app gratuito e privado para planejar seus sonhos (casa nova, carro, viagem), entender seus gastos e saber quanto guardar por mês.
 
 Como entrar:
-1. Abra ${ENDERECO}/app pelo celular ou computador.
-2. Digite este e-mail (${email}) e o código de 6 números que chegar na sua caixa de entrada.
-3. Siga as perguntas iniciais e crie sua senha.
+1. Abra ${ENDERECO}/entrar pelo celular ou computador e toque em "Criar conta".
+2. Use este e-mail (${email}) e escolha uma senha.
+3. Para confirmar que o e-mail é seu, digite o código de 6 números que chegar na sua caixa de entrada.
+4. Pronto: responda às perguntas iniciais do app. Das próximas vezes, é só entrar com e-mail e senha.
 
 Para ter o ícone na tela inicial:
 - Android (Chrome): menu ⋮ > Instalar app.

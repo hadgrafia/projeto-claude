@@ -3,8 +3,8 @@
 //  1. confere o token
 //  2. banco D1 + tabelas
 //  3. projeto do Cloudflare Pages
-//  4. Cloudflare Access: login por código no e-mail, grupo de convidados, política e aplicativo
-// Saídas (para os próximos passos do workflow): d1_id, grupo_id.
+//  4. Cloudflare Access: código no e-mail (confirmação do cadastro), grupo de convidados, política
+// Saídas (para os próximos passos do workflow): d1_id, grupo_id, access_equipe, access_aud.
 import { appendFileSync } from 'node:fs';
 import { readFileSync } from 'node:fs';
 
@@ -99,23 +99,37 @@ if (!politica)
   );
 
 const apps = exigir(await cf(`/accounts/${CONTA}/access/apps`), 'Listar aplicativos do Access');
-// Página de apresentação (raiz) é pública; o app (/app), a API (/api) e as versões de teste
-// (*.meus-planos-financeiros.pages.dev) exigem login de convidado.
+// O app e a API são protegidos pela CONTA do app (e-mail + senha, ver functions/auth.ts).
+// O Access fica só na confirmação do e-mail do cadastro (/conta/confirmar): ele envia o código
+// e só deixa passar e-mails do grupo de convidados. As versões de teste continuam fechadas.
 let app = apps.find((a) => a.name === 'Meus Planos Financeiros' || a.domain === DOMINIO);
 const configApp = {
   name: 'Meus Planos Financeiros',
   type: 'self_hosted',
-  domain: `${DOMINIO}/app`,
-  self_hosted_domains: [`${DOMINIO}/app`, `${DOMINIO}/api`, `*.${DOMINIO}`],
-  session_duration: '720h',
+  domain: `${DOMINIO}/conta/confirmar`,
+  self_hosted_domains: [`${DOMINIO}/conta/confirmar`, `*.${DOMINIO}`],
+  session_duration: '15m',
   allowed_idps: [otp.id],
   auto_redirect_to_identity: true,
   app_launcher_visible: false,
   policies: [{ id: politica.id, precedence: 1 }],
 };
-if (!app) app = exigir(await cf(`/accounts/${CONTA}/access/apps`, { method: 'POST', body: JSON.stringify(configApp) }), 'Proteger o app com o Access');
-else exigir(await cf(`/accounts/${CONTA}/access/apps/${app.id}`, { method: 'PUT', body: JSON.stringify(configApp) }), 'Atualizar proteção do app');
-console.log(`✅ Access: só e-mails do grupo "${NOME_GRUPO}" abrem https://${DOMINIO}/app`);
+if (!app) app = exigir(await cf(`/accounts/${CONTA}/access/apps`, { method: 'POST', body: JSON.stringify(configApp) }), 'Proteger a confirmação de e-mail com o Access');
+else app = exigir(await cf(`/accounts/${CONTA}/access/apps/${app.id}`, { method: 'PUT', body: JSON.stringify(configApp) }), 'Atualizar a confirmação de e-mail');
+saida('access_equipe', org.result.auth_domain);
+saida('access_aud', app.aud);
+console.log(`✅ Access: só e-mails do grupo "${NOME_GRUPO}" conseguem confirmar o cadastro (https://${DOMINIO}/entrar/)`);
+
+// Tela do código por e-mail com as cores do app (se o token tiver permissão; senão, segue normal).
+const design = {
+  background_color: '#1C1E1A',
+  text_color: '#F0EBE1',
+  logo_path: `https://${DOMINIO}/apple-touch-icon.png`,
+  header_text: 'Meus Planos Financeiros · confirme seu e-mail',
+  footer_text: 'Digite o seu e-mail e depois o código de 6 números que chegar na caixa de entrada.',
+};
+const visual = await cf(`/accounts/${CONTA}/access/organizations`, { method: 'PUT', body: JSON.stringify({ ...org.result, login_design: design }) });
+console.log(visual.ok ? '✅ Tela do código com as cores do app' : `ℹ️  Tela do código com visual padrão (${JSON.stringify(visual.errors ?? visual.status).slice(0, 160)})`);
 
 // Páginas públicas: política de privacidade (exigida pela Play Store) e verificação automática
 // (que tem o próprio código secreto). Todo o resto continua exigindo login.

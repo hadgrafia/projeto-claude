@@ -13,7 +13,7 @@ import { aporteDoPlano, resumoRenda, totalGuardado, valorLivreMensal } from './f
 
 export class SessaoExpirada extends Error {
   constructor() {
-    super('Sua sessão expirou. Toque em "Entrar de novo" para confirmar seu e-mail.');
+    super('Sua sessão expirou. Toque em "Entrar de novo" e use seu e-mail e senha.');
   }
 }
 
@@ -59,7 +59,7 @@ async function api<T>(caminho: string, init: RequestInit = {}, c?: Pick<Conjunto
   } catch {
     throw new SessaoExpirada();
   }
-  // O Cloudflare Access redireciona para o login quando a sessão acaba.
+  // Sem sessão, o servidor responde 401 (ou redireciona para a página Entrar).
   if (r.type === 'opaqueredirect' || r.status === 401 || !(r.headers.get('Content-Type') ?? '').includes('json')) {
     if (r.status === 401 || r.type === 'opaqueredirect' || r.status === 302) throw new SessaoExpirada();
     throw new Error('O servidor do app ainda não está publicado.');
@@ -185,7 +185,13 @@ export function somaOutros(plano: Plano) {
   return { guardado: outros.reduce((a, m) => a + m.guardado, 0), aporte: outros.reduce((a, m) => a + m.aporteMensal, 0), qtd: outros.length };
 }
 
-/** Abre de novo o login do Cloudflare Access (o service worker não intercepta /api). */
+/** Abre a página Entrar (e-mail e senha) e depois volta para a mesma tela do app. */
 export const entrarDeNovo = () => {
-  location.href = '/api/sessao';
+  location.href = `/entrar/?volta=/app/${location.hash}`;
 };
+
+/** Encerra a sessão deste aparelho e vai para a página Entrar. Os dados do aparelho continuam guardados. */
+export async function sairDaConta() {
+  await fetch('/api/conta/sair', { method: 'POST', credentials: 'same-origin' }).catch(() => undefined);
+  location.href = '/entrar/';
+}

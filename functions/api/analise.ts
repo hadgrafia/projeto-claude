@@ -99,6 +99,62 @@ export async function clienteVertex(env: Env, conta: ContaServico, extras: Parti
   return new AnthropicVertex({ region: env.GCP_REGION || 'global', projectId: projeto, authClient, ...extras });
 }
 
+/**
+ * Modelos do Claude tentados em ordem: o primeiro que o Google Cloud aceitar (ativado no
+ * Model Garden e com cota) é usado. GCP_MODELO, se definido, vai na frente.
+ */
+export const MODELOS = ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-sonnet-4-6', 'claude-haiku-5-5', 'claude-3-5-sonnet-v2@20241022', 'claude-3-5-sonnet@20240620'];
+export const ordemModelos = (env: Env) => [...new Set([env.GCP_MODELO?.trim(), ...MODELOS].filter((m): m is string => Boolean(m)))];
+/** Modelos antigos (Claude 3.x) não aceitam "effort" e têm limite menor de resposta. */
+const antigo = (m: string) => m.startsWith('claude-3');
+/** Erros que significam "este modelo não está disponível aqui": tenta o próximo. */
+export const indisponivel = (e: unknown) =>
+  e instanceof Anthropic.NotFoundError || e instanceof Anthropic.RateLimitError || e instanceof Anthropic.PermissionDeniedError;
+
+let modeloBom: { id: string; em: number } | undefined;
+
+/** Pergunta curtinha para testar cada modelo (usada pela verificação automática). */
+export async function testarModelo(env: Env, conta: ContaServico, modelo: string) {
+  const client = await clienteVertex(env, conta, { maxRetries: 0 });
+  const m = await client.messages.create({
+    model: modelo,
+    max_tokens: antigo(modelo) ? 64 : 2048,
+    ...(antigo(modelo) ? {} : { output_config: { effort: 'low' as const } }),
+    messages: [{ role: 'user', content: 'Responda só com a palavra: ok' }],
+  });
+  return m.content.some((b) => b.type === 'text' && /ok/i.test(b.text));
+}
+
+async function analisarCom(env: Env, conta: ContaServico, modelo: string, pergunta: string, comPesquisa: boolean) {
+  // Só o Opus 5.5 tem reserva para recusas: se ele recusar, tenta de novo no Claude Opus 4.8.
+  const client = await clienteVertex(env, conta, {
+    maxRetries: 0,
+    ...(modelo === 'claude-opus-5-5' ? { middleware: [betaRefusalFallbackMiddleware([{ model: 'claude-opus-4-8' }])] } : {}),
+  });
+  const fallbackState = new BetaFallbackState();
+  const messages: Anthropic.MessageParam[] = [{ role: 'user', content: pergunta }];
+  let resposta: Anthropic.Message | undefined;
+  // A pesquisa na web roda no servidor; se ela pausar, retomamos (no máximo 4 vezes).
+  for (let i = 0; i < 5; i++) {
+    const stream = client.messages.stream(
+      {
+        model: modelo,
+        max_tokens: antigo(modelo) ? 8192 : 16000,
+        ...(antigo(modelo) ? {} : { output_config: { effort: 'high' as const } }),
+        system: SISTEMA,
+        // No Vertex AI só existe a versão básica da pesquisa na web.
+        ...(comPesquisa ? { tools: [{ type: 'web_search_20250305' as const, name: 'web_search' as const, max_uses: 8, user_location: { type: 'approximate' as const, country: 'BR' } }] } : {}),
+        messages,
+      },
+      { fallbackState },
+    );
+    resposta = await stream.finalMessage();
+    if (resposta.stop_reason !== 'pause_turn') break;
+    messages.push({ role: 'assistant', content: resposta.content });
+  }
+  return resposta;
+}
+
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (!env.GCP_SA_KEY) return json({ erro: 'A análise com IA ainda não foi ativada pela administradora.' }, 503);
   let conta: ContaServico;
@@ -125,49 +181,49 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     `Dados do plano (informados pela pessoa no app):\n${JSON.stringify(limpar(pedido.dados ?? {}), null, 2)}\n\n` +
     'Pesquise os valores atuais e monte a análise no formato pedido.';
 
-  try {
-    // No Vertex não há fallback no servidor: se o modelo recusar, tenta de novo no Claude Opus 4.8.
-    const client = await clienteVertex(env, conta, { middleware: [betaRefusalFallbackMiddleware([{ model: 'claude-opus-4-8' }])] });
-    const fallbackState = new BetaFallbackState();
-    const messages: Anthropic.MessageParam[] = [{ role: 'user', content: pergunta }];
-    let resposta: Anthropic.Message | undefined;
-    // A pesquisa na web roda no servidor; se ela pausar, retomamos (no máximo 4 vezes).
-    for (let i = 0; i < 5; i++) {
-      const stream = client.messages.stream(
-        {
-          model: 'claude-opus-5-5',
-          max_tokens: 16000,
-          output_config: { effort: 'high' },
-          system: SISTEMA,
-          // No Vertex AI só existe a versão básica da pesquisa na web.
-          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 8, user_location: { type: 'approximate', country: 'BR' } }],
-          messages,
-        },
-        { fallbackState },
-      );
-      resposta = await stream.finalMessage();
-      if (resposta.stop_reason !== 'pause_turn') break;
-      messages.push({ role: 'assistant', content: resposta.content });
-    }
-    if (!resposta) return json({ erro: 'Sem resposta.' }, 502);
-    if (resposta.stop_reason === 'refusal') return json({ erro: 'A análise não pôde ser feita para este pedido.' }, 422);
+  // O modelo que funcionou por último vai primeiro (por 1 hora); depois volta a tentar a ordem preferida.
+  let ordem = ordemModelos(env);
+  if (modeloBom && Date.now() - modeloBom.em < 3600_000) ordem = [modeloBom.id, ...ordem.filter((m) => m !== modeloBom!.id)];
 
-    const partes: string[] = [];
-    const fontes = new Map<string, string>();
-    for (const bloco of resposta.content) {
-      if (bloco.type === 'text') {
-        partes.push(bloco.text);
-        for (const c of bloco.citations ?? []) {
-          if (c.type === 'web_search_result_location') fontes.set(c.url, c.title ?? c.url);
+  let ultimoErro: unknown;
+  for (const modelo of ordem) {
+    try {
+      let resposta: Anthropic.Message | undefined;
+      let semPesquisa = false;
+      try {
+        resposta = await analisarCom(env, conta, modelo, pergunta, true);
+      } catch (e) {
+        // Alguns modelos antigos não têm a pesquisa na web no Vertex: faz a análise sem ela.
+        if (!(e instanceof Anthropic.BadRequestError) || !antigo(modelo)) throw e;
+        resposta = await analisarCom(env, conta, modelo, pergunta, false);
+        semPesquisa = true;
+      }
+      modeloBom = { id: modelo, em: Date.now() };
+      if (!resposta) return json({ erro: 'Sem resposta.' }, 502);
+      if (resposta.stop_reason === 'refusal') return json({ erro: 'A análise não pôde ser feita para este pedido.' }, 422);
+
+      const partes: string[] = [];
+      const fontes = new Map<string, string>();
+      for (const bloco of resposta.content) {
+        if (bloco.type === 'text') {
+          partes.push(bloco.text);
+          for (const c of bloco.citations ?? []) {
+            if (c.type === 'web_search_result_location') fontes.set(c.url, c.title ?? c.url);
+          }
         }
       }
+      if (semPesquisa) partes.push('\n\n_Esta análise foi feita sem pesquisa na web: confira os valores nos sites indicados._');
+      return json({ texto: partes.join('').trim(), fontes: [...fontes].map(([url, titulo]) => ({ url, titulo })), geradaEm: new Date().toISOString(), modelo });
+    } catch (e) {
+      ultimoErro = e;
+      if (indisponivel(e)) continue;
+      break;
     }
-    return json({ texto: partes.join('').trim(), fontes: [...fontes].map(([url, titulo]) => ({ url, titulo })), geradaEm: new Date().toISOString() });
-  } catch (e) {
-    if (e instanceof Anthropic.RateLimitError) return json({ erro: 'Muitas análises agora. Tente em alguns minutos.' }, 429);
-    if (e instanceof Anthropic.PermissionDeniedError) return json({ erro: 'O Google Cloud negou o acesso: confira se o Claude está ativado no Vertex AI e se a conta de serviço tem o papel "Vertex AI User".' }, 502);
-    if (e instanceof Anthropic.NotFoundError) return json({ erro: 'Modelo não encontrado no Vertex AI: ative o Claude Opus 5.5 no Model Garden.' }, 502);
-    if (e instanceof Anthropic.APIError) return json({ erro: `Erro da IA (${e.status}).` }, 502);
-    return json({ erro: (e as Error).message || 'Não foi possível concluir a análise.' }, 502);
   }
+  const e = ultimoErro;
+  if (e instanceof Anthropic.RateLimitError) return json({ erro: 'A IA está sem cota no Google Cloud agora. Tente em alguns minutos.' }, 429);
+  if (e instanceof Anthropic.PermissionDeniedError) return json({ erro: 'O Google Cloud negou o acesso: confira se o Claude está ativado no Vertex AI e se a conta de serviço tem o papel "Vertex AI User".' }, 502);
+  if (e instanceof Anthropic.NotFoundError) return json({ erro: 'Nenhum modelo do Claude está ativado no Model Garden do Vertex AI.' }, 502);
+  if (e instanceof Anthropic.APIError) return json({ erro: `Erro da IA (${e.status}).` }, 502);
+  return json({ erro: (e as Error)?.message || 'Não foi possível concluir a análise.' }, 502);
 };
