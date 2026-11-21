@@ -44,6 +44,8 @@ jobs:
         if: steps.segredos.outputs.ok == 'true'
         run: |
           npm ci
+          # Segurança: não publica se alguma biblioteca do app tiver falha grave conhecida.
+          npm audit --omit=dev --audit-level=high
           npm test
           npm run build
       - name: Configurar Cloudflare (banco, Access)

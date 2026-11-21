@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import { registerSW } from 'virtual:pwa-register';
 import App from './App';
+import { prepararInstalacao } from './components/Instalar';
 import './styles.css';
 
 // Guarda o app no aparelho para abrir e funcionar sem internet.
@@ -21,6 +22,9 @@ const atualizar = registerSW({
   },
 });
 (window as Window & { mpAtualizar?: () => void }).mpAtualizar = () => atualizar(true);
+
+// Botão "Instalar agora" (Android/computador): guarda o pedido do navegador.
+prepararInstalacao();
 
 // Pede ao navegador para não apagar os dados locais quando faltar espaço.
 navigator.storage?.persist?.().catch(() => undefined);

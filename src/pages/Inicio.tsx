@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Icone, ICONE_PLANO } from '../components/Icone';
 import { Barra, Casa, Dinheiro, Entra, Folha } from '../components/Ui';
 import { EditarRenda } from '../components/EditarRenda';
+import { Instalar } from '../components/Instalar';
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
@@ -58,6 +59,8 @@ export default function Inicio() {
           </div>
         </section>
       </Entra>
+
+      <Instalar compacto />
 
       {planos.length === 0 ? (
         <Entra i={1}>

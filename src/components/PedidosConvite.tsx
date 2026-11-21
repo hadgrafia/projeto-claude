@@ -32,8 +32,8 @@ ${link}
 2. Escolha uma senha para a sua conta.
 3. Pronto: responda às perguntas iniciais do app. Das próximas vezes, é só entrar com o seu e-mail (${email}) e a senha.
 
-Para ter o ícone na tela inicial:
-- Android (Chrome): menu ⋮ > Instalar app.
+Para ter o app na tela inicial (grátis, sem loja e sem desligar nenhuma proteção do celular):
+- Android (Chrome): no início do app, toque em "Instalar agora" (ou menu ⋮ > Instalar app).
 - iPhone (Safari): Compartilhar > Adicionar à Tela de Início.
 
 Seus dados ficam só no seu celular e o app nunca acessa o seu banco.

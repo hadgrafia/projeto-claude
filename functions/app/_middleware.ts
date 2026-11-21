@@ -8,6 +8,26 @@ import type { Env } from '../tipos';
  */
 const LIVRES = /^\/app\/(manifest\.webmanifest|[\w.-]+\.(png|svg|ico))$/;
 
+/**
+ * Política de segurança do app: só roda código do próprio app (nenhum script de terceiros,
+ * anúncio ou rastreador) e só conversa com o próprio servidor, o Banco Central (Selic) e a
+ * Tabela FIPE. Não pode ser aberto dentro de outro site.
+ */
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self' data:",
+  "img-src 'self' data: blob:",
+  "connect-src 'self' https://api.bcb.gov.br https://parallelum.com.br",
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+].join('; ');
+
 export const onRequest: PagesFunction<Env> = async (ctx) => {
   const url = new URL(ctx.request.url);
   if (ctx.env.EXIGIR_ACCESS !== '1' || LIVRES.test(url.pathname)) return ctx.next();
@@ -23,6 +43,11 @@ export const onRequest: PagesFunction<Env> = async (ctx) => {
   const resp = new Response(r.body, r);
   resp.headers.set('Cache-Control', 'private, no-cache');
   resp.headers.set('X-Frame-Options', 'DENY');
+  resp.headers.set('Content-Security-Policy', CSP);
+  resp.headers.set('X-Content-Type-Options', 'nosniff');
+  resp.headers.set('Referrer-Policy', 'no-referrer');
+  resp.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=()');
+  resp.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   if (s.renovar) resp.headers.append('Set-Cookie', s.renovar);
   return resp;
 };

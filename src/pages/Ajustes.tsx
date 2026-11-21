@@ -5,6 +5,7 @@ import { Folha, Segmentado } from '../components/Ui';
 import { CriarSenha, TecladoPin } from '../components/Bloqueio';
 import { EditarRenda } from '../components/EditarRenda';
 import { AjustesCartao, AjustesContato, TrocarSenha } from '../components/AjustesExtras';
+import { Instalar } from '../components/Instalar';
 import { PedidosConvite } from '../components/PedidosConvite';
 import { ativarBiometria, biometriaDisponivel, cifrar, conferirPin, decifrar, definirTempo, lerBloqueio, removerBiometria, type ConfigBloqueio } from '../lib/bloqueio';
 import { db, exportarTudo, importarTudo, type Tema } from '../db';
@@ -220,10 +221,8 @@ export default function Ajustes() {
       </section>
 
       <section className="cartao areia">
-        <h2 style={{ fontSize: 15, fontWeight: 800 }}>Instalar no celular</h2>
-        <p className="pequeno"><strong>iPhone:</strong> abra no Safari, toque em Compartilhar e depois em “Adicionar à Tela de Início”.</p>
-        <p className="pequeno"><strong>Android:</strong> no Chrome, toque no menu ⋮ e em “Instalar app”.</p>
-        <p className="mini suave">Depois de instalado, o app abre e funciona sem internet.</p>
+        <Instalar />
+        <p className="mini suave">Depois de instalado, o app abre e funciona sem internet, e se atualiza sozinho.</p>
       </section>
 
       <section className="cartao verde">

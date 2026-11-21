@@ -31,6 +31,8 @@ export const onRequest: PagesFunction<Env> = async (ctx) => {
   resp.headers.set('X-Content-Type-Options', 'nosniff');
   resp.headers.set('Referrer-Policy', 'no-referrer');
   resp.headers.set('Cache-Control', 'no-store');
+  resp.headers.set('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
+  resp.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   if (renovar) resp.headers.append('Set-Cookie', renovar);
   return resp;
 };

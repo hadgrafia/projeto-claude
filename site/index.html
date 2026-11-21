@@ -15,10 +15,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./site.css">
-<script>
-  // Quem instalou o app antigo na tela inicial cai aqui: leva direto para o app.
-  if (window.matchMedia('(display-mode: standalone)').matches) location.replace('./app/');
-</script>
+<script src="./inicio.js"></script>
 </head>
 <body>
 <header class="topo">
@@ -116,15 +113,15 @@
 
   <section id="instalar" class="secao secao-areia">
     <div class="conteudo">
-      <h2 class="revelar">Use onde quiser</h2>
-      <p class="lead revelar">Quando o acesso for liberado, você recebe no seu e-mail um link de convite pessoal para criar a conta com a sua senha. Para ter o app na tela inicial, é só instalar pelo navegador: é grátis e não precisa de loja.</p>
+      <h2 class="revelar">Instale em um toque</h2>
+      <p class="lead revelar">Quando o acesso for liberado, você recebe no seu e-mail um link de convite pessoal para criar a conta. Depois, é só instalar pelo próprio navegador: é grátis, não precisa de loja e <strong>não precisa desligar o Play Protect nem o Bloqueador automático</strong>.</p>
       <div class="grade-instalar">
         <article class="cartao revelar">
           <h3>Android</h3>
           <ol>
-            <li>Abra o link do convite (ou <strong>meus-planos-financeiros.pages.dev/entrar</strong>) no Chrome e entre na sua conta.</li>
-            <li>Toque no menu <strong>⋮</strong> e em <strong>Instalar app</strong>.</li>
-            <li>Pronto: o ícone aparece na tela inicial.</li>
+            <li>Abra o link do convite (ou <strong>meus-planos-financeiros.pages.dev/entrar</strong>) no <strong>Chrome</strong> e entre na sua conta.</li>
+            <li>No início do app, toque em <strong>Instalar agora</strong> (ou no menu <strong>⋮</strong> → <strong>Instalar app</strong>).</li>
+            <li>Pronto: o ícone aparece na tela inicial e o app se atualiza sozinho.</li>
           </ol>
         </article>
         <article class="cartao revelar">
@@ -171,6 +168,8 @@
       <div class="faq">
         <details class="revelar"><summary>Quanto custa?</summary><p>Nada. O app é gratuito e não tem anúncios.</p></details>
         <details class="revelar"><summary>Preciso instalar alguma coisa?</summary><p>Não. Funciona direto no navegador. Se quiser o ícone na tela inicial, é só instalar pelo navegador, sem loja e sem pagar.</p></details>
+        <details class="revelar"><summary>Preciso desligar o Play Protect ou o Bloqueador automático?</summary><p>Não. Pelo navegador, o próprio Chrome cria o app no seu celular, com a verificação do Google. Nenhum arquivo é baixado e nenhuma proteção precisa ser desligada.</p></details>
+        <details class="revelar"><summary>O app é seguro? Pode trazer vírus?</summary><p>Não traz vírus: ele roda dentro do navegador, isolado do resto do celular, sem acesso aos seus arquivos, fotos ou outros apps. Todo o tráfego é cifrado (HTTPS), o site não tem anúncios nem rastreadores, só roda o código do próprio app e cada atualização passa por testes e por uma checagem automática de segurança antes de ir ao ar.</p></details>
         <details class="revelar"><summary>O app mexe na minha conta do banco?</summary><p>Nunca. Ele só lê os avisos de pagamento (no Android, se você permitir) ou o extrato que você mesmo envia.</p></details>
         <details class="revelar"><summary>Funciona sem internet?</summary><p>Sim. Depois do primeiro acesso, o app abre e funciona sem conexão. Só a análise com IA e o plano em conjunto precisam de internet.</p></details>
         <details class="revelar"><summary>Por que preciso de convite?</summary><p>Para manter o app seguro e próximo de quem usa. Peça o seu no formulário acima.</p></details>

@@ -126,7 +126,8 @@ export async function linhasDoPDF(arquivo: ArrayBuffer): Promise<string[]> {
   const pdfjs = await import('pdfjs-dist');
   const worker = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
   pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
-  const doc = await pdfjs.getDocument({ data: arquivo }).promise;
+  // Sem execução de código vindo do PDF (proteção extra contra arquivos maliciosos).
+  const doc = await pdfjs.getDocument({ data: arquivo, isEvalSupported: false }).promise;
   const linhas: string[] = [];
   for (let p = 1; p <= doc.numPages; p++) {
     const pagina = await doc.getPage(p);
