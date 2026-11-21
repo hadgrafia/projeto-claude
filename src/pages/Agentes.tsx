@@ -5,7 +5,7 @@ import { Avatar, PainelAgentes, useEquipe } from '../components/Equipe';
 import { Icone } from '../components/Icone';
 import { Markdown } from '../components/Ui';
 import { db, type Importancia, type TipoMov } from '../db';
-import { AGENTES, baixar, impostoDoAno, perguntar, planilhaDoMes, prepararAnexo, resumoDoMes, type Acao, type IdAgente } from '../lib/agentes';
+import { AGENTES, baixar, gastoDoTexto, impostoDoAno, perguntar, planilhaDoMes, prepararAnexo, resumoDoMes, type Acao, type IdAgente } from '../lib/agentes';
 import { selicVista } from '../lib/agentesAvisos';
 import { categorizar, NOMES_CATEGORIAS } from '../lib/categorias';
 import { compromissoDoMes, limiteDisponivel, recomendar } from '../lib/compras';
@@ -68,7 +68,9 @@ export default function Agentes() {
     try {
       const historico = conversa.slice(-10).map((m) => ({ de: m.de === 'pessoa' ? ('pessoa' as const) : ('agente' as const), texto: m.de === 'pessoa' ? m.texto : `${AGENTES[m.de].nome}: ${m.texto}` }));
       const r = await perguntar(msg.trim(), historico, equipe.contexto(), anexo);
-      adicionar({ de: r.agente, texto: r.resposta, acoes: r.acoes });
+      // Se a IA esqueceu de sugerir o registro de um gasto contado em texto, o app prepara.
+      const local = !r.acoes.some((a) => a.tipo === 'registrar') ? gastoDoTexto(msg) : null;
+      adicionar({ de: local ? 'nina' : r.agente, texto: r.resposta, acoes: local ? [local, ...r.acoes] : r.acoes });
     } catch (e) {
       setErro((e as Error).message);
     } finally {

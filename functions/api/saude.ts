@@ -1,7 +1,7 @@
 import { json, type Env } from '../tipos';
 import { ordemModelos, regioes, testarModelo, tokenGoogle, type ContaServico } from './analise';
 import { conversarComGemini, testarGemini } from './gemini';
-import { ESQUEMA_AGENTES, SISTEMA_AGENTES } from './agente';
+import { ESQUEMA_AGENTES, paraAcoes, SISTEMA_AGENTES } from './agente';
 
 /**
  * Verificação automática, chamada só pelo robô de publicação (exige o código VERIFICACAO).
@@ -73,7 +73,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       // Agentes: uma pergunta de teste, com a mesma regra e o mesmo formato de resposta do app.
       try {
         const { json: a } = await conversarComGemini(env, conta, SISTEMA_AGENTES, [{ role: 'user', parts: [{ text: 'CONTEXTO: {"rendaMensal": 4000}\n\nMENSAGEM:\ngastei 25 reais no sorvete da Borelli' }] }], ESQUEMA_AGENTES);
-        const x = a as { agente?: string; acoes?: { tipo?: string; valor?: number }[] };
+        const x = paraAcoes(a as Parameters<typeof paraAcoes>[0]) as { agente?: string; acoes?: { tipo?: string; valor?: number }[] };
         r.agentes = x.agente && x.acoes?.some((c) => c.tipo === 'registrar' && Number(c.valor) === 25) ? `ok (${x.agente} preparou o registro de R$ 25)` : `resposta inesperada: agente=${x.agente} acoes=${JSON.stringify(x.acoes ?? null).slice(0, 300)}`;
       } catch (e) {
         r.agentes = `erro: ${((e as Error).message ?? '').slice(0, 200)}`;

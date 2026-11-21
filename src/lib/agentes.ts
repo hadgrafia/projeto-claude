@@ -225,3 +225,21 @@ export async function prepararAnexo(arquivo: Blob): Promise<{ tipo: string; dado
   for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
   return { tipo: tipo.split(';')[0], dados: btoa(bin) };
 }
+
+/**
+ * Reserva local: se a IA não sugerir o registro, o app reconhece frases simples como
+ * "gastei 25 no sorvete da Borelli" ou "recebi 300 da Ana" e prepara o registro (para confirmar).
+ */
+export function gastoDoTexto(msg: string): Acao | null {
+  const m = msg.match(/\b(gastei|paguei|comprei|torrei|recebi|ganhei)\b[^\d]{0,25}?(?:R\$\s*)?(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(?:reais|conto|pila)?\s*(.*)$/i);
+  if (!m) return null;
+  const valor = Number(m[2].replace(/\.(?=\d{3}\b)/g, '').replace(',', '.'));
+  if (!(valor > 0)) return null;
+  const tipoMov = /recebi|ganhei/i.test(m[1]) ? 'entrada' : 'saida';
+  const resto = m[3].replace(/[.!?]+$/, '').trim();
+  // O lugar costuma vir depois do último "da/do/na/no/em/com".
+  const partes = resto.split(/\s+(?:n[oa]s?|d[oa]s?|em|com|pr[oa]|para)\s+/i).map((p) => p.trim()).filter(Boolean);
+  const bruto = (partes.length ? partes[partes.length - 1] : resto).replace(/^(?:n[oa]s?|d[oa]s?|em|com)\s+/i, '');
+  const local = bruto ? bruto.charAt(0).toUpperCase() + bruto.slice(1, 60) : '';
+  return { tipo: 'registrar', valor, local: local || undefined, tipoMov, categoria: null };
+}

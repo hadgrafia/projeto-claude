@@ -24,47 +24,74 @@ Regras:
 - Nunca peça senha, dados bancários, número de cartão ou acesso ao app do banco.
 - Valores em reais no formato "R$ 1.234,56".
 
-Ações (campo "acoes"; o app mostra um botão e só executa depois que a pessoa confirma):
-- IMPORTANTE: sempre que a pessoa contar um gasto ou entrada, inclua a ação "registrar" em "acoes". Na "resposta", NÃO diga que já registrou: diga algo como "Confira e toque em Registrar".
-- "registrar": quando a pessoa contar um gasto ou entrada (ou mandar comprovante/nota). Preencha valor (número positivo), local (nome da loja/lugar/pessoa, sem CNPJ), tipoMov ("saida" ou "entrada"), categoria (uma da lista do contexto) e data (AAAA-MM-DD, só se a pessoa disser; senão vazio). Uma ação por gasto; numa nota fiscal, uma ação com o total.
-- "avaliar_compra" (Leo): quando perguntarem se podem/devem comprar algo com valor. Preencha descricao, valor, importancia ("necessidade", "util" ou "desejo", pelo que a pessoa disse), maxSemJuros (parcelas sem juros que a loja oferece; 1 se não disse) e noCartao (true se for no cartão de crédito ou não disse). O app calcula a recomendação com as regras dele.
-- "criar_plano" (Gabriela): quando a pessoa quiser criar um plano. Preencha tipoPlano ("casa", "carro", "equipamentos", "viagem" ou "outro") e nome.
-- "relatorio" (Nina): quando pedirem relatório ou planilha. Preencha mes (AAAA-MM).
-- "resumo" (Nina): quando pedirem resumo do mês. Preencha mes (AAAA-MM).
-- "imposto" (Nina): quando perguntarem sobre Imposto de Renda. Preencha ano (AAAA).
-Se não houver ação, devolva "acoes": [].`;
+Campos da resposta (o app mostra botões e só executa depois que a pessoa confirma):
+- "registros": TODA vez que a pessoa contar um gasto ou entrada (ou mandar comprovante/nota), coloque aqui um item por gasto, com valor (número positivo), local (loja, lugar ou pessoa, sem CNPJ), tipoMov ("saida" ou "entrada"), categoria (uma da lista do contexto) e data (AAAA-MM-DD, só se a pessoa disser). Numa nota fiscal, um item com o total. Na "resposta", NÃO diga que já registrou: diga "Confira e toque em Registrar". Se não houver gasto, devolva lista vazia.
+- "compra" (Leo): quando perguntarem se podem/devem comprar algo com valor: descricao, valor, importancia ("necessidade", "util" ou "desejo"), maxSemJuros (parcelas sem juros oferecidas; 1 se não disse) e noCartao (true se cartão de crédito ou não disse). O app calcula a recomendação.
+- "plano" (Gabriela): quando a pessoa quiser criar um plano: tipoPlano ("casa", "carro", "equipamentos", "viagem" ou "outro") e nome.
+- "relatorio" (Nina): mês AAAA-MM quando pedirem relatório ou planilha.
+- "resumo" (Nina): mês AAAA-MM quando pedirem resumo do mês.
+- "imposto" (Nina): ano AAAA quando perguntarem sobre Imposto de Renda.`;
 
 export const ESQUEMA_AGENTES = {
   type: 'OBJECT',
   properties: {
     agente: { type: 'STRING', enum: ['nina', 'gabriela', 'matheus', 'leo'] },
-    resposta: { type: 'STRING' },
-    acoes: {
+    resposta: { type: 'STRING', description: 'Texto curto para a pessoa (até 700 caracteres).' },
+    registros: {
       type: 'ARRAY',
+      description: 'Gastos ou entradas que a pessoa contou nesta mensagem (vazia se nenhum).',
       items: {
         type: 'OBJECT',
         properties: {
-          tipo: { type: 'STRING', enum: ['registrar', 'avaliar_compra', 'criar_plano', 'relatorio', 'resumo', 'imposto'] },
           valor: { type: 'NUMBER' },
           local: { type: 'STRING' },
-          tipoMov: { type: 'STRING' },
+          tipoMov: { type: 'STRING', enum: ['saida', 'entrada'] },
           categoria: { type: 'STRING' },
           data: { type: 'STRING' },
-          descricao: { type: 'STRING' },
-          importancia: { type: 'STRING' },
-          maxSemJuros: { type: 'INTEGER' },
-          noCartao: { type: 'BOOLEAN' },
-          tipoPlano: { type: 'STRING' },
-          nome: { type: 'STRING' },
-          mes: { type: 'STRING' },
-          ano: { type: 'STRING' },
         },
-        required: ['tipo'],
+        required: ['valor', 'local', 'tipoMov'],
       },
     },
+    compra: {
+      type: 'OBJECT',
+      properties: {
+        descricao: { type: 'STRING' },
+        valor: { type: 'NUMBER' },
+        importancia: { type: 'STRING', enum: ['necessidade', 'util', 'desejo'] },
+        maxSemJuros: { type: 'INTEGER' },
+        noCartao: { type: 'BOOLEAN' },
+      },
+    },
+    plano: { type: 'OBJECT', properties: { tipoPlano: { type: 'STRING', enum: ['casa', 'carro', 'equipamentos', 'viagem', 'outro'] }, nome: { type: 'STRING' } } },
+    relatorio: { type: 'STRING' },
+    resumo: { type: 'STRING' },
+    imposto: { type: 'STRING' },
   },
-  required: ['agente', 'resposta', 'acoes'],
+  required: ['agente', 'resposta', 'registros'],
 };
+
+interface Saida {
+  agente: string;
+  resposta: string;
+  registros?: { valor: number; local: string; tipoMov: string; categoria?: string; data?: string }[];
+  compra?: { descricao?: string; valor?: number; importancia?: string; maxSemJuros?: number; noCartao?: boolean };
+  plano?: { tipoPlano?: string; nome?: string };
+  relatorio?: string;
+  resumo?: string;
+  imposto?: string;
+}
+
+/** Converte a resposta da IA na lista de ações que o app entende. */
+export function paraAcoes(r: Saida) {
+  const acoes: Record<string, unknown>[] = [];
+  for (const g of r.registros ?? []) if (Number(g.valor) > 0) acoes.push({ tipo: 'registrar', valor: Number(g.valor), local: g.local, tipoMov: g.tipoMov, categoria: g.categoria, data: g.data });
+  if (r.compra && Number(r.compra.valor) > 0) acoes.push({ tipo: 'avaliar_compra', ...r.compra, valor: Number(r.compra.valor) });
+  if (r.plano?.tipoPlano) acoes.push({ tipo: 'criar_plano', ...r.plano });
+  if (r.relatorio) acoes.push({ tipo: 'relatorio', mes: r.relatorio });
+  if (r.resumo) acoes.push({ tipo: 'resumo', mes: r.resumo });
+  if (r.imposto) acoes.push({ tipo: 'imposto', ano: r.imposto });
+  return { agente: r.agente, resposta: r.resposta, acoes };
+}
 
 const TIPOS_ANEXO = /^(image\/(jpeg|png|webp|heic|heif)|audio\/(webm|ogg|mp4|mpeg|mp3|aac|wav|x-m4a|m4a)|application\/pdf)$/;
 const MAX_ANEXO = 7 * 1024 * 1024; // base64
@@ -96,7 +123,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   try {
     const conta = JSON.parse(env.GCP_SA_KEY) as ContaServico;
     const { json: r } = await conversarComGemini(env, conta, SISTEMA_AGENTES, [...historico, { role: 'user', parts: partes }], ESQUEMA_AGENTES);
-    return json(r);
+    return json(paraAcoes(r as Saida));
   } catch (e) {
     if (e instanceof GeminiErro && e.status === 429) return json({ erro: 'Muita gente conversando agora. Tente em um minuto.' }, 429);
     return json({ erro: 'Não consegui responder agora. Tente de novo em instantes.' }, 502);

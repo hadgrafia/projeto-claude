@@ -35,3 +35,13 @@ describe('lançamento rápido (navegador)', () => {
     expect(lerParametros(new URLSearchParams({}))).toBeNull();
   });
 });
+
+import { gastoDoTexto } from './agentes';
+describe('agentes: reserva local para registrar', () => {
+  it('entende frases simples de gasto e entrada', () => {
+    expect(gastoDoTexto('gastei 25 no sorvete da Borelli')).toMatchObject({ valor: 25, local: 'Borelli', tipoMov: 'saida' });
+    expect(gastoDoTexto('Paguei R$ 1.250,90 de aluguel')).toMatchObject({ valor: 1250.9, tipoMov: 'saida' });
+    expect(gastoDoTexto('recebi 300 da Ana')).toMatchObject({ valor: 300, local: 'Ana', tipoMov: 'entrada' });
+    expect(gastoDoTexto('quanto gastei com mercado?')).toBeNull();
+  });
+});
