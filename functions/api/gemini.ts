@@ -100,23 +100,54 @@ export interface ParteGemini {
  * Conversa com resposta em JSON (formato fixo), usada pelos agentes. Aceita texto, áudio,
  * imagem e PDF (inlineData). Sem pesquisa na web: os números vêm do contexto do próprio app.
  */
+/** Lê o JSON da resposta; se vier cortado ou quebrado, tenta salvar o essencial. */
+function lerJson(texto: string): unknown {
+  try {
+    return JSON.parse(texto);
+  } catch {
+    const inicio = texto.indexOf('{');
+    const fim = texto.lastIndexOf('}');
+    if (inicio >= 0 && fim > inicio) {
+      try {
+        return JSON.parse(texto.slice(inicio, fim + 1));
+      } catch {
+        /* segue */
+      }
+    }
+    const agente = texto.match(/"agente"\s*:\s*"(\w+)"/)?.[1];
+    const resposta = texto.match(/"resposta"\s*:\s*"((?:[^"\\]|\\.){1,1500})"/)?.[1];
+    if (agente && resposta) return { agente, resposta: JSON.parse(`"${resposta}"`), acoes: [] };
+    throw new GeminiErro(502, `resposta fora do formato (${texto.length} caracteres): ${texto.slice(0, 120)}`);
+  }
+}
+
+/**
+ * Conversa com resposta em JSON (formato fixo), usada pelos agentes. Aceita texto, áudio,
+ * imagem e PDF (inlineData). Sem pesquisa na web: os números vêm do contexto do próprio app.
+ * Se a resposta vier fora do formato, tenta mais uma vez.
+ */
 export async function conversarComGemini(env: Env, conta: ContaServico, sistema: string, mensagens: { role: 'user' | 'model'; parts: ParteGemini[] }[], esquema: unknown) {
   let ultimo: unknown;
   for (const { modelo, regiao } of ordem()) {
-    try {
-      const j = await chamar(env, conta, modelo, regiao, {
-        systemInstruction: { parts: [{ text: sistema }] },
-        contents: mensagens,
-        generationConfig: { maxOutputTokens: 8192, responseMimeType: 'application/json', responseSchema: esquema },
-      });
-      bom = { modelo, regiao, em: Date.now() };
-      const texto = (j.candidates?.[0]?.content?.parts ?? []).filter((p) => p.text && !p.thought).map((p) => p.text).join('');
-      return { json: JSON.parse(texto) as unknown, modelo };
-    } catch (e) {
-      ultimo = e;
-      if (pular(e)) continue;
-      throw e;
+    for (let tentativa = 0; tentativa < 2; tentativa++) {
+      try {
+        const j = await chamar(env, conta, modelo, regiao, {
+          systemInstruction: { parts: [{ text: sistema }] },
+          contents: mensagens,
+          generationConfig: { maxOutputTokens: 4096, responseMimeType: 'application/json', responseSchema: esquema },
+        });
+        bom = { modelo, regiao, em: Date.now() };
+        const texto = (j.candidates?.[0]?.content?.parts ?? []).filter((p) => p.text && !p.thought).map((p) => p.text).join('');
+        return { json: lerJson(texto), modelo };
+      } catch (e) {
+        ultimo = e;
+        if (e instanceof GeminiErro && e.status === 502) continue; // fora do formato: tenta de novo
+        break;
+      }
     }
+    if (pular(ultimo)) continue;
+    if (ultimo instanceof GeminiErro && ultimo.status === 502) continue;
+    throw ultimo;
   }
   throw ultimo ?? new GeminiErro(404, 'nenhum modelo Gemini disponível');
 }

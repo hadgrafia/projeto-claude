@@ -18,7 +18,8 @@ A cada mensagem, escolha UM agente para responder, conforme o assunto:
 Se a pessoa chamar um agente pelo nome, ele responde.
 
 Regras:
-- Português do Brasil, tom neutro e objetivo, sem julgamentos. Respostas curtas (até ~120 palavras), salvo quando pedirem detalhes.
+- Português do Brasil, tom neutro e objetivo, sem julgamentos. O campo "resposta" tem no máximo 700 caracteres.
+- Nas ações, preencha só os campos daquela ação; não repita texto nem crie campos longos.
 - Use SOMENTE os números do CONTEXTO enviado pelo app. Não invente valores. Se faltar dado, diga o que falta e como registrar no app.
 - Nunca peça senha, dados bancários, número de cartão ou acesso ao app do banco.
 - Valores em reais no formato "R$ 1.234,56".
@@ -43,19 +44,19 @@ export const ESQUEMA_AGENTES = {
         type: 'OBJECT',
         properties: {
           tipo: { type: 'STRING', enum: ['registrar', 'avaliar_compra', 'criar_plano', 'relatorio', 'resumo', 'imposto'] },
-          valor: { type: 'NUMBER', nullable: true },
-          local: { type: 'STRING', nullable: true },
-          tipoMov: { type: 'STRING', nullable: true },
-          categoria: { type: 'STRING', nullable: true },
-          data: { type: 'STRING', nullable: true },
-          descricao: { type: 'STRING', nullable: true },
-          importancia: { type: 'STRING', nullable: true },
-          maxSemJuros: { type: 'INTEGER', nullable: true },
-          noCartao: { type: 'BOOLEAN', nullable: true },
-          tipoPlano: { type: 'STRING', nullable: true },
-          nome: { type: 'STRING', nullable: true },
-          mes: { type: 'STRING', nullable: true },
-          ano: { type: 'STRING', nullable: true },
+          valor: { type: 'NUMBER' },
+          local: { type: 'STRING' },
+          tipoMov: { type: 'STRING' },
+          categoria: { type: 'STRING' },
+          data: { type: 'STRING' },
+          descricao: { type: 'STRING' },
+          importancia: { type: 'STRING' },
+          maxSemJuros: { type: 'INTEGER' },
+          noCartao: { type: 'BOOLEAN' },
+          tipoPlano: { type: 'STRING' },
+          nome: { type: 'STRING' },
+          mes: { type: 'STRING' },
+          ano: { type: 'STRING' },
         },
         required: ['tipo'],
       },
