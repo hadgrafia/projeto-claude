@@ -16,7 +16,8 @@ export const onRequest: PagesFunction<Env> = async (ctx) => {
   const origem = ctx.request.headers.get('Origin');
   if (metodo !== 'GET' && metodo !== 'HEAD' && origem && origem !== url.origin) return json({ erro: 'Origem não permitida.' }, 403);
   const tamanho = Number(ctx.request.headers.get('Content-Length') ?? 0);
-  if (tamanho > 64_000) return json({ erro: 'Pedido grande demais.' }, 413);
+  // Os agentes recebem áudio, foto ou PDF (até ~5 MB); o resto da API, só textos pequenos.
+  if (tamanho > (caminho === '/api/agente' ? 8_000_000 : 64_000)) return json({ erro: 'Arquivo grande demais.' }, 413);
 
   let renovar: string | undefined;
   const publica = PUBLICAS.includes(caminho) || caminho.startsWith('/api/conta/');

@@ -19,6 +19,7 @@ const CSP = [
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",
   "img-src 'self' data: blob:",
+  "media-src 'self' blob:",
   "connect-src 'self' https://api.bcb.gov.br https://parallelum.com.br",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
@@ -46,7 +47,7 @@ export const onRequest: PagesFunction<Env> = async (ctx) => {
   resp.headers.set('Content-Security-Policy', CSP);
   resp.headers.set('X-Content-Type-Options', 'nosniff');
   resp.headers.set('Referrer-Policy', 'no-referrer');
-  resp.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=()');
+  resp.headers.set('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=(), payment=(), usb=(), bluetooth=()');
   resp.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   if (s.renovar) resp.headers.append('Set-Cookie', s.renovar);
   return resp;

@@ -90,3 +90,33 @@ export async function testarGemini(env: Env, conta: ContaServico) {
   }
   return { usando: '', motivos };
 }
+
+export interface ParteGemini {
+  text?: string;
+  inlineData?: { mimeType: string; data: string };
+}
+
+/**
+ * Conversa com resposta em JSON (formato fixo), usada pelos agentes. Aceita texto, áudio,
+ * imagem e PDF (inlineData). Sem pesquisa na web: os números vêm do contexto do próprio app.
+ */
+export async function conversarComGemini(env: Env, conta: ContaServico, sistema: string, mensagens: { role: 'user' | 'model'; parts: ParteGemini[] }[], esquema: unknown) {
+  let ultimo: unknown;
+  for (const { modelo, regiao } of ordem()) {
+    try {
+      const j = await chamar(env, conta, modelo, regiao, {
+        systemInstruction: { parts: [{ text: sistema }] },
+        contents: mensagens,
+        generationConfig: { maxOutputTokens: 8192, responseMimeType: 'application/json', responseSchema: esquema },
+      });
+      bom = { modelo, regiao, em: Date.now() };
+      const texto = (j.candidates?.[0]?.content?.parts ?? []).filter((p) => p.text && !p.thought).map((p) => p.text).join('');
+      return { json: JSON.parse(texto) as unknown, modelo };
+    } catch (e) {
+      ultimo = e;
+      if (pular(e)) continue;
+      throw e;
+    }
+  }
+  throw ultimo ?? new GeminiErro(404, 'nenhum modelo Gemini disponível');
+}

@@ -33,7 +33,8 @@ export interface Perfil {
   /** Contato para avisos do app. */
   email?: string;
   celular?: string;
-  avisos?: { celular: boolean; email: boolean };
+  /** agentes: false = os agentes só respondem quando a pessoa pergunta (sem avisos por conta própria). */
+  avisos?: { celular: boolean; email: boolean; agentes?: boolean };
   criadoEm: string;
 }
 

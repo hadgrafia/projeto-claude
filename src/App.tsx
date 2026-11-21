@@ -1,6 +1,6 @@
 import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
+import { Link, Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import { Icone, type NomeIcone } from './components/Icone';
 import { Logo } from './components/Logo';
 import { PerguntaLocal } from './components/Lugar';
@@ -12,6 +12,9 @@ import Ajustes from './pages/Ajustes';
 import Convite from './pages/Convite';
 import Compra from './pages/Compra';
 import Lancar from './pages/Lancar';
+import Agentes from './pages/Agentes';
+import { useEquipe } from './components/Equipe';
+import { avisarDestaques } from './lib/agentesAvisos';
 import BoasVindas from './pages/BoasVindas';
 import Feedback from './pages/Feedback';
 import Gastos from './pages/Gastos';
@@ -48,6 +51,10 @@ function Nav() {
           )}
         </NavLink>
       ))}
+      <NavLink to="/agentes" className={({ isActive }) => `so-computador ${isActive ? 'ativo' : ''}`} aria-label="Agentes">
+        <Icone nome="conversa" />
+        <span className="rotulo">Agentes</span>
+      </NavLink>
       <NavLink to="/compra" className={({ isActive }) => `so-computador ${isActive ? 'ativo' : ''}`} aria-label="Antes de comprar">
         <Icone nome="etiqueta" />
         <span className="rotulo">Antes de comprar</span>
@@ -71,6 +78,26 @@ function AvisoOffline() {
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+/** Avisos dos agentes no celular (se a pessoa deixou ligado em Ajustes). */
+function VigiaAgentes() {
+  const { destaques, perfil } = useEquipe();
+  const chaves = destaques.map((d) => d.chave).join('|');
+  useEffect(() => {
+    if (perfil?.concluiuInicio) avisarDestaques(perfil, destaques).catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chaves, perfil?.avisos?.agentes, perfil?.concluiuInicio]);
+  return null;
+}
+
+/** Botão flutuante para falar com a equipe de agentes (celular). */
+function BotaoAgentes() {
+  return (
+    <Link to="/agentes" className="botao-agentes" aria-label="Falar com os agentes">
+      <Icone nome="conversa" tamanho={22} />
+    </Link>
   );
 }
 
@@ -181,6 +208,7 @@ export default function App() {
                   <Route path="/ajustes" element={<Ajustes />} />
                   <Route path="/compra" element={<Compra />} />
                   <Route path="/lancar" element={<Lancar />} />
+                  <Route path="/agentes" element={<Agentes />} />
                   <Route path="*" element={<Navigate to="/inicio" replace />} />
                 </>
               ) : (
@@ -190,6 +218,8 @@ export default function App() {
           </motion.div>
         </AnimatePresence>
         {comNav && <Nav />}
+        {comNav && local.pathname !== '/agentes' && <BotaoAgentes />}
+        {pronto && <VigiaAgentes />}
         {pronto && <PerguntaLocal />}
         {bloqueio.oculto && pronto && <CapaPrivacidade />}
       </div>

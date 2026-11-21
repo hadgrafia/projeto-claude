@@ -40,6 +40,7 @@ export function AjustesContato({ perfil, aoSalvar }: { perfil: Perfil; aoSalvar:
   const [celular, setCelular] = useState(perfil.celular ?? '');
   const [noCelular, setNoCelular] = useState(perfil.avisos?.celular ?? false);
   const [porEmail, setPorEmail] = useState(perfil.avisos?.email ?? false);
+  const [agentes, setAgentes] = useState(perfil.avisos?.agentes !== false);
   const emailOk = !email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const celularLimpo = celular.replace(/\D/g, '');
   const celularOk = !celular || (celularLimpo.length >= 10 && celularLimpo.length <= 13);
@@ -64,6 +65,10 @@ export function AjustesContato({ perfil, aoSalvar }: { perfil: Perfil; aoSalvar:
         <input type="checkbox" checked={porEmail} onChange={(e) => setPorEmail(e.target.checked)} style={{ width: 20, height: 20, accentColor: 'var(--terracota)' }} />
         Receber também por e-mail (quando ativado pela administradora)
       </label>
+      <label className="linha pequeno" style={{ gap: 10 }}>
+        <input type="checkbox" checked={agentes} onChange={(e) => setAgentes(e.target.checked)} style={{ width: 20, height: 20, accentColor: 'var(--terracota)' }} />
+        Avisos dos agentes (Nina, Gabriela, Matheus e Leo avisam por conta própria: plano atrasado, cartão quase no fim, Selic mudou). Desmarque para eles só responderem quando você chamar.
+      </label>
       <span className="mini suave">Seus contatos ficam guardados no seu celular e só são usados para os avisos do app.</span>
       <button
         type="button"
@@ -72,7 +77,7 @@ export function AjustesContato({ perfil, aoSalvar }: { perfil: Perfil; aoSalvar:
         onClick={async () => {
           let permitido = noCelular;
           if (noCelular) permitido = await pedirPermissaoAvisos();
-          await db.perfil.update('eu', { email: email.trim() || undefined, celular: celularLimpo || undefined, avisos: { celular: permitido, email: porEmail } });
+          await db.perfil.update('eu', { email: email.trim() || undefined, celular: celularLimpo || undefined, avisos: { celular: permitido, email: porEmail, agentes } });
           setNoCelular(permitido);
           aoSalvar(noCelular && !permitido ? 'Salvo. Para receber avisos no celular, permita as notificações do app nas configurações do aparelho.' : 'Contato e avisos salvos.');
         }}

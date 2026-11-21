@@ -279,3 +279,26 @@ h1, h2, h3, p { margin: 0; }
   .folha { width: min(560px, 100%); border-radius: 28px 28px 0 0; }
   .aviso-offline { left: 264px; }
 }
+
+/* ---------- Agentes ---------- */
+.avatar-agente { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; color: #fff; font-weight: 800; flex: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--bg) 70%, transparent); }
+.equipe { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.equipe .membro { display: grid; justify-items: center; gap: 4px; text-align: center; background: var(--card); border: 0; border-radius: 20px; padding: 12px 6px; cursor: pointer; color: var(--texto); }
+.equipe .membro .mini { line-height: 1.2; }
+.mensagens { display: flex; flex-direction: column; gap: 12px; }
+.balao { border-radius: 20px; padding: 10px 14px; max-width: 86%; display: flex; flex-direction: column; gap: 6px; }
+.balao.pessoa { align-self: flex-end; background: var(--verde); color: var(--sobre-verde); border-bottom-right-radius: 6px; }
+.balao.agente { background: var(--card); border-top-left-radius: 6px; flex: 1; }
+.balao.agente .markdown p { margin: 0; }
+.acao { display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 14px; background: var(--bg); }
+.digitando { flex-direction: row; gap: 4px; width: max-content; }
+.digitando span { width: 7px; height: 7px; border-radius: 999px; background: var(--suave); animation: pulsar 1s infinite ease-in-out; }
+.digitando span:nth-child(2) { animation-delay: 0.15s; } .digitando span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes pulsar { 0%, 100% { opacity: 0.3; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-3px); } }
+.barra-chat { position: sticky; bottom: calc(env(safe-area-inset-bottom) + 8px); display: flex; align-items: flex-end; gap: 8px; background: var(--card); border-radius: 26px; padding: 6px; box-shadow: var(--sombra); z-index: 5; }
+.barra-chat textarea { flex: 1; border: 0; background: transparent; resize: none; padding: 12px 6px; min-height: 44px; max-height: 140px; font: inherit; color: var(--texto); outline: none; field-sizing: content; }
+.ponto-gravando { width: 14px; height: 14px; border-radius: 4px; background: #fff; }
+.gravando { animation: pulsar 1.2s infinite; }
+.botao-agentes { position: fixed; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 92px); z-index: 25; width: 56px; height: 56px; border-radius: 999px; background: var(--terracota); color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: var(--sombra); }
+@media (min-width: 900px) { .botao-agentes { display: none; } }
+.recado { padding: 4px 0; }
