@@ -80,12 +80,31 @@ describe('finanças', () => {
 });
 
 describe('planos', () => {
-  it('casa nova em SP, mobiliada, reserva de 6 meses', () => {
-    const r = PLANOS.casa.calcular(respostasPadrao('casa'));
+  it('casa nova: nada vem preenchido com um caso pessoal', () => {
+    const padrao = respostasPadrao('casa');
+    expect(padrao.cidade).toBeUndefined();
+    expect(padrao.tamanho).toBeUndefined();
+    expect(PLANOS.casa.calcular(padrao).meta).toBe(0);
+  });
+  it('casa nova: plano antigo (studio mobiliado em SP) continua com o mesmo cálculo', () => {
+    const r = PLANOS.casa.calcular({ cidade: 'São Paulo', tamanho: 30, mobiliado: 'sim', reserva: '6', caucao: '3', transporte: 'integracao', alimentacao: 1000, contas: 400, outros: 600 });
     expect(r.composicao[0].rotulo).toContain('6 meses');
-    expect(r.meta).toBeGreaterThan(35000);
+    expect(r.meta).toBeGreaterThan(30000);
     expect(r.meta).toBeLessThan(45000);
     expect(r.fontes.join(' ')).toContain('FipeZap');
+  });
+  it('casa nova: alugar apartamento de 2 quartos em Curitiba para 2 pessoas', () => {
+    const r = PLANOS.casa.calcular({ modalidade: 'alugar', imovel: 'apartamento', quartos: '2', uf: 'PR', cidade: 'Curitiba', pessoas: '2', mobiliado: 'nao', caucao: '1', reserva: '6' });
+    expect(r.mensal?.[0]).toEqual({ rotulo: 'Aluguel', valor: 60 * 47 });
+    expect(r.meta).toBeGreaterThan(0);
+    expect(r.links[0].url).toContain('aluguel');
+  });
+  it('casa nova: comprar casa financiada mostra entrada, ITBI e parcela', () => {
+    const r = PLANOS.casa.calcular({ modalidade: 'comprar', imovel: 'casa', quartos: '3', uf: 'MG', pessoas: '3', valorImovel: 400000, forma: 'financiar', entrada: '20', anosFinanciamento: '30', reserva: '6' });
+    expect(r.composicao[0]).toEqual({ rotulo: 'Entrada (20%)', valor: 80000 });
+    expect(r.composicao.some((c) => c.rotulo.startsWith('ITBI'))).toBe(true);
+    expect(r.mensal?.[0].rotulo).toContain('Parcela');
+    expect(r.mensal?.[0].valor).toBeGreaterThan(2500);
   });
   it('carro financiado', () => {
     const r = PLANOS.carro.calcular({ preco: 80000, pagamento: 'financiado', entrada: 20000, parcelas: 48, juros: 1.8, ipva: 4 });

@@ -122,7 +122,7 @@ export default function PlanoDetalhe() {
 
       {res.mensal && res.mensal.length > 0 && (
         <section className="cartao verde">
-          <h2 style={{ fontSize: 15, fontWeight: 800 }}>{plano.tipo === 'casa' ? 'Custo por mês morando sozinha' : 'Custo por mês depois da compra'}</h2>
+          <h2 style={{ fontSize: 15, fontWeight: 800 }}>{plano.tipo === 'casa' ? 'Custo por mês na casa nova' : 'Custo por mês depois da compra'}</h2>
           {res.mensal.map((c) => (
             <div key={c.rotulo} className="entre pequeno"><span>{c.rotulo}</span><strong className="num">{reaisCurto(c.valor)}</strong></div>
           ))}

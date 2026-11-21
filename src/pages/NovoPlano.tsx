@@ -123,7 +123,7 @@ export default function NovoPlano() {
             <Icone nome="carro" /> Consultar Tabela FIPE
           </button>
         )}
-        {def.campos.map((c) => (
+        {def.campos.filter((c) => !c.se || c.se(resp)).map((c) => (
           <CampoPlano key={c.id} campo={c} valor={resp[c.id]} aoMudar={(v) => set(c.id, v)} />
         ))}
       </section>
@@ -148,7 +148,7 @@ export default function NovoPlano() {
       )}
       {resultado?.notas.map((n) => <p key={n} className="cartao areia pequeno">{n}</p>)}
 
-      <CampoDinheiro rotulo="Prefere definir a meta você mesma?" valor={metaManual} aoMudar={setMetaManual} dica="Deixe vazio para usar a meta calculada." />
+      <CampoDinheiro rotulo="Prefere definir a meta por conta própria?" valor={metaManual} aoMudar={setMetaManual} dica="Deixe vazio para usar a meta calculada." />
       <CampoDinheiro rotulo="Quanto já tem guardado para este plano?" valor={guardado} aoMudar={setGuardado} dica="Investimentos ligados ao plano somam automaticamente." />
 
       <section className="cartao verde">

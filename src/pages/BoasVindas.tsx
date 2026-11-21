@@ -101,7 +101,7 @@ export default function BoasVindas() {
             ok: true,
           },
           { v: 'extrato', t: 'Enviar o extrato do mês', d: 'Android e iPhone. PDF, OFX ou CSV que você baixa do seu banco. Você continua com 100% do controle.', ic: 'documento', ok: true },
-          { v: 'manual', t: 'Anotar eu mesma', d: 'Registro rápido: valor e categoria.', ic: 'lapis', ok: true },
+          { v: 'manual', t: 'Anotar por conta própria', d: 'Registro rápido: valor e categoria.', ic: 'lapis', ok: true },
         ] as const
       ).map((o) => (
         <button

@@ -9,7 +9,7 @@ import { cdiDaSelic, recomendar as recomendarInvest } from './invest';
 export type IdAgente = 'nina' | 'gabriela' | 'matheus' | 'leo';
 export const AGENTES: Record<IdAgente, { nome: string; papel: string; cor: string; exemplo: string }> = {
   nina: { nome: 'Nina', papel: 'Gastos, resumos e Imposto de Renda', cor: '#B4552D', exemplo: 'Gastei 25 no sorvete da Borelli' },
-  gabriela: { nome: 'Gabriela', papel: 'Planos e metas', cor: '#3B4A3A', exemplo: 'Quero juntar para morar sozinha em 2028' },
+  gabriela: { nome: 'Gabriela', papel: 'Planos e metas', cor: '#3B4A3A', exemplo: 'Quero juntar para a casa nova em 2028' },
   matheus: { nome: 'Matheus', papel: 'Investimentos', cor: '#5F7A5A', exemplo: 'Onde guardo o dinheiro da Casa Nova?' },
   leo: { nome: 'Leo', papel: 'Antes de comprar', cor: '#8F4A2B', exemplo: 'Posso comprar um celular de R$ 2.000?' },
 };
