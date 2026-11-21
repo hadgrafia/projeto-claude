@@ -196,26 +196,29 @@ h1, h2, h3, p { margin: 0; }
 .nav a > * { position: relative; }
 
 .aviso-offline {
-  position: fixed; top: calc(env(safe-area-inset-top) + 8px); left: 50%; transform: translateX(-50%); z-index: 30;
+  position: fixed; top: calc(env(safe-area-inset-top) + 8px); left: 0; right: 0; margin: 0 auto; width: max-content; z-index: 30;
   background: var(--grafite); color: var(--sobre-grafite); padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 600;
   display: flex; align-items: center; gap: 8px; box-shadow: var(--sombra); max-width: calc(100% - 32px);
 }
 
 .aviso-versao {
-  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 96px); z-index: 35;
+  position: fixed; left: 0; right: 0; margin: 0 auto; bottom: calc(env(safe-area-inset-bottom) + 96px); z-index: 35;
   width: min(440px, calc(100% - 24px)); background: var(--grafite); color: var(--sobre-grafite); border-radius: 22px; padding: 12px 12px 12px 18px;
   display: flex; align-items: center; gap: 10px; box-shadow: var(--sombra); font-size: 14px;
 }
 .aviso-versao .circulo { background: transparent; color: inherit; transform: rotate(45deg); }
-@media (min-width: 900px) { .aviso-versao { bottom: 24px; left: calc(50% + 132px); } }
+@media (min-width: 900px) { .aviso-versao { bottom: 24px; left: 264px; } }
 
 .folha-fundo { position: fixed; inset: 0; background: rgba(28, 30, 26, 0.45); z-index: 40; }
 .folha {
-  position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); width: min(480px, 100%); max-height: 90dvh; overflow-y: auto;
+  /* Centralizada com margin (e não transform): a animação de subir usa transform e não pode deslocá-la. */
+  position: fixed; left: 0; right: 0; margin: 0 auto; bottom: 0; width: min(480px, 100%); max-height: calc(100dvh - env(safe-area-inset-top)); overflow-y: auto; overscroll-behavior: contain;
   background: var(--bg); border-radius: 28px 28px 0 0; padding: 12px 20px calc(env(safe-area-inset-bottom) + 24px); z-index: 41;
   display: flex; flex-direction: column; gap: 14px;
 }
 .folha .alca { width: 44px; height: 5px; border-radius: 999px; background: var(--borda); align-self: center; }
+/* Título e botão de fechar ficam sempre à vista enquanto o formulário rola. */
+.folha > .topo { position: sticky; top: -12px; z-index: 2; background: var(--bg); margin: -12px -20px 0; padding: 14px 20px 10px; }
 
 .markdown h2 { font-size: 16px; font-weight: 800; margin: 14px 0 6px; }
 .markdown p, .markdown li { font-size: 14px; line-height: 1.55; }
@@ -274,5 +277,5 @@ h1, h2, h3, p { margin: 0; }
   .nav a:not(.ativo):hover { background: var(--areia-2); color: var(--texto); }
 
   .folha { width: min(560px, 100%); border-radius: 28px 28px 0 0; }
-  .aviso-offline { left: calc(50% + 132px); }
+  .aviso-offline { left: 264px; }
 }

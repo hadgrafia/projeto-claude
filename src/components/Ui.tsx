@@ -94,7 +94,7 @@ export function Folha({ aberta, aoFechar, titulo, children }: { aberta: boolean;
             <div className="topo">
               <h2 style={{ fontSize: 20, fontWeight: 800 }}>{titulo}</h2>
               <button type="button" className="circulo card" onClick={aoFechar} aria-label="Fechar">
-                <Icone nome="mais" tamanho={20} />
+                <span style={{ display: 'inline-flex', transform: 'rotate(45deg)' }}><Icone nome="mais" tamanho={20} /></span>
               </button>
             </div>
             {children}
