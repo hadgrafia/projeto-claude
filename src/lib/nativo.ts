@@ -1,5 +1,6 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
-import { db } from '../db';
+import { db, lerCache, salvarCache } from '../db';
+import { appPermitido } from './appsPagamento';
 import { categorizar } from './categorias';
 
 /**
@@ -35,6 +36,17 @@ export interface AppInfo {
 export const ehAppAndroid = () => Capacitor.getPlatform() === 'android';
 export const Leitor = registerPlugin<LeitorNotificacoes>('LeitorNotificacoes');
 
+/**
+ * A pessoa apagou um lançamento que veio de um aviso: tira também da fila do leitor do
+ * aparelho e anota, para ele nunca mais voltar.
+ */
+export async function esquecerAviso(chave: string) {
+  if (!chave.startsWith('n-')) return;
+  const lista = (await lerCache<string[]>('notificacoes-apagadas'))?.valor ?? [];
+  await salvarCache('notificacoes-apagadas', [...lista.slice(-200), chave]);
+  if (ehAppAndroid()) await Leitor.confirmar({ ids: [chave.slice(2)] }).catch(() => undefined);
+}
+
 export async function sincronizar() {
   if (!ehAppAndroid()) return 0;
   const { itens } = await Leitor.pendentes();
@@ -43,10 +55,18 @@ export async function sincronizar() {
   const existentes = new Map((await db.movimentos.where('chave').anyOf(chaves).toArray()).map((m) => [m.chave, m]));
   const novos = [];
   const resolvidos: string[] = [];
-  const aviso = (await db.perfil.get('eu'))?.limiteAvisoCompra ?? 100;
+  const perfil = await db.perfil.get('eu');
+  const aviso = perfil?.limiteAvisoCompra ?? 100;
+  const apagados = new Set((await lerCache<string[]>('notificacoes-apagadas'))?.valor ?? []);
   for (const i of itens) {
     const local = i.local?.trim() || undefined;
     const ja = existentes.get(`n-${i.id}`);
+    // Apagado pela pessoa, ou de um app fora da lista de apps de pagamento (ex.: cotação do dólar):
+    // descarta de vez no aparelho, para não voltar.
+    if (!ja && (apagados.has(`n-${i.id}`) || !appPermitido(perfil, i.app))) {
+      resolvidos.push(i.id);
+      continue;
+    }
     if (ja) {
       // A pessoa respondeu na notificação depois que o gasto já tinha chegado ao app.
       if (ja.localPendente && local) {

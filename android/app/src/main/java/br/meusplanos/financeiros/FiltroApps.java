@@ -16,7 +16,7 @@ import java.util.Set;
 /**
  * Quais apps o Meus Planos pode ler. Só avisos desses apps viram lançamentos; o resto
  * (cotação do dólar, notícias, redes sociais…) é ignorado na hora.
- * Enquanto a pessoa não escolhe, vale a lista padrão (carteiras e bancos conhecidos).
+ * Enquanto a pessoa não escolhe, nenhum app é lido. PADRAO é só a lista de opções sugeridas.
  * Apps fora da lista que mandaram aviso com valor ficam anotados (só pacote e nome) para a
  * pessoa poder adicioná-los em Ajustes.
  */
@@ -57,13 +57,14 @@ final class FiltroApps {
     }
 
     static Set<String> permitidos(Context c) {
-        if (!configurado(c)) return new HashSet<>(PADRAO.keySet());
+        // Enquanto a pessoa não escolhe os apps que usa, nada é lido (só anotado como sugestão).
+        if (!configurado(c)) return new HashSet<>();
         Set<String> s = new HashSet<>();
         try {
             JSONArray a = new JSONArray(prefs(c).getString("permitidos", "[]"));
             for (int i = 0; i < a.length(); i++) s.add(a.getString(i));
         } catch (JSONException e) {
-            return new HashSet<>(PADRAO.keySet());
+            return new HashSet<>();
         }
         return s;
     }

@@ -55,3 +55,17 @@ describe('avisos que não são pagamento', () => {
     expect(lerParametros(new URLSearchParams({ app: 'Nubank', texto: 'Dólar comercial: compra R$ 5,43' }))).toBeNull();
   });
 });
+
+import { appPermitido, escolheuApps } from './appsPagamento';
+describe('apps de pagamento escolhidos', () => {
+  it('nada vem marcado: nenhum aviso é aceito até a pessoa escolher', () => {
+    expect(escolheuApps({} as never)).toBe(false);
+    expect(appPermitido({} as never, 'Nubank')).toBe(false);
+  });
+  it('aceita só os apps marcados', () => {
+    const perfil = { appsPagamento: [{ nome: 'Nubank', pacote: 'com.nu.production' }, { nome: 'Apple Wallet' }] } as never;
+    expect(appPermitido(perfil, 'Nubank')).toBe(true);
+    expect(appPermitido(perfil, 'Apple Wallet')).toBe(true);
+    expect(appPermitido(perfil, 'Investing.com')).toBe(false);
+  });
+});

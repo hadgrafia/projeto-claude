@@ -5,6 +5,7 @@ import { Barra, Casa, Dinheiro, Entra, Folha } from '../components/Ui';
 import { EditarRenda } from '../components/EditarRenda';
 import { Instalar } from '../components/Instalar';
 import { PainelAgentes } from '../components/Equipe';
+import { CartaoEscolherApps } from '../components/AppsPagamento';
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
@@ -61,6 +62,7 @@ export default function Inicio() {
         </section>
       </Entra>
 
+      <CartaoEscolherApps perfil={perfil} />
       <Instalar compacto />
       <PainelAgentes compacto />
 

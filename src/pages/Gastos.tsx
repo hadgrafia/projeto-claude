@@ -10,7 +10,7 @@ import { analisarMes, type Status } from '../lib/feedback';
 import { hora, reais } from '../lib/format';
 import { chaveMovimento } from '../lib/importar';
 import { CampoLugar, useLugaresRecentes } from '../components/Lugar';
-import { lugarInformadoNoApp } from '../lib/nativo';
+import { lugarInformadoNoApp, esquecerAviso } from '../lib/nativo';
 
 type Periodo = 'dia' | 'semana' | 'mes' | 'ano';
 
@@ -222,7 +222,7 @@ export function FormMovimento({ mov, aoSalvar, origem = 'manual' }: { mov?: Part
       </label>
       <button type="button" className="botao" onClick={salvar} disabled={!valor || !local.trim()}>Salvar</button>
       {mov?.id && (
-        <button type="button" className="botao perigo" onClick={async () => { await db.movimentos.delete(mov.id!); aoSalvar(); }}>
+        <button type="button" className="botao perigo" onClick={async () => { await db.movimentos.delete(mov.id!); if (mov.chave) await esquecerAviso(mov.chave); aoSalvar(); }}>
           <Icone nome="lixo" /> Apagar
         </button>
       )}

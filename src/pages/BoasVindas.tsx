@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Icone, ICONE_PLANO } from '../components/Icone';
 import { CampoDinheiro, Segmentado } from '../components/Ui';
 import { CriarSenha } from '../components/Bloqueio';
+import { EscolherApps, salvarApps, type AppEscolhido } from '../components/AppsPagamento';
 import { Logo } from '../components/Logo';
 import { PerguntasPerfil } from '../components/PerguntasPerfil';
 import { convitePendente } from './Convite';
@@ -26,17 +27,19 @@ export default function BoasVindas() {
   const [gasto, setGasto] = useState<number>();
   const [respostas, setRespostas] = useState<(number | undefined)[]>([]);
   const [senhaCriada, setSenhaCriada] = useState(false);
+  const [apps, setApps] = useState<AppEscolhido[]>([]);
   const [aviso, setAviso] = useState('');
   const convite = convitePendente();
 
   /** Todas as respostas são obrigatórias: diz o que falta em cada etapa. */
   const falta = (p: number): string => {
     if (p === 0 && !metodo) return 'Escolha como você quer registrar os gastos.';
-    if (p === 1 && nome.trim().length < 2) return 'Diga como podemos te chamar.';
-    if (p === 2 && !senhaCriada) return 'Crie a senha do app para continuar.';
-    if (p === 3 && !(renda && renda > 0)) return 'Informe quanto você recebe por mês.';
-    if (p === 3 && !(gasto && gasto > 0)) return 'Informe quanto você gasta por mês, mais ou menos.';
-    if (p === 4 && PERGUNTAS_PERFIL.some((_, i) => respostas[i] === undefined)) return 'Responda as 3 perguntas.';
+    if (p === 1 && !apps.length) return 'Marque pelo menos um app de pagamento que você usa (banco ou carteira).';
+    if (p === 2 && nome.trim().length < 2) return 'Diga como podemos te chamar.';
+    if (p === 3 && !senhaCriada) return 'Crie a senha do app para continuar.';
+    if (p === 4 && !(renda && renda > 0)) return 'Informe quanto você recebe por mês.';
+    if (p === 4 && !(gasto && gasto > 0)) return 'Informe quanto você gasta por mês, mais ou menos.';
+    if (p === 5 && PERGUNTAS_PERFIL.some((_, i) => respostas[i] === undefined)) return 'Responda as 3 perguntas.';
     return '';
   };
   const avancar = () => {
@@ -57,8 +60,10 @@ export default function BoasVindas() {
       tema,
       metodo: metodo ?? 'manual',
       concluiuInicio: true,
+      appsPagamento: apps,
       criadoEm: new Date().toISOString(),
     });
+    await salvarApps(apps);
     navegar(convite ?? (tipo ? `/planos/novo?tipo=${tipo}&primeiro=1` : '/inicio'), { replace: true });
     if (metodo === 'notificacoes' && ehAppAndroid()) {
       // Permissão para avisar "Onde foi este gasto?" e para ler as notificações de pagamento.
@@ -131,7 +136,14 @@ export default function BoasVindas() {
       )}
     </>,
 
-    // 1 — nome e tema
+    // 1 — apps de pagamento que a pessoa usa (nada vem marcado)
+    <>
+      <h1 className="titulo">Quais apps de pagamento você usa?</h1>
+      <p className="subtitulo">Marque seu banco e sua carteira digital. Só os avisos desses apps viram lançamentos; o resto (cotação do dólar, notícias, mensagens) é ignorado. Dá para mudar depois em Ajustes.</p>
+      <EscolherApps valor={apps} aoMudar={(v) => { setApps(v); setAviso(''); }} />
+    </>,
+
+    // 2 — nome e tema
     <>
       <h1 className="titulo">Como podemos te chamar?</h1>
       <label className="campo">
@@ -156,7 +168,7 @@ export default function BoasVindas() {
       />
     </>,
 
-    // 2 — segurança: senha obrigatória e biometria opcional
+    // 3 — segurança: senha obrigatória e biometria opcional
     <>
       <h1 className="titulo">Proteja seus dados</h1>
       <p className="subtitulo">Ninguém além de você abre o app: ele pede a senha (ou sua digital ou rosto) toda vez que é aberto.</p>
@@ -166,11 +178,11 @@ export default function BoasVindas() {
           <strong>Senha criada</strong>
         </div>
       ) : (
-        <CriarSenha aoConcluir={() => { setSenhaCriada(true); setAviso(''); setPasso(3); }} />
+        <CriarSenha aoConcluir={() => { setSenhaCriada(true); setAviso(''); setPasso(4); }} />
       )}
     </>,
 
-    // 3 — renda e gastos
+    // 4 — renda e gastos
     <>
       <h1 className="titulo">Quanto você recebe por mês?</h1>
       <p className="subtitulo">Use o valor do seu salário (ou recebimento) mais recente. Se mudar, é só ajustar quando quiser no Início ou em Ajustes.</p>
@@ -185,14 +197,14 @@ export default function BoasVindas() {
       ) : null}
     </>,
 
-    // 4 — perfil de investidor
+    // 5 — perfil de investidor
     <>
       <h1 className="titulo">Seu jeito de investir</h1>
       <p className="subtitulo">3 perguntas para o app sugerir onde guardar o dinheiro de cada plano.</p>
       <PerguntasPerfil respostas={respostas} aoResponder={(i, v) => { setRespostas((r) => Object.assign([...r], { [i]: v })); setAviso(''); }} />
     </>,
 
-    // 5 — primeiro plano
+    // 6 — primeiro plano
     <>
       <h1 className="titulo">Qual é o seu primeiro plano?</h1>
       <p className="subtitulo">Escolha um para começar. Depois você pode criar quantos quiser, cada um com sua meta.</p>
@@ -231,7 +243,7 @@ export default function BoasVindas() {
           {aviso}
         </motion.p>
       )}
-      {passo < passos.length - 1 && (passo !== 2 || senhaCriada) && (
+      {passo < passos.length - 1 && (passo !== 3 || senhaCriada) && (
         <div className="linha" style={{ marginTop: 8 }}>
           {passo > 0 && (
             <button type="button" className="circulo escuro" style={{ width: 52, height: 52 }} aria-label="Voltar" onClick={() => { setAviso(''); setPasso(passo - 1); }}>

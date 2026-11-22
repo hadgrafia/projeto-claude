@@ -27,14 +27,16 @@ export const APPS_PADRAO: { pacote?: string; nome: string; carteira?: boolean }[
   { pacote: 'br.com.uol.ps.myaccount', nome: 'PagBank' },
 ];
 
-export const listaDeApps = (perfil?: Perfil) => perfil?.appsPagamento ?? APPS_PADRAO.map(({ pacote, nome }) => ({ pacote, nome }));
+/** Nada vem marcado: cada pessoa escolhe os apps que usa (no cadastro ou em Ajustes). */
+export const listaDeApps = (perfil?: Perfil) => perfil?.appsPagamento ?? [];
+export const escolheuApps = (perfil?: Perfil) => (perfil?.appsPagamento?.length ?? 0) > 0;
 
 const normal = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
 /** O aviso veio de um app da lista? (compara pelo nome, para as automações) */
 export function appPermitido(perfil: Perfil | undefined, nomeDoApp: string) {
   const n = normal(nomeDoApp);
-  if (!n) return true;
+  if (!n) return false;
   return listaDeApps(perfil).some((a) => {
     const m = normal(a.nome);
     return m === n || n.includes(m) || m.includes(n) || (a.pacote ? normal(a.pacote).includes(n) : false);
