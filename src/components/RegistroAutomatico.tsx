@@ -6,7 +6,7 @@ import { ehAppAndroid } from '../lib/nativo';
  * (o sistema não deixa nenhum site ler notificações). No app Android, a leitura é direta.
  */
 const BASE = `${location.origin}/app/#/lancar`;
-const LINK_ANDROID = `${BASE}?app=Banco&texto=TEXTO_DA_NOTIFICACAO`;
+const LINK_ANDROID = `${BASE}?app=NOME_DO_APP&texto=TEXTO_DA_NOTIFICACAO`;
 const LINK_IPHONE = `${BASE}?valor=VALOR&local=COMERCIANTE&origem=Apple%20Pay`;
 
 function Copiar({ texto }: { texto: string }) {
@@ -53,7 +53,7 @@ export function RegistroAutomatico() {
         <ol className="pequeno" style={{ paddingLeft: 20, margin: '8px 0 0' }}>
           <li>Na Play Store, instale um app de automação gratuito (por exemplo, o <strong>MacroDroid</strong>). Vindo da Play Store, não precisa desligar nenhuma proteção.</li>
           <li>Crie uma regra com o gatilho <strong>notificação recebida</strong>, escolhendo os apps do seu banco e de pagamento.</li>
-          <li>Como ação, escolha <strong>abrir um site (link)</strong> e cole o link abaixo. No lugar de <code>TEXTO_DA_NOTIFICACAO</code>, coloque a variável do app de automação que traz o texto da notificação.</li>
+          <li>Como ação, escolha <strong>abrir um site (link)</strong> e cole o link abaixo. No lugar de <code>NOME_DO_APP</code> e <code>TEXTO_DA_NOTIFICACAO</code>, coloque as variáveis do app de automação com o nome do app e o texto da notificação. Avisos de apps fora da lista "Apps de pagamento" (abaixo) são ignorados.</li>
         </ol>
         <Copiar texto={LINK_ANDROID} />
         <p className="mini suave">A cada aviso de pagamento, o Meus Planos abre com o gasto preenchido pelo mesmo leitor do app Android. Avisos sem dinheiro, como códigos de segurança, são ignorados.</p>

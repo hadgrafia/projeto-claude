@@ -2,7 +2,7 @@ import type { TipoMov } from '../db';
 import { categorizar } from './categorias';
 import { lerValor } from './format';
 import { extrairLocal, limparLocal, ehLocalValido } from './lugar';
-import { lerNotificacao } from './notificacao';
+import { avisoIgnoravel, lerNotificacao } from './notificacao';
 
 /**
  * Lançamento rápido para quem usa o app pelo navegador (onde o sistema não deixa ler notificações):
@@ -54,6 +54,7 @@ export function lerParametros(p: URLSearchParams): Lido | null {
   const titulo = (p.get('titulo') ?? '').slice(0, 300);
   const app = (p.get('app') ?? '').slice(0, 60);
   if (texto || titulo) {
+    if (avisoIgnoravel(`${titulo} ${texto}`)) return null;
     const n = lerNotificacao(app || 'Automação', titulo, texto);
     if (n) return { valor: n.valor, local: n.local, tipo: n.tipo, categoria: n.categoria, origemTexto: app || undefined };
     const c = lerComprovante(`${titulo}\n${texto}`);

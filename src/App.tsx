@@ -5,7 +5,7 @@ import { Icone, type NomeIcone } from './components/Icone';
 import { Logo } from './components/Logo';
 import { PerguntaLocal } from './components/Lugar';
 import { CapaPrivacidade, TelaBloqueio, useBloqueio } from './components/Bloqueio';
-import { iniciarLeituraNativa } from './lib/nativo';
+import { ehAppAndroid, iniciarLeituraNativa, Leitor } from './lib/nativo';
 import { avisoDoMes } from './lib/avisos';
 import { ligarNuvem, sincronizar } from './lib/nuvem';
 import { useDados, useOnline } from './hooks';
@@ -180,6 +180,13 @@ export default function App() {
       vivo = false;
     };
   }, []);
+
+  // App Android: a lista de apps de pagamento da conta vale no leitor deste aparelho.
+  useEffect(() => {
+    const lista = perfil?.appsPagamento;
+    if (!lista || !ehAppAndroid()) return;
+    Leitor.definirApps({ pacotes: lista.filter((a) => a.pacote).map((a) => a.pacote!) }).catch(() => undefined);
+  }, [perfil?.appsPagamento]);
 
   // App Android: traz os pagamentos lidos das notificações enquanto o app estava fechado.
   useEffect(() => {

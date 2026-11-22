@@ -19,6 +19,12 @@ import com.getcapacitor.annotation.PermissionCallback;
 
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
+
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import java.util.Iterator;
+import java.util.List;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -87,6 +93,60 @@ public class LeitorNotificacoesPlugin extends Plugin {
     @PluginMethod
     public void notificar(PluginCall call) {
         Avisos.avisoGeral(getContext(), call.getString("titulo", "Meus Planos"), call.getString("texto", ""));
+        call.resolve();
+    }
+
+    /**
+     * Apps que podem ser lidos: a lista atual, a padrão, os que mandaram aviso com valor mas
+     * estão fora da lista e os apps instalados (para adicionar outro app de pagamento).
+     */
+    @PluginMethod
+    public void apps(PluginCall call) {
+        JSObject r = new JSObject();
+        r.put("configurado", FiltroApps.configurado(getContext()));
+        JSArray permitidos = new JSArray();
+        for (String p : FiltroApps.permitidos(getContext())) permitidos.put(p);
+        r.put("permitidos", permitidos);
+        JSArray padrao = new JSArray();
+        for (java.util.Map.Entry<String, String> e : FiltroApps.PADRAO.entrySet()) padrao.put(app(e.getKey(), e.getValue()));
+        r.put("padrao", padrao);
+        JSArray ignorados = new JSArray();
+        JSONObject ig = FiltroApps.ignorados(getContext());
+        for (Iterator<String> it = ig.keys(); it.hasNext(); ) {
+            String k = it.next();
+            ignorados.put(app(k, ig.optString(k, k)));
+        }
+        r.put("ignorados", ignorados);
+        JSArray instalados = new JSArray();
+        PackageManager pm = getContext().getPackageManager();
+        Intent i = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
+        List<ResolveInfo> lista = pm.queryIntentActivities(i, 0);
+        Set<String> vistos = new HashSet<>();
+        for (ResolveInfo ri : lista) {
+            String pacote = ri.activityInfo.packageName;
+            if (pacote.equals(getContext().getPackageName()) || !vistos.add(pacote)) continue;
+            instalados.put(app(pacote, ri.loadLabel(pm).toString()));
+        }
+        r.put("instalados", instalados);
+        call.resolve(r);
+    }
+
+    private static JSObject app(String pacote, String nome) {
+        JSObject o = new JSObject();
+        o.put("pacote", pacote);
+        o.put("nome", nome);
+        return o;
+    }
+
+    @PluginMethod
+    public void definirApps(PluginCall call) {
+        JSArray pacotes = call.getArray("pacotes", new JSArray());
+        Set<String> set = new HashSet<>();
+        for (int i = 0; i < pacotes.length(); i++) {
+            String p = pacotes.optString(i, null);
+            if (p != null && !p.isEmpty()) set.add(p);
+        }
+        FiltroApps.definir(getContext(), set);
         call.resolve();
     }
 

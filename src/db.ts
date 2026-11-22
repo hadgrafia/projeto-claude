@@ -35,6 +35,8 @@ export interface Perfil {
   celular?: string;
   /** agentes: false = os agentes só respondem quando a pessoa pergunta (sem avisos por conta própria). */
   avisos?: { celular: boolean; email: boolean; agentes?: boolean };
+  /** Apps de pagamento que o Meus Planos pode ler (pacote no Android; nome para automações). */
+  appsPagamento?: { pacote?: string; nome: string }[];
   criadoEm: string;
 }
 

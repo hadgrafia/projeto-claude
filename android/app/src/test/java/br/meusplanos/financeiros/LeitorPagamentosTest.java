@@ -35,5 +35,8 @@ public class LeitorPagamentosTest {
     public void ignoraOQueNaoEDinheiro() {
         assertNull(LeitorPagamentos.ler("Ana", "Oi, tudo bem?"));
         assertNull(LeitorPagamentos.ler("Seu código de verificação", "R$ 0,00 código 1234"));
+        // Aviso diário de cotação não é pagamento.
+        assertNull(LeitorPagamentos.ler("Dólar hoje", "Dólar comercial: compra R$ 5,43 e venda R$ 5,44"));
+        assertNull(LeitorPagamentos.ler("Cotação", "Euro fecha a R$ 6,12"));
     }
 }

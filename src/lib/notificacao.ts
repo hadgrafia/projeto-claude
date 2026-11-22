@@ -19,7 +19,14 @@ const SAIDA = [
   /compra/i, /pagamento/i, /pago/i, /paga/i, /enviad[oa]/i, /d[eé]bito/i, /transfer[eê]ncia (realizada|enviada)/i,
   /saque/i, /aprovad[ao]/i, /voc[eê] (pagou|transferiu|enviou)/i, /pix (enviado|realizado)/i, /fatura/i,
 ];
-const IGNORAR = [/limite dispon[ií]vel/i, /c[oó]digo de (verifica|seguran)/i, /token/i, /senha/i, /oferta/i, /promo/i, /cashback dispon/i];
+const IGNORAR = [
+  /limite dispon[ií]vel/i, /c[oó]digo de (verifica|seguran)/i, /token/i, /senha/i, /oferta/i, /promo/i, /cashback dispon/i,
+  // Cotações e mercado: não são pagamentos (ex.: aviso diário do dólar).
+  /cota[cç][aã]o/i, /\bd[oó]lar(es)?\b/i, /\beuro(s)?\b/i, /bitcoin/i, /\bbtc\b/i, /ibovespa/i, /c[aâ]mbio/i, /bolsa de valores/i, /a[cç][aã]o (subiu|caiu)/i, /fechou em (alta|queda)/i,
+];
+
+/** Avisos que nunca são pagamento (códigos, ofertas, cotação do dólar etc.). */
+export const avisoIgnoravel = (texto: string) => IGNORAR.some((r) => r.test(texto));
 
 export function lerNotificacao(app: string, titulo: string, texto: string, quando = new Date()): Omit<Movimento, 'id'> | null {
   const completo = `${titulo} ${texto}`.trim();

@@ -50,6 +50,11 @@ public class ServicoNotificacoes extends NotificationListenerService {
 
         LeitorPagamentos.Pagamento p = LeitorPagamentos.ler(titulo, texto);
         if (p == null) return;
+        // Só os apps escolhidos (carteiras e bancos). Outros ficam anotados como sugestão.
+        if (!FiltroApps.permitido(this, sbn.getPackageName())) {
+            FiltroApps.anotarIgnorado(this, sbn.getPackageName(), nomeDoApp(sbn.getPackageName(), ex));
+            return;
+        }
 
         long agora = System.currentTimeMillis();
         String assinatura = sbn.getPackageName() + "|" + p.valor + "|" + p.tipo + "|" + (String.valueOf(titulo) + texto).hashCode();
@@ -63,6 +68,7 @@ public class ServicoNotificacoes extends NotificationListenerService {
 
     private String nomeDoApp(String pacote, Bundle ex) {
         if (NOMES.containsKey(pacote)) return NOMES.get(pacote);
+        if (FiltroApps.PADRAO.containsKey(pacote)) return FiltroApps.PADRAO.get(pacote);
         try {
             Object info = ex.get("android.appInfo");
             PackageManager pm = getPackageManager();

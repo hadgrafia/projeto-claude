@@ -24,6 +24,12 @@ interface LeitorNotificacoes {
   pendentes(): Promise<{ itens: Capturado[] }>;
   confirmar(opcoes: { ids: string[] }): Promise<void>;
   notificar(opcoes: { titulo: string; texto: string }): Promise<void>;
+  apps(): Promise<{ configurado: boolean; permitidos: string[]; padrao: AppInfo[]; ignorados: AppInfo[]; instalados: AppInfo[] }>;
+  definirApps(opcoes: { pacotes: string[] }): Promise<void>;
+}
+export interface AppInfo {
+  pacote: string;
+  nome: string;
 }
 
 export const ehAppAndroid = () => Capacitor.getPlatform() === 'android';

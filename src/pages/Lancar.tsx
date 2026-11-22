@@ -8,6 +8,7 @@ import { linhasDoPDF, lerLinhasExtrato } from '../lib/importar';
 import { dataCurta, reais } from '../lib/format';
 import { db, type Movimento } from '../db';
 import { jaRegistrado } from '../lib/conciliar';
+import { appPermitido } from '../lib/appsPagamento';
 
 /**
  * Lançamento rápido: chega por "Compartilhar comprovante" ou por um link de automação.
@@ -34,7 +35,16 @@ export default function Lancar() {
   useEffect(() => {
     const p = new URLSearchParams(local.search);
     (async () => {
-      if (p.get('compartilhado') !== '1') return setLido(lerParametros(p));
+      if (p.get('compartilhado') !== '1') {
+        // Aviso de um app fora da lista de apps de pagamento (ex.: cotação do dólar): ignora.
+        const app = p.get('app') ?? '';
+        const perfil = await db.perfil.get('eu');
+        if (app && (p.get('texto') || p.get('titulo')) && !appPermitido(perfil, app)) {
+          setAviso(`O aviso veio de "${app}", que não está na sua lista de apps de pagamento (Ajustes). Nada foi preenchido.`);
+          return setLido(null);
+        }
+        return setLido(lerParametros(p));
+      }
       const c = await pegarCompartilhado();
       if (!c) return setLido(null);
       const a = c.arquivo;

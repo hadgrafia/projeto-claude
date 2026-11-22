@@ -45,3 +45,13 @@ describe('agentes: reserva local para registrar', () => {
     expect(gastoDoTexto('quanto gastei com mercado?')).toBeNull();
   });
 });
+
+import { lerNotificacao } from './notificacao';
+describe('avisos que não são pagamento', () => {
+  it('ignora a cotação diária do dólar e do euro', () => {
+    expect(lerNotificacao('Investimentos', 'Dólar hoje', 'Dólar comercial: compra R$ 5,43 e venda R$ 5,44')).toBeNull();
+    expect(lerNotificacao('Notícias', 'Cotação', 'Euro fecha a R$ 6,12')).toBeNull();
+    expect(lerNotificacao('Nubank', 'Compra aprovada', 'Compra de R$ 45,90 aprovada em Padaria')).not.toBeNull();
+    expect(lerParametros(new URLSearchParams({ app: 'Nubank', texto: 'Dólar comercial: compra R$ 5,43' }))).toBeNull();
+  });
+});

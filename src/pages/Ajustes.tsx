@@ -7,6 +7,7 @@ import { EditarRenda } from '../components/EditarRenda';
 import { AjustesCartao, AjustesContato, ExcluirConta, TrocarSenha } from '../components/AjustesExtras';
 import { Instalar } from '../components/Instalar';
 import { RegistroAutomatico } from '../components/RegistroAutomatico';
+import { AppsPagamento } from '../components/AppsPagamento';
 import { PedidosConvite } from '../components/PedidosConvite';
 import { ativarBiometria, biometriaDisponivel, cifrar, conferirPin, decifrar, definirTempo, lerBloqueio, removerBiometria, type ConfigBloqueio } from '../lib/bloqueio';
 import { db, exportarTudo, importarTudo, type Tema } from '../db';
@@ -222,6 +223,7 @@ export default function Ajustes() {
       </section>
 
       <RegistroAutomatico />
+      {perfil && <AppsPagamento key={`apps-${(perfil.appsPagamento ?? []).length}`} perfil={perfil} aoSalvar={aviso} />}
 
       <section className="cartao areia">
         <Instalar />

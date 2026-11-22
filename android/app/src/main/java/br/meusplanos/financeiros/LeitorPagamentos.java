@@ -38,7 +38,9 @@ public final class LeitorPagamentos {
         "compra", "pagamento", "pago", "paga", "enviad[oa]", "d[eé]bito", "transfer[eê]ncia (realizada|enviada)",
         "saque", "aprovad[ao]", "voc[eê] (pagou|transferiu|enviou)", "pix (enviado|realizado)", "fatura");
     private static final Pattern[] IGNORAR = compilar(
-        "limite dispon[ií]vel", "c[oó]digo de (verifica|seguran)", "token", "senha", "oferta", "promo", "cashback dispon");
+        "limite dispon[ií]vel", "c[oó]digo de (verifica|seguran)", "token", "senha", "oferta", "promo", "cashback dispon",
+        // Cotações e mercado: não são pagamentos (ex.: aviso diário do dólar).
+        "cota[cç][aã]o", "\\bd[oó]lar(es)?\\b", "\\beuro(s)?\\b", "bitcoin", "\\bbtc\\b", "ibovespa", "c[aâ]mbio", "bolsa de valores", "a[cç][aã]o (subiu|caiu)", "fechou em (alta|queda)");
     private static final Pattern VOCE_PAGOU = Pattern.compile("voc[eê] (pagou|transferiu|enviou)", F);
 
     private static final String FIM =
