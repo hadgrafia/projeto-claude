@@ -1,6 +1,6 @@
 import type { Compra, Importancia, Movimento, Perfil } from '../db';
 import { estadoCartao, mesDaFatura, parcelaNaFatura } from './cartao';
-import { chaveMes, mesesEntre } from './format';
+import { chaveMes, mesesEntre, reaisCurto } from './format';
 import { parcelaPrice } from './finance';
 
 /**
@@ -60,7 +60,7 @@ export interface Recomendacao {
   atrasoPlanos: number;
 }
 
-const r$ = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+const r$ = (v: number) => reaisCurto(v);
 
 /** Parcelas que caem num mês (AAAA-MM). */
 export function parcelasNoMes(compras: Compra[], mes = chaveMes(new Date())) {

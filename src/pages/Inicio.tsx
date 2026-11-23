@@ -16,6 +16,7 @@ import { compromissoDoMes } from '../lib/compras';
 import { situacaoPlano, useDados, useSelic } from '../hooks';
 import { analisarMes } from '../lib/feedback';
 import { mesCurto, pct, reaisCurto } from '../lib/format';
+import { BotaoOlho } from '../components/OlhoValores';
 
 const saudacao = () => {
   const h = new Date().getHours();
@@ -41,9 +42,12 @@ export default function Inicio() {
           <span className="subtitulo">{saudacao()}{perfil?.nome ? `, ${perfil.nome}` : ''}</span>
           <strong style={{ fontSize: 20, fontWeight: 800 }}>Seus planos</strong>
         </div>
-        <Link to="/ajustes" className="circulo card" aria-label="Ajustes">
-          <Icone nome="engrenagem" tamanho={20} />
-        </Link>
+        <div className="linha" style={{ gap: 8 }}>
+          <BotaoOlho />
+          <Link to="/ajustes" className="circulo card" aria-label="Ajustes">
+            <Icone nome="engrenagem" tamanho={20} />
+          </Link>
+        </div>
       </div>
 
       <Entra largo>

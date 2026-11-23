@@ -27,6 +27,7 @@ import Investimentos from './pages/Investimentos';
 import NovoPlano from './pages/NovoPlano';
 import PlanoDetalhe from './pages/PlanoDetalhe';
 import Planos from './pages/Planos';
+import { BotaoOlho, useValoresOcultos } from './components/OlhoValores';
 
 const ABAS: { para: string; rotulo: string; icone: NomeIcone }[] = [
   { para: '/inicio', rotulo: 'Início', icone: 'casa' },
@@ -42,6 +43,7 @@ function Nav() {
       <div className="nav-marca">
         <Logo tamanho={40} />
         <strong>Meus Planos</strong>
+        <BotaoOlho className="circulo card so-computador" />
       </div>
       {ABAS.map((a) => (
         <NavLink key={a.para} to={a.para} aria-label={a.rotulo} className={({ isActive }) => (isActive ? 'ativo' : '')}>
@@ -156,6 +158,7 @@ function useTelaGrande() {
 
 export default function App() {
   const { perfil, carregado } = useDados();
+  const oculto = useValoresOcultos();
   const local = useLocation();
   const bloqueio = useBloqueio();
   const telaGrande = useTelaGrande();
@@ -232,7 +235,8 @@ export default function App() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className={comNav ? 'app com-menu' : 'app'}>
+      {/* key: ao tocar no olho, a tela é montada de novo com os valores escondidos ou à mostra */}
+      <div key={oculto ? 'ocultos' : 'visiveis'} className={comNav ? 'app com-menu' : 'app'}>
         <AvisoOffline />
         <AvisoAtualizacao />
         <AnimatePresence mode="wait" initial={false}>

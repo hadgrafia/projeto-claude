@@ -14,6 +14,7 @@ import { hora, reais } from '../lib/format';
 import { chaveMovimento } from '../lib/importar';
 import { CampoLugar, useLugaresRecentes } from '../components/Lugar';
 import { lugarInformadoNoApp, esquecerAviso, naoEraGasto } from '../lib/nativo';
+import { BotaoOlho } from '../components/OlhoValores';
 
 type Periodo = 'dia' | 'semana' | 'mes' | 'ano';
 
@@ -77,9 +78,12 @@ export default function Gastos() {
     <main className="tela">
       <div className="topo">
         <h1 className="titulo">Gastos e entradas</h1>
-        <Link to="/importar" className="circulo card" aria-label="Enviar extrato">
-          <Icone nome="upload" tamanho={20} />
-        </Link>
+        <div className="linha" style={{ gap: 8 }}>
+          <BotaoOlho />
+          <Link to="/importar" className="circulo card" aria-label="Enviar extrato">
+            <Icone nome="upload" tamanho={20} />
+          </Link>
+        </div>
       </div>
 
       <Segmentado

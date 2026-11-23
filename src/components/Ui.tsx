@@ -1,6 +1,6 @@
 import { animate, AnimatePresence, motion, useMotionValue, useTransform } from 'framer-motion';
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { reais, reaisCurto } from '../lib/format';
+import { ocultarNoTexto, reais, reaisCurto } from '../lib/format';
 import { Icone } from './Icone';
 
 /** Número que "conta" até o valor final. */
@@ -117,7 +117,7 @@ export function CampoDinheiro({ rotulo, valor, aoMudar, dica }: { rotulo: string
   return (
     <label className="campo">
       {rotulo}
-      <div className="com-sufixo">
+      <div className="com-sufixo valor-sensivel">
         <input
           inputMode="decimal"
           placeholder="R$ 0,00"
@@ -145,7 +145,7 @@ export const Entra = ({ children, i = 0, largo }: { children: ReactNode; i?: num
 
 /** Markdown simples (títulos, listas, negrito, links, tabelas) sem HTML bruto. */
 export function Markdown({ texto }: { texto: string }) {
-  const linhas = texto.split('\n');
+  const linhas = ocultarNoTexto(texto).split('\n');
   const blocos: ReactNode[] = [];
   const inline = (s: string, k: string): ReactNode[] =>
     s.split(/(\*\*[^*]+\*\*|\[[^\]]+\]\(https?:\/\/[^)\s]+\))/g).map((p, i) => {

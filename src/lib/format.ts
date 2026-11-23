@@ -1,8 +1,37 @@
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const brlInteiro = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
 
-export const reais = (v: number) => brl.format(Number.isFinite(v) ? v : 0);
-export const reaisCurto = (v: number) => brlInteiro.format(Number.isFinite(v) ? Math.round(v) : 0);
+/*
+ * Modo "valores ocultos" (o olho): para mostrar o app a alguém sem expor os seus números.
+ * Vale para este aparelho; todos os valores em reais viram "R$ ••••".
+ */
+export const MASCARA = 'R$ ••••';
+const CHAVE_OCULTO = 'mp_valores_ocultos';
+let oculto = (() => {
+  try {
+    return localStorage.getItem(CHAVE_OCULTO) === '1';
+  } catch {
+    return false;
+  }
+})();
+export const valoresOcultos = () => oculto;
+export function definirValoresOcultos(v: boolean) {
+  oculto = v;
+  try {
+    localStorage.setItem(CHAVE_OCULTO, v ? '1' : '0');
+  } catch {
+    /* sem armazenamento: vale só até fechar */
+  }
+  document.documentElement.classList.toggle('valores-ocultos', v);
+  window.dispatchEvent(new CustomEvent('mp-valores-ocultos', { detail: v }));
+}
+if (typeof document !== 'undefined') document.documentElement.classList.toggle('valores-ocultos', oculto);
+
+/** Esconde valores em reais dentro de um texto (respostas dos agentes, avisos). */
+export const ocultarNoTexto = (t: string) => (oculto ? t.replace(/(R|US)\$\s?-?\s?[\d.]+(,\d{1,2})?/g, MASCARA) : t);
+
+export const reais = (v: number) => (oculto ? MASCARA : brl.format(Number.isFinite(v) ? v : 0));
+export const reaisCurto = (v: number) => (oculto ? MASCARA : brlInteiro.format(Number.isFinite(v) ? Math.round(v) : 0));
 export const pct = (v: number, casas = 0) =>
   `${(Number.isFinite(v) ? v : 0).toLocaleString('pt-BR', { maximumFractionDigits: casas, minimumFractionDigits: casas })}%`;
 

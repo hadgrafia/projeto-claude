@@ -6,6 +6,7 @@ import { db } from '../db';
 import { situacaoPlano, useDados, useSelic } from '../hooks';
 import { mesCurto, pct, reaisCurto } from '../lib/format';
 import { analisarPrazo, taxaMensal } from '../lib/finance';
+import { BotaoOlho } from '../components/OlhoValores';
 
 const CORES = ['#B4552D', '#3B4A3A', '#D9774F', '#8A9A86', '#6B4E3D', '#C9CFC0'];
 
@@ -21,7 +22,10 @@ export default function Planos() {
     <main className="tela">
       <div className="topo">
         <h1 className="titulo">Meus planos</h1>
-        <Link to="/planos/novo" className="circulo terracota" aria-label="Criar novo plano"><Icone nome="mais" /></Link>
+        <div className="linha" style={{ gap: 8 }}>
+          <BotaoOlho />
+          <Link to="/planos/novo" className="circulo terracota" aria-label="Criar novo plano"><Icone nome="mais" /></Link>
+        </div>
       </div>
 
       <section className="cartao verde">

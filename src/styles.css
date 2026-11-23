@@ -319,3 +319,12 @@ h1, h2, h3, p { margin: 0; }
 .botao.botao-salvar.salvo, .botao.botao-salvar.salvo:disabled { background: #2E7D4F; color: #fff; border-color: #2E7D4F; opacity: 1; }
 .botao.botao-salvar.erro { background: #B3261E; color: #fff; border-color: #B3261E; }
 .botao.botao-salvar:active { transform: scale(0.98); }
+
+/* Olho dos valores */
+.botao-olho { border: 0; cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; }
+.botao-olho.fechado { background: var(--terracota); color: #fff; }
+.botao-olho.fechado svg path { stroke: #fff; }
+/* Valores ocultos: campos de dinheiro ficam borrados (até a pessoa tocar para editar) */
+html.valores-ocultos .valor-sensivel input:not(:focus) { filter: blur(7px); }
+.aviso-oculto { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--terracota-texto); }
+.nav-marca .botao-olho { margin-left: auto; width: 38px; height: 38px; }

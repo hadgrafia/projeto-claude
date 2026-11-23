@@ -9,6 +9,7 @@ import { pedirAnalise, type RespostaIA } from '../lib/ia';
 import { calcularPerfil, cdiDaSelic, liquidoAnual, metaPoupanca, NOMES_INVESTIMENTO, PERGUNTAS_PERFIL, poupancaAnual, recomendar, reservaEmergencia } from '../lib/invest';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { PerguntasPerfil } from '../components/PerguntasPerfil';
+import { BotaoOlho } from '../components/OlhoValores';
 
 const ROTULO_PERFIL: Record<PerfilRisco, string> = { conservador: 'Conservador', moderado: 'Moderado', arrojado: 'Arrojado' };
 
@@ -51,7 +52,10 @@ export default function Investimentos() {
     <main className="tela">
       <div className="topo">
         <h1 className="titulo">Investimentos</h1>
-        <button type="button" className="circulo terracota" aria-label="Adicionar investimento" onClick={() => setEditando('novo')}><Icone nome="mais" /></button>
+        <div className="linha" style={{ gap: 8 }}>
+          <BotaoOlho />
+          <button type="button" className="circulo terracota" aria-label="Adicionar investimento" onClick={() => setEditando('novo')}><Icone nome="mais" /></button>
+        </div>
       </div>
 
       <Entra largo>
