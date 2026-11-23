@@ -37,6 +37,10 @@ export interface Perfil {
   avisos?: { celular: boolean; email: boolean; agentes?: boolean };
   /** Apps de pagamento que o Meus Planos pode ler (pacote no Android; nome para automações). */
   appsPagamento?: { pacote?: string; nome: string }[];
+  /** Assinaturas (Netflix, Spotify, IA…) que a Lari lembra antes da cobrança. */
+  assinaturas?: import('./lib/assinaturas').Assinatura[];
+  /** true quando a pessoa já respondeu sobre assinaturas (mesmo que não tenha nenhuma). */
+  assinaturasRespondido?: boolean;
   criadoEm: string;
 }
 

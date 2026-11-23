@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Icone } from '../components/Icone';
 import { Folha, Segmentado } from '../components/Ui';
 import { CriarSenha, TecladoPin } from '../components/Bloqueio';
@@ -221,6 +221,15 @@ export default function Ajustes() {
           </label>
         </div>
       </section>
+
+      <Link to="/assinaturas" className="cartao cartao-link" style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <span className="avatar-agente" style={{ width: 40, height: 40, background: '#C08A3E', fontSize: 17 }}>L</span>
+        <span className="cresce coluna" style={{ gap: 2 }}>
+          <strong>Assinaturas</strong>
+          <span className="pequeno suave">Netflix, Spotify, IA e outras: a Lari avisa antes de cada cobrança.</span>
+        </span>
+        <Icone nome="direita" />
+      </Link>
 
       <RegistroAutomatico />
       {perfil && <AppsPagamento key={`apps-${(perfil.appsPagamento ?? []).length}`} perfil={perfil} aoSalvar={aviso} />}

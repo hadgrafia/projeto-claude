@@ -14,6 +14,7 @@ import Convite from './pages/Convite';
 import Compra from './pages/Compra';
 import Lancar from './pages/Lancar';
 import Agentes from './pages/Agentes';
+import Assinaturas from './pages/Assinaturas';
 import { useEquipe } from './components/Equipe';
 import { avisarDestaques } from './lib/agentesAvisos';
 import BoasVindas from './pages/BoasVindas';
@@ -55,6 +56,10 @@ function Nav() {
       <NavLink to="/agentes" className={({ isActive }) => `so-computador ${isActive ? 'ativo' : ''}`} aria-label="Agentes">
         <Icone nome="conversa" />
         <span className="rotulo">Agentes</span>
+      </NavLink>
+      <NavLink to="/assinaturas" className={({ isActive }) => `so-computador ${isActive ? 'ativo' : ''}`} aria-label="Assinaturas">
+        <Icone nome="sino" />
+        <span className="rotulo">Assinaturas</span>
       </NavLink>
       <NavLink to="/compra" className={({ isActive }) => `so-computador ${isActive ? 'ativo' : ''}`} aria-label="Antes de comprar">
         <Icone nome="etiqueta" />
@@ -247,6 +252,7 @@ export default function App() {
                   <Route path="/compra" element={<Compra />} />
                   <Route path="/lancar" element={<Lancar />} />
                   <Route path="/agentes" element={<Agentes />} />
+                  <Route path="/assinaturas" element={<Assinaturas />} />
                   <Route path="*" element={<Navigate to="/inicio" replace />} />
                 </>
               ) : (

@@ -6,6 +6,7 @@ import { EditarRenda } from '../components/EditarRenda';
 import { Instalar } from '../components/Instalar';
 import { PainelAgentes } from '../components/Equipe';
 import { CartaoEscolherApps } from '../components/AppsPagamento';
+import { CartaoAssinaturas } from '../components/Assinaturas';
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
@@ -63,6 +64,7 @@ export default function Inicio() {
       </Entra>
 
       <CartaoEscolherApps perfil={perfil} />
+      <CartaoAssinaturas perfil={perfil} />
       <Instalar compacto />
       <PainelAgentes compacto />
 

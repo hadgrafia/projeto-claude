@@ -4,14 +4,16 @@ import { compromissoDoMes, limiteDisponivel } from './compras';
 import { analisarMes } from './feedback';
 import { chaveMes, mesLongo, reais } from './format';
 import { cdiDaSelic, recomendar as recomendarInvest } from './invest';
+import { proximaCobranca, totalMensal } from './assinaturas';
 
 /** A equipe de agentes. Cada um assina as próprias respostas. */
-export type IdAgente = 'nina' | 'gabriela' | 'matheus' | 'leo';
+export type IdAgente = 'nina' | 'gabriela' | 'matheus' | 'leo' | 'lari';
 export const AGENTES: Record<IdAgente, { nome: string; papel: string; cor: string; exemplo: string }> = {
   nina: { nome: 'Nina', papel: 'Gastos, resumos e Imposto de Renda', cor: '#B4552D', exemplo: 'Gastei 25 no sorvete da Borelli' },
   gabriela: { nome: 'Gabriela', papel: 'Planos e metas', cor: '#3B4A3A', exemplo: 'Quero juntar para a casa nova em 2028' },
   matheus: { nome: 'Matheus', papel: 'Investimentos', cor: '#5F7A5A', exemplo: 'Onde guardo o dinheiro da Casa Nova?' },
   leo: { nome: 'Leo', papel: 'Antes de comprar', cor: '#8F4A2B', exemplo: 'Posso comprar um celular de R$ 2.000?' },
+  lari: { nome: 'Lari', papel: 'Assinaturas e cobranças', cor: '#C08A3E', exemplo: 'Quanto gasto com assinaturas?' },
 };
 
 export interface Situacao {
@@ -87,6 +89,8 @@ export function montarContexto(d: {
     parcelasNesteMes: Math.round(compromissoDoMes(d.compras, mes)),
     comprasParceladas: d.compras.slice(-20).map((c) => ({ descricao: c.descricao, valor: c.valor, parcelas: c.parcelas, valorParcela: Math.round(c.valorParcela), inicio: c.inicio, noCartao: c.noCartao })),
     valorParaAvisoDeCompra: d.perfil?.limiteAvisoCompra ?? 100,
+    assinaturas: (d.perfil?.assinaturas ?? []).map((a) => ({ nome: a.nome, valor: a.valor, ciclo: a.ciclo, diaCobranca: a.dia, mesCobranca: a.mes, proxima: proximaCobranca(a).toISOString().slice(0, 10) })),
+    assinaturasPorMes: Math.round(totalMensal(d.perfil?.assinaturas ?? []) * 100) / 100,
   };
 }
 
@@ -171,7 +175,7 @@ export function impostoDoAno(movs: Movimento[], ano: string) {
 /* ---------- Conversa com a equipe ---------- */
 
 export interface Acao {
-  tipo: 'registrar' | 'avaliar_compra' | 'criar_plano' | 'relatorio' | 'resumo' | 'imposto' | 'renda' | 'guardar' | 'porcentagem' | 'investimento' | 'cartao' | 'tela';
+  tipo: 'registrar' | 'avaliar_compra' | 'criar_plano' | 'relatorio' | 'resumo' | 'imposto' | 'renda' | 'guardar' | 'porcentagem' | 'investimento' | 'cartao' | 'tela' | 'assinatura';
   valor?: number | null;
   local?: string | null;
   tipoMov?: string | null;
@@ -193,6 +197,9 @@ export interface Acao {
   limite?: number | null;
   usado?: number | null;
   tela?: string | null;
+  ciclo?: string | null;
+  dia?: number | null;
+  mesCobranca?: number | null;
 }
 export interface RespostaAgente {
   agente: IdAgente;
@@ -211,7 +218,7 @@ export async function perguntar(mensagem: string, historico: { de: 'pessoa' | 'a
   if (r.status === 401) throw new Error('Sua sessão expirou. Abra Ajustes e toque em "Entrar de novo".');
   const c = (await r.json().catch(() => ({}))) as Partial<RespostaAgente> & { erro?: string };
   if (!r.ok) throw new Error(c.erro ?? `Erro ${r.status}`);
-  const agente = (['nina', 'gabriela', 'matheus', 'leo'] as const).includes(c.agente as IdAgente) ? (c.agente as IdAgente) : 'nina';
+  const agente = (['nina', 'gabriela', 'matheus', 'leo', 'lari'] as const).includes(c.agente as IdAgente) ? (c.agente as IdAgente) : 'nina';
   return { agente, resposta: c.resposta ?? '', acoes: Array.isArray(c.acoes) ? c.acoes : [] };
 }
 
@@ -272,4 +279,5 @@ export const TELAS: Record<string, { rota: string; nome: string }> = {
   conselhos: { rota: '/feedback', nome: 'Conselhos' },
   antes_de_comprar: { rota: '/compra', nome: 'Antes de comprar' },
   ajustes: { rota: '/ajustes', nome: 'Ajustes' },
+  assinaturas: { rota: '/assinaturas', nome: 'Assinaturas' },
 };

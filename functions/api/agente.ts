@@ -4,7 +4,7 @@ import { conversarComGemini, GeminiErro, type ParteGemini } from './gemini';
 
 /**
  * Agentes do Meus Planos (chat no app e no site; o WhatsApp usa o mesmo cérebro):
- *  Nina (gastos), Gabriela (planos), Matheus (investimentos), Leo (antes de comprar).
+ *  Nina (gastos), Gabriela (planos), Matheus (investimentos), Leo (antes de comprar), Lari (assinaturas).
  * O app manda a mensagem, um anexo opcional (áudio, foto ou PDF) e um RESUMO dos números da
  * pessoa (nunca senha, banco ou dados de conta). A IA escolhe o agente, responde e sugere ações,
  * que o app executa só depois de a pessoa confirmar.
@@ -15,10 +15,11 @@ A cada mensagem, escolha UM agente para responder, conforme o assunto:
 - "gabriela": planos. Cria planos conversando, explica metas, prazos, quanto separar por mês e quando dá para chegar, registra dinheiro guardado num plano, muda a porcentagem do valor livre de um plano, compara planos e explica o plano em conjunto com a família.
 - "matheus": investimentos. Selic, CDI, onde guardar o dinheiro de cada plano, rendimento estimado, diferenças entre Tesouro, CDB, LCI/LCA, poupança, fundos, ações e cripto, imposto e liquidez; registra ou atualiza investimentos. Orientação educativa, não recomendação individual registrada na CVM (diga isso só se a pessoa pedir algo muito específico).
 - "leo": antes de comprar e cartão. "Posso comprar X agora?", à vista ou parcelado, juros, parcelas que já existem, limite do cartão (e atualiza limite e valor usado), como evitar dívidas e nome sujo.
+- "lari": assinaturas (Netflix, Spotify, IA, academia, Amazon Prime etc.). Lembra as próximas cobranças, soma quanto as assinaturas custam por mês e por ano, aponta repetidas ou pouco usadas para cancelar, compara planos mensais e anuais e cadastra assinaturas novas.
 Se a pessoa chamar um agente pelo nome, ele responde.
 
 Como usar o app (para tirar dúvidas e indicar a tela certa):
-- Início: resumo dos planos, renda, recados da equipe. Gastos: lista por dia/semana/mês/ano, anotar gasto. Enviar extrato: PDF, OFX ou CSV, sem duplicar o que veio dos avisos. Planos: criar e acompanhar metas. Investir: investimentos e onde guardar. Conselhos: o que manter, rever e cortar no mês. Antes de comprar: recomendação de compra e parcelas. Ajustes: renda, cartão, contato e avisos, convites, senha, cópia de segurança, instalar o app, registrar gastos pelos avisos do banco (compartilhar comprovante, automação).
+- Início: resumo dos planos, renda, assinaturas, recados da equipe. Assinaturas: lista, próximas cobranças e totais (Lari). Gastos: lista por dia/semana/mês/ano, anotar gasto. Enviar extrato: PDF, OFX ou CSV, sem duplicar o que veio dos avisos. Planos: criar e acompanhar metas. Investir: investimentos e onde guardar. Conselhos: o que manter, rever e cortar no mês. Antes de comprar: recomendação de compra e parcelas. Ajustes: renda, cartão, contato e avisos, convites, senha, cópia de segurança, instalar o app, registrar gastos pelos avisos do banco (compartilhar comprovante, automação).
 - O app nunca acessa o banco; os dados ficam no aparelho e numa cópia cifrada da conta (voltam em qualquer aparelho); instalar pelo navegador não exige desligar o Play Protect; em Ajustes dá para sair por um tempo ou excluir a conta.
 
 Regras:
@@ -40,12 +41,13 @@ Campos da resposta (o app mostra botões e só executa depois que a pessoa confi
 - "porcentagem" (Gabriela): plano (nome) e percentual (0 a 100) quando pedir para mudar quanto do valor livre vai para um plano.
 - "investimento" (Matheus): nome, tipoInvestimento ("cofrinho", "cdb", "tesouro-selic", "tesouro-ipca", "tesouro-prefixado", "lci-lca", "poupanca", "fundo", "acoes-etf", "cripto" ou "outro"), saldo, aporteMensal e plano (nome, opcional) quando a pessoa contar de um investimento ou novo saldo.
 - "cartao" (Leo): limite e/ou usado quando a pessoa informar o limite do cartão ou quanto já usou.
-- "tela": quando a pessoa perguntar onde fica algo ou como fazer algo no app, uma destas: "inicio", "gastos", "enviar_extrato", "planos", "novo_plano", "investir", "conselhos", "antes_de_comprar", "ajustes".`;
+- "assinatura" (Lari): nome, valor, ciclo ("mensal" ou "anual"), dia (1 a 31) e mes (1 a 12, só anual) quando a pessoa contar de uma assinatura nova ou mudar o valor/dia de uma.
+- "tela": quando a pessoa perguntar onde fica algo ou como fazer algo no app, uma destas: "inicio", "gastos", "enviar_extrato", "planos", "novo_plano", "investir", "conselhos", "antes_de_comprar", "ajustes", "assinaturas".`;
 
 export const ESQUEMA_AGENTES = {
   type: 'OBJECT',
   properties: {
-    agente: { type: 'STRING', enum: ['nina', 'gabriela', 'matheus', 'leo'] },
+    agente: { type: 'STRING', enum: ['nina', 'gabriela', 'matheus', 'leo', 'lari'] },
     resposta: { type: 'STRING', description: 'Texto curto para a pessoa (até 700 caracteres).' },
     registros: {
       type: 'ARRAY',
@@ -84,7 +86,11 @@ export const ESQUEMA_AGENTES = {
       properties: { nome: { type: 'STRING' }, tipoInvestimento: { type: 'STRING' }, saldo: { type: 'NUMBER' }, aporteMensal: { type: 'NUMBER' }, plano: { type: 'STRING' } },
     },
     cartao: { type: 'OBJECT', properties: { limite: { type: 'NUMBER' }, usado: { type: 'NUMBER' } } },
-    tela: { type: 'STRING', enum: ['inicio', 'gastos', 'enviar_extrato', 'planos', 'novo_plano', 'investir', 'conselhos', 'antes_de_comprar', 'ajustes'] },
+    assinatura: {
+      type: 'OBJECT',
+      properties: { nome: { type: 'STRING' }, valor: { type: 'NUMBER' }, ciclo: { type: 'STRING', enum: ['mensal', 'anual'] }, dia: { type: 'INTEGER' }, mes: { type: 'INTEGER' } },
+    },
+    tela: { type: 'STRING', enum: ['inicio', 'gastos', 'enviar_extrato', 'planos', 'novo_plano', 'investir', 'conselhos', 'antes_de_comprar', 'ajustes', 'assinaturas'] },
   },
   required: ['agente', 'resposta', 'registros'],
 };
@@ -103,6 +109,7 @@ interface Saida {
   porcentagem?: { plano?: string; percentual?: number };
   investimento?: { nome?: string; tipoInvestimento?: string; saldo?: number; aporteMensal?: number; plano?: string };
   cartao?: { limite?: number; usado?: number };
+  assinatura?: { nome?: string; valor?: number; ciclo?: string; dia?: number; mes?: number };
   tela?: string;
 }
 
@@ -120,6 +127,7 @@ export function paraAcoes(r: Saida) {
   if (r.porcentagem?.plano && r.porcentagem.percentual !== undefined) acoes.push({ tipo: 'porcentagem', nome: r.porcentagem.plano, percentual: Number(r.porcentagem.percentual) });
   if (r.investimento?.nome) acoes.push({ tipo: 'investimento', ...r.investimento });
   if (r.cartao && (Number(r.cartao.limite) > 0 || r.cartao.usado !== undefined)) acoes.push({ tipo: 'cartao', ...r.cartao });
+  if (r.assinatura?.nome && Number(r.assinatura.valor) > 0) acoes.push({ tipo: 'assinatura', nome: r.assinatura.nome, valor: Number(r.assinatura.valor), ciclo: r.assinatura.ciclo, dia: r.assinatura.dia, mesCobranca: r.assinatura.mes });
   if (r.tela) acoes.push({ tipo: 'tela', tela: r.tela });
   return { agente: r.agente, resposta: r.resposta, acoes };
 }

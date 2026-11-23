@@ -5,6 +5,7 @@ import { avisar } from './avisos';
 import { limiteDisponivel } from './compras';
 import { analisarMes } from './feedback';
 import { mesCurto, reais } from './format';
+import { diasAte, proximaCobranca } from './assinaturas';
 
 /** Um destaque do painel dos agentes (também vira aviso no celular, se a pessoa quiser). */
 export interface Destaque {
@@ -18,6 +19,18 @@ export interface Destaque {
 export function destaques(d: { perfil?: Perfil; planos: Plano[]; movimentos: Movimento[]; compras: Compra[]; renda: number; selic?: number; situacoes: Map<number, Situacao> }): Destaque[] {
   const lista: Destaque[] = [];
   const hoje = new Date().toISOString().slice(0, 10);
+  // Lari: cobranças de assinaturas nos próximos 3 dias.
+  for (const a of d.perfil?.assinaturas ?? []) {
+    const quando = proximaCobranca(a);
+    const dias = diasAte(quando);
+    if (dias <= 3)
+      lista.push({
+        agente: 'lari',
+        texto: `${a.nome} cobra ${dias === 0 ? 'hoje' : dias === 1 ? 'amanhã' : `em ${dias} dias`}: ${reais(a.valor)}${a.ciclo === 'anual' ? ' (anual)' : ''}. Se não usa mais, dá tempo de cancelar.`,
+        link: '/assinaturas',
+        chave: `lari-${a.id}-${quando.toISOString().slice(0, 10)}`,
+      });
+  }
   // Leo: cartão quase no fim.
   if (d.perfil?.limiteCartao) {
     const livre = limiteDisponivel(d.perfil.limiteCartao, d.perfil.limiteUsado, d.perfil.limiteUsadoEm, d.compras) ?? 0;
@@ -74,7 +87,7 @@ export function selicVista(selic?: number) {
 /** Avisos dos agentes no celular, se a pessoa deixou ligado. Cada um só uma vez. */
 export async function avisarDestaques(perfil: Perfil | undefined, lista: Destaque[]) {
   if (perfil?.avisos?.agentes === false) return;
-  const nomes: Record<IdAgente, string> = { nina: 'Nina', gabriela: 'Gabriela', matheus: 'Matheus', leo: 'Leo' };
+  const nomes: Record<IdAgente, string> = { nina: 'Nina', gabriela: 'Gabriela', matheus: 'Matheus', leo: 'Leo', lari: 'Lari' };
   for (const d of lista) {
     if (await lerCache(`destaque:${d.chave}`)) continue;
     await salvarCache(`destaque:${d.chave}`, true);

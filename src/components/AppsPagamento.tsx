@@ -4,6 +4,7 @@ import { APPS_PADRAO, escolheuApps, listaDeApps } from '../lib/appsPagamento';
 import { ehAppAndroid, Leitor, type AppInfo } from '../lib/nativo';
 import { Icone } from './Icone';
 import { Folha } from './Ui';
+import { IconeMarca } from './IconeMarca';
 
 export type AppEscolhido = { pacote?: string; nome: string };
 const chave = (a: AppEscolhido) => a.pacote ?? `nome:${a.nome.toLowerCase()}`;
@@ -39,12 +40,16 @@ export function EscolherApps({ valor, aoMudar }: { valor: AppEscolhido[]; aoMuda
   }, [valor]);
   const achados = busca.trim().length >= 2 ? instalados.filter((a) => a.nome.toLowerCase().includes(busca.trim().toLowerCase()) && !marcados.has(a.pacote)).slice(0, 8) : [];
 
-  const caixa = (a: AppEscolhido) => (
-    <label key={chave(a)} className="linha pequeno" style={{ gap: 10 }}>
-      <input type="checkbox" checked={marcados.has(chave(a))} onChange={() => alternar(a)} style={{ width: 20, height: 20, accentColor: 'var(--terracota)' }} />
-      {a.nome}
-    </label>
-  );
+  const caixa = (a: AppEscolhido) => {
+    const p = APPS_PADRAO.find((x) => chave(x) === chave(a) || x.nome === a.nome);
+    return (
+      <label key={chave(a)} className="linha pequeno" style={{ gap: 10, alignItems: 'center' }}>
+        <input type="checkbox" checked={marcados.has(chave(a))} onChange={() => alternar(a)} style={{ width: 20, height: 20, accentColor: 'var(--terracota)' }} />
+        <IconeMarca icone={p?.icone} sigla={p?.sigla ?? a.nome.slice(0, 2)} cor={p?.cor ?? '#5F7A5A'} nome={a.nome} tamanho={30} />
+        {a.nome}
+      </label>
+    );
+  };
 
   return (
     <div className="coluna" style={{ gap: 10 }}>

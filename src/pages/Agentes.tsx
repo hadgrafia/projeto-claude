@@ -422,6 +422,33 @@ function CartaoAcao({ acao, feita, aoFazer, equipe }: { acao: Acao; feita?: bool
     );
   }
 
+  if (acao.tipo === 'assinatura' && acao.nome && acao.valor) {
+    const ciclo: 'mensal' | 'anual' = acao.ciclo === 'anual' ? 'anual' : 'mensal';
+    const dia = Math.min(31, Math.max(1, Math.round(acao.dia ?? new Date().getDate())));
+    const existe = (equipe.perfil?.assinaturas ?? []).find((a) => a.nome.toLowerCase() === acao.nome!.toLowerCase());
+    return (
+      <div className="acao">
+        <span className="pequeno">{existe ? 'Atualizar' : 'Nova'} assinatura <strong>{acao.nome}</strong> · {reais(acao.valor)} {ciclo === 'anual' ? 'por ano' : 'por mês'} · dia {dia}</span>
+        {feitoOu(
+          <button
+            type="button"
+            className="botao pequeno"
+            onClick={async () => {
+              const { SERVICOS } = await import('../lib/assinaturas');
+              const servico = SERVICOS.find((s) => s.nome.toLowerCase().includes(acao.nome!.toLowerCase()) || acao.nome!.toLowerCase().includes(s.nome.toLowerCase().split(' ')[0]));
+              const lista = equipe.perfil?.assinaturas ?? [];
+              const nova = { id: existe?.id ?? Math.random().toString(36).slice(2, 10), servico: existe?.servico ?? servico?.id, nome: existe?.nome ?? servico?.nome ?? acao.nome!, valor: acao.valor!, ciclo, dia, mes: ciclo === 'anual' ? (acao.mesCobranca ?? new Date().getMonth() + 1) : undefined };
+              await db.perfil.update('eu', { assinaturas: existe ? lista.map((a) => (a.id === existe.id ? nova : a)) : [...lista, nova], assinaturasRespondido: true });
+              aoFazer();
+            }}
+          >
+            {existe ? 'Atualizar assinatura' : 'Adicionar assinatura'}
+          </button>,
+        )}
+      </div>
+    );
+  }
+
   if (acao.tipo === 'tela' && acao.tela && TELAS[acao.tela]) {
     return (
       <div className="acao">

@@ -282,7 +282,8 @@ h1, h2, h3, p { margin: 0; }
 
 /* ---------- Agentes ---------- */
 .avatar-agente { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; color: #fff; font-weight: 800; flex: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--bg) 70%, transparent); }
-.equipe { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.equipe { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.equipe .membro .mini { font-size: 10.5px; overflow-wrap: anywhere; hyphens: auto; }
 .equipe .membro { display: grid; justify-items: center; gap: 4px; text-align: center; background: var(--card); border: 0; border-radius: 20px; padding: 12px 6px; cursor: pointer; color: var(--texto); }
 .equipe .membro .mini { line-height: 1.2; }
 .mensagens { display: flex; flex-direction: column; gap: 12px; }
@@ -304,3 +305,7 @@ h1, h2, h3, p { margin: 0; }
 .recado { padding: 4px 0; }
 
 .espera-conta { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 24px; animation: pulsar 1.6s infinite ease-in-out; }
+.icone-marca { display: inline-flex; align-items: center; justify-content: center; border-radius: 28%; flex: none; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); }
+.grade-servicos { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; max-height: 340px; overflow-y: auto; padding: 2px; }
+.servico { display: grid; justify-items: center; gap: 6px; text-align: center; background: var(--card); border: 1px solid var(--borda); border-radius: 18px; padding: 10px 6px; cursor: pointer; color: var(--texto); line-height: 1.2; }
+.servico:active { transform: scale(0.96); }
