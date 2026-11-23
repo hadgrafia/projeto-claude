@@ -54,4 +54,30 @@ public class LeitorPagamentosTest {
         assertNull(LeitorPagamentos.ler("Fatura", "Sua fatura de R$ 800,00 vence amanhã"));
         assertNull(LeitorPagamentos.ler("Limite", "Seu limite disponível agora é R$ 2.000,00"));
     }
+
+    @Test
+    public void cotacaoNuncaViraGasto() {
+        assertNull(LeitorPagamentos.ler("USD/BRL", "Compra R$ 5,43 · Venda R$ 5,44"));
+        assertNull(LeitorPagamentos.ler("Câmbio", "US$ 1 = R$ 5,61"));
+        assertNull(LeitorPagamentos.ler("DÓLAR", "R$ 5,72 (+0,8%)"));
+        assertNull(LeitorPagamentos.ler("Inter", "O dolar caiu para R$ 5,38 hoje"));
+        assertNull(LeitorPagamentos.ler("Do\u0301lar", "Cotac\u0327a\u0303o R$ 5,43"));
+        // A palavra "dólar" só numa linha extra do aviso
+        assertNull(LeitorPagamentos.ler("Alerta", "Compra: R$ 5,43", "Dólar comercial agora"));
+        // Compras de verdade continuam
+        assertEquals(110.0, LeitorPagamentos.ler("Compra internacional", "Compra aprovada de R$ 110,00 (US$ 20,00) em AMAZON no cartão final 1234").valor, 0.001);
+        assertEquals(600.0, LeitorPagamentos.ler("Bolsa Família", "Depósito de R$ 600,00 caiu na sua conta").valor, 0.001);
+    }
+
+    @Test
+    public void modeloIgualAoDoApp() {
+        // Mesmo valor calculado por modeloDoAviso em src/lib/notificacao.ts (conferido no teste de lá).
+        String a = LeitorPagamentos.modelo("Dólar hoje", "Compra R$ 5,43 · Venda R$ 5,44");
+        String b = LeitorPagamentos.modelo("Dólar hoje", "Compra R$ 5,61 · Venda R$ 5,62");
+        assertEquals(a, b);
+        assertEquals(16, a.length());
+        assertEquals(MODELO_DOLAR, a);
+    }
+
+    static final String MODELO_DOLAR = "cafaef6a8d96848e";
 }

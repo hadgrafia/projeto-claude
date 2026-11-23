@@ -9,6 +9,7 @@ import { dataCurta, reais } from '../lib/format';
 import { db, type Movimento } from '../db';
 import { jaRegistrado } from '../lib/conciliar';
 import { appPermitido } from '../lib/appsPagamento';
+import { avisoIgnoravel, modeloDoAviso } from '../lib/notificacao';
 
 /**
  * Lançamento rápido: chega por "Compartilhar comprovante" ou por um link de automação.
@@ -20,6 +21,7 @@ export default function Lancar() {
   const [lido, setLido] = useState<Lido | null>();
   const [aviso, setAviso] = useState('');
   const [parecido, setParecido] = useState<Movimento>();
+  const [modelo, setModelo] = useState<string>();
 
   // Mesma compra já registrada (aviso repetido, comprovante compartilhado duas vezes, extrato)?
   useEffect(() => {
@@ -42,6 +44,18 @@ export default function Lancar() {
         if (app && (p.get('texto') || p.get('titulo')) && !appPermitido(perfil, app)) {
           setAviso(`O aviso veio de "${app}", que não está na sua lista de apps de pagamento (Ajustes). Nada foi preenchido.`);
           return setLido(null);
+        }
+        if (p.get('texto') || p.get('titulo')) {
+          const m = await modeloDoAviso((p.get('titulo') ?? '').slice(0, 300), (p.get('texto') ?? '').slice(0, 2000));
+          if (perfil?.avisosIgnorados?.includes(m)) {
+            setAviso('Você já marcou avisos como este como "não era um gasto". Nada foi preenchido.');
+            return setLido(null);
+          }
+          setModelo(m);
+          if (avisoIgnoravel(`${p.get('titulo') ?? ''} ${p.get('texto') ?? ''}`)) {
+            setAviso('Este aviso é de cotação, código ou propaganda, não de um gasto. Nada foi preenchido.');
+            return setLido(null);
+          }
         }
         return setLido(lerParametros(p));
       }
@@ -98,7 +112,7 @@ export default function Lancar() {
       )}
       <section className="cartao">
         <FormMovimento
-          mov={lido ? { valor: lido.valor, local: lido.local, tipo: lido.tipo, categoria: lido.tipo === 'saida' ? lido.categoria : '', forma: lido.forma, parcelas: lido.parcelas } : undefined}
+          mov={lido ? { valor: lido.valor, local: lido.local, tipo: lido.tipo, categoria: lido.tipo === 'saida' ? lido.categoria : '', forma: lido.forma, parcelas: lido.parcelas, modelo } : undefined}
           origem="notificacao"
           aoSalvar={() => navegar('/gastos', { replace: true })}
         />

@@ -5,7 +5,7 @@ import { Icone, type NomeIcone } from './components/Icone';
 import { Logo } from './components/Logo';
 import { PerguntaLocal } from './components/Lugar';
 import { CapaPrivacidade, TelaBloqueio, useBloqueio } from './components/Bloqueio';
-import { ehAppAndroid, iniciarLeituraNativa, Leitor } from './lib/nativo';
+import { ehAppAndroid, enviarIgnorados, iniciarLeituraNativa, Leitor } from './lib/nativo';
 import { avisoDoMes } from './lib/avisos';
 import { ligarNuvem, sincronizar } from './lib/nuvem';
 import { useDados, useOnline } from './hooks';
@@ -197,6 +197,10 @@ export default function App() {
     if (!lista || !ehAppAndroid()) return;
     Leitor.definirApps({ pacotes: lista.filter((a) => a.pacote).map((a) => a.pacote!) }).catch(() => undefined);
   }, [perfil?.appsPagamento]);
+  // …e os tipos de aviso que a pessoa disse que não eram gasto.
+  useEffect(() => {
+    if (perfil?.avisosIgnorados) enviarIgnorados(perfil.avisosIgnorados);
+  }, [perfil?.avisosIgnorados]);
 
   // App Android: traz os pagamentos lidos das notificações enquanto o app estava fechado.
   useEffect(() => {

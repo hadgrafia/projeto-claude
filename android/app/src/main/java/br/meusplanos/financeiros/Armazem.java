@@ -51,7 +51,7 @@ final class Armazem {
         }
     }
 
-    static synchronized void adicionar(Context c, String id, long quando, LeitorPagamentos.Pagamento p, String app) {
+    static synchronized void adicionar(Context c, String id, long quando, LeitorPagamentos.Pagamento p, String app, String modelo) {
         try {
             JSONObject o = new JSONObject();
             o.put("id", id);
@@ -62,6 +62,7 @@ final class Armazem {
             if (p.forma != null) o.put("forma", p.forma);
             if (p.parcelas > 1) o.put("parcelas", p.parcelas);
             o.put("app", app);
+            if (modelo != null && !modelo.isEmpty()) o.put("modelo", modelo);
             JSONArray a = itens(c);
             a.put(o);
             prefs(c).edit().putString(ITENS, a.toString()).apply();

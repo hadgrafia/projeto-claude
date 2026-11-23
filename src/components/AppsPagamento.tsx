@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { db, type Perfil } from '../db';
 import { APPS_PADRAO, escolheuApps, listaDeApps } from '../lib/appsPagamento';
-import { ehAppAndroid, Leitor, type AppInfo } from '../lib/nativo';
+import { ehAppAndroid, enviarIgnorados, Leitor, type AppInfo } from '../lib/nativo';
 import { Icone } from './Icone';
 import { BotaoSalvar, Folha } from './Ui';
 import { IconeMarca } from './IconeMarca';
@@ -100,7 +100,24 @@ export function AppsPagamento({ perfil, aoSalvar }: { perfil: Perfil; aoSalvar: 
   return (
     <section className="cartao" id="apps-pagamento">
       <h2 style={{ fontSize: 15, fontWeight: 800 }}>Apps de pagamento que o app lê</h2>
-      <p className="mini suave">Só os avisos dos apps marcados viram lançamentos. Avisos de outros apps (cotação do dólar, notícias, redes sociais) são ignorados.</p>
+      <p className="mini suave">Só os avisos dos apps marcados viram lançamentos. Avisos de outros apps (notícias, redes sociais) são ignorados. Cotações (dólar, euro, bitcoin, bolsa) nunca viram gasto, mesmo vindo do app do banco.</p>
+      {(perfil.avisosIgnorados?.length ?? 0) > 0 && (
+        <div className="entre pequeno">
+          <span>Tipos de aviso que você marcou como "não era um gasto": <strong>{perfil.avisosIgnorados!.length}</strong></span>
+          <button
+            type="button"
+            className="chip"
+            onClick={async () => {
+              if (!confirm('Voltar a ler os avisos que você marcou como "não era um gasto"?')) return;
+              await db.perfil.update('eu', { avisosIgnorados: [] });
+              await enviarIgnorados([]);
+              aoSalvar('Os avisos marcados voltam a ser lidos.');
+            }}
+          >
+            Voltar a ler
+          </button>
+        </div>
+      )}
       <EscolherApps valor={escolhidos} aoMudar={setEscolhidos} />
       <BotaoSalvar
         className="botao pequeno"

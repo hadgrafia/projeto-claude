@@ -1,5 +1,8 @@
 package br.meusplanos.financeiros;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -48,9 +51,50 @@ public final class LeitorPagamentos {
     private static final Pattern[] IGNORAR = compilar(
         "c[oó]digo de (verifica|seguran)", "token", "senha", "oferta", "promo", "cashback dispon",
         // Lembretes da fatura não são gastos (as compras já entram uma a uma).
-        "fatura (fechou|fechada|vence|venceu|est[aá] (dispon|fechada|aberta)|dispon[ií]vel|do m[eê]s)", "vence (hoje|amanh)",
-        // Cotações e mercado: não são pagamentos (ex.: aviso diário do dólar).
-        "cota[cç][aã]o", "\\bd[oó]lar(es)?\\b", "\\beuro(s)?\\b", "bitcoin", "\\bbtc\\b", "ibovespa", "c[aâ]mbio", "bolsa de valores", "a[cç][aã]o (subiu|caiu)", "fechou em (alta|queda)");
+        "fatura (fechou|fechada|vence|venceu|est[aá] (dispon|fechada|aberta)|dispon[ií]vel|do m[eê]s)", "vence (hoje|amanh)");
+
+    // Cotações e mercado (mesma regra de ehCotacaoOuMercado em src/lib/notificacao.ts), sobre o texto sem acentos.
+    private static final Pattern MOEDA = Pattern.compile(
+        "(?:^|[^a-z0-9])(dolar(es)?|usd|us\\$|u\\$|euro(s)?|eur|€|libra(s)? esterlina|gbp|iene|jpy|peso(s)? argentino|bitcoin|btc|ethereum|eth|cripto(moeda)?s?|ptax|moeda(s)? estrangeira)(?=$|[^a-z0-9])");
+    private static final Pattern MERCADO = Pattern.compile(
+        "(cotac(ao|oes)|cambio|ibovespa|bolsa de valores|na bolsa|a bolsa|mercado financeiro|fechou (em|a)\\b|fecha (em|a)\\b|fechamento do|abertura do|em (alta|queda)\\b|(alta|queda|variacao|valorizacao|desvalorizacao) de \\d|(subiu|caiu|recuou|avancou|valorizou|desvalorizou|disparou|despencou) (para|a|\\d)|\\d+([.,]\\d+)?\\s?%\\s(de )?(alta|queda))");
+    private static final Pattern CONFIRMA_PAGAMENTO = Pattern.compile(
+        "(aprovad|recusad|no cartao|cartao (final|de credito|de debito|virtual|terminado)|final \\d{3,4}|voce (pagou|comprou|enviou|transferiu|recebeu)|pix (enviado|realizado|recebido|agendado)|pagamento (realizado|efetuado|aprovado|confirmado|de boleto)|compra (realizada|aprovada|no (debito|credito))|transferencia (realizada|enviada|recebida)|debitad|creditad|saque (realizado|efetuado))");
+    private static final Pattern COMPRA_NUM = Pattern.compile("\\bcompra\\b[^\\d\\n]{0,12}\\d");
+    private static final Pattern VENDA_NUM = Pattern.compile("\\bvenda\\b[^\\d\\n]{0,12}\\d");
+    private static final Pattern MARCAS = Pattern.compile("\\p{M}+");
+
+    /** Sem acentos (inclusive os "separados") e em minúsculas. */
+    static String semAcento(String t) {
+        return MARCAS.matcher(Normalizer.normalize(t == null ? "" : t, Normalizer.Form.NFD)).replaceAll("").toLowerCase(Locale.ROOT);
+    }
+
+    static boolean ehCotacaoOuMercado(String texto) {
+        String t = semAcento(texto);
+        boolean moeda = MOEDA.matcher(t).find();
+        boolean confirma = CONFIRMA_PAGAMENTO.matcher(t).find();
+        if (COMPRA_NUM.matcher(t).find() && VENDA_NUM.matcher(t).find() && (moeda || !confirma)) return true;
+        return (moeda || MERCADO.matcher(t).find()) && !confirma;
+    }
+
+    /**
+     * "Modelo" do aviso: texto sem números, sem acentos, resumido num código (16 letras).
+     * Avisos do mesmo tipo têm o mesmo modelo. Mesma conta de modeloDoAviso em src/lib/notificacao.ts.
+     */
+    public static String modelo(CharSequence titulo, CharSequence texto) {
+        String base = semAcento((titulo == null ? "" : titulo) + " " + (texto == null ? "" : texto))
+            .replaceAll("\\d[\\d.,:/]*", "#")
+            .replaceAll("\\s+", " ")
+            .trim();
+        try {
+            byte[] h = MessageDigest.getInstance("SHA-256").digest(base.getBytes(StandardCharsets.UTF_8));
+            StringBuilder b = new StringBuilder();
+            for (int i = 0; i < 8; i++) b.append(String.format("%02x", h[i]));
+            return b.toString();
+        } catch (Exception e) {
+            return "";
+        }
+    }
     /** Aviso só sobre o limite ("seu limite disponível aumentou"). "Compra aprovada… limite disponível" é compra. */
     private static final Pattern SO_LIMITE = Pattern.compile("limite (dispon[ií]vel|do cart[aã]o)", F);
     private static final Pattern TEM_PAGAMENTO = Pattern.compile("compra|aprovad|pagamento|pago|d[eé]bito|pix", F);
@@ -101,11 +145,20 @@ public final class LeitorPagamentos {
         return false;
     }
 
-    /** Retorna null quando a notificação não é de pagamento nem de dinheiro recebido. */
     public static Pagamento ler(CharSequence titulo, CharSequence texto) {
+        return ler(titulo, texto, null);
+    }
+
+    /**
+     * Retorna null quando a notificação não é de pagamento nem de dinheiro recebido.
+     * "resto" são as outras linhas do aviso (subtítulo, resumo, linhas extras): servem só para
+     * reconhecer cotação, código ou propaganda, que às vezes aparecem fora do texto principal.
+     */
+    public static Pagamento ler(CharSequence titulo, CharSequence texto, CharSequence resto) {
         String completo = ((titulo == null ? "" : titulo) + " " + (texto == null ? "" : texto)).trim().replaceAll("\\s+", " ");
-        if (completo.isEmpty() || algum(IGNORAR, completo)) return null;
-        if (SO_LIMITE.matcher(completo).find() && !TEM_PAGAMENTO.matcher(completo).find()) return null;
+        String tudo = (completo + " " + (resto == null ? "" : resto)).trim();
+        if (completo.isEmpty() || algum(IGNORAR, tudo) || ehCotacaoOuMercado(tudo)) return null;
+        if (SO_LIMITE.matcher(tudo).find() && !TEM_PAGAMENTO.matcher(tudo).find()) return null;
         Matcher m = VALOR.matcher(completo);
         if (!m.find()) return null;
         double valor;

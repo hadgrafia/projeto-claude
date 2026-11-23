@@ -48,8 +48,22 @@ public class ServicoNotificacoes extends NotificationListenerService {
         CharSequence texto = ex.getCharSequence(Notification.EXTRA_BIG_TEXT);
         if (texto == null) texto = ex.getCharSequence(Notification.EXTRA_TEXT);
 
-        LeitorPagamentos.Pagamento p = LeitorPagamentos.ler(titulo, texto);
+        // Outras linhas do aviso (subtítulo, resumo, linhas extras): às vezes a palavra "dólar"
+        // ou "cotação" está só nelas. Servem só para reconhecer o que NÃO é pagamento.
+        StringBuilder resto = new StringBuilder();
+        for (String k : new String[] {Notification.EXTRA_TEXT, Notification.EXTRA_SUB_TEXT, Notification.EXTRA_SUMMARY_TEXT, Notification.EXTRA_INFO_TEXT, Notification.EXTRA_TITLE_BIG}) {
+            CharSequence v = ex.getCharSequence(k);
+            if (v != null) resto.append(' ').append(v);
+        }
+        CharSequence[] linhas = ex.getCharSequenceArray(Notification.EXTRA_TEXT_LINES);
+        if (linhas != null) for (CharSequence l : linhas) if (l != null) resto.append(' ').append(l);
+        if (n.tickerText != null) resto.append(' ').append(n.tickerText);
+
+        LeitorPagamentos.Pagamento p = LeitorPagamentos.ler(titulo, texto, resto);
         if (p == null) return;
+        // A pessoa já disse que avisos iguais a este não eram gasto (ex.: cotação diária).
+        String modelo = LeitorPagamentos.modelo(titulo, texto);
+        if (FiltroApps.modeloIgnorado(this, modelo)) return;
         // Só os apps escolhidos (carteiras e bancos). Outros ficam anotados como sugestão.
         if (!FiltroApps.permitido(this, sbn.getPackageName())) {
             FiltroApps.anotarIgnorado(this, sbn.getPackageName(), nomeDoApp(sbn.getPackageName(), ex));
@@ -62,7 +76,7 @@ public class ServicoNotificacoes extends NotificationListenerService {
 
         String app = nomeDoApp(sbn.getPackageName(), ex);
         String id = UUID.randomUUID().toString();
-        Armazem.adicionar(this, id, agora, p, app);
+        Armazem.adicionar(this, id, agora, p, app, modelo);
         if (p.local == null) Avisos.perguntarLocal(this, id, p, app);
     }
 

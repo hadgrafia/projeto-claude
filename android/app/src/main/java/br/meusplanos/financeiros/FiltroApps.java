@@ -92,6 +92,21 @@ final class FiltroApps {
         }
     }
 
+    /** Modelos de aviso que a pessoa marcou como "não era um gasto" (só o código, nunca o texto). */
+    static synchronized void definirModelosIgnorados(Context c, Set<String> modelos) {
+        prefs(c).edit().putString("modelos_ignorados", new JSONArray(modelos).toString()).apply();
+    }
+
+    static boolean modeloIgnorado(Context c, String modelo) {
+        if (modelo == null || modelo.isEmpty()) return false;
+        try {
+            JSONArray a = new JSONArray(prefs(c).getString("modelos_ignorados", "[]"));
+            for (int i = 0; i < a.length(); i++) if (modelo.equals(a.getString(i))) return true;
+        } catch (JSONException ignored) {
+        }
+        return false;
+    }
+
     static JSONObject ignorados(Context c) {
         try {
             return new JSONObject(prefs(c).getString("ignorados", "{}"));

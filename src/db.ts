@@ -30,6 +30,8 @@ export interface Perfil {
   limiteCartao?: number;
   limiteUsado?: number;
   /** Dia do mês em que a fatura fecha e em que vence (opcionais; sem eles, a compra cai na fatura do mês seguinte). */
+  /** Tipos de aviso (códigos) que a pessoa disse que não eram gasto: os iguais são ignorados. */
+  avisosIgnorados?: string[];
   cartaoFechamento?: number;
   cartaoVencimento?: number;
   limiteUsadoEm?: string;
@@ -123,6 +125,8 @@ export interface Movimento {
   faturaMes?: string;
   /** true quando o aviso ou o extrato não disse se foi débito ou crédito: o app pergunta. */
   formaPendente?: boolean;
+  /** Código do "tipo" de aviso que gerou o lançamento (nunca o texto). Usado em "não era um gasto". */
+  modelo?: string;
   categoria: string;
   origem: OrigemMov;
   /** Assinatura para evitar duplicados ao importar o mesmo extrato duas vezes. */

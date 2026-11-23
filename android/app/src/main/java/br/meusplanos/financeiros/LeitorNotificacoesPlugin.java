@@ -150,6 +150,19 @@ public class LeitorNotificacoesPlugin extends Plugin {
         call.resolve();
     }
 
+    /** Avisos que a pessoa disse que não eram gasto: os iguais são descartados na hora, sem guardar nada. */
+    @PluginMethod
+    public void ignorarModelos(PluginCall call) {
+        JSArray modelos = call.getArray("modelos", new JSArray());
+        Set<String> set = new HashSet<>();
+        for (int i = 0; i < modelos.length(); i++) {
+            String m = modelos.optString(i, null);
+            if (m != null && m.matches("[0-9a-f]{16}")) set.add(m);
+        }
+        FiltroApps.definirModelosIgnorados(getContext(), set);
+        call.resolve();
+    }
+
     /** O app já guardou estes itens com o lugar: apaga daqui e fecha a pergunta, se ainda estiver aberta. */
     @PluginMethod
     public void confirmar(PluginCall call) {

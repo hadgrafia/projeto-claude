@@ -1,3 +1,4 @@
+import { useLiveQuery } from 'dexie-react-hooks';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -12,7 +13,7 @@ import { analisarMes, type Status } from '../lib/feedback';
 import { hora, reais } from '../lib/format';
 import { chaveMovimento } from '../lib/importar';
 import { CampoLugar, useLugaresRecentes } from '../components/Lugar';
-import { lugarInformadoNoApp, esquecerAviso } from '../lib/nativo';
+import { lugarInformadoNoApp, esquecerAviso, naoEraGasto } from '../lib/nativo';
 
 type Periodo = 'dia' | 'semana' | 'mes' | 'ano';
 
@@ -205,7 +206,7 @@ export function FormMovimento({ mov, aoSalvar, origem = 'manual' }: { mov?: Part
       await db.movimentos.update(mov.id, dados);
       if (mov.localPendente && mov.chave) lugarInformadoNoApp(mov.chave);
     }
-    else await db.movimentos.add({ ...dados, origem, chave: `${chaveMovimento(data, valor, lugar, tipo)}-${Date.now()}` });
+    else await db.movimentos.add({ ...dados, origem, chave: `${chaveMovimento(data, valor, lugar, tipo)}-${Date.now()}`, ...(mov?.modelo ? { modelo: mov.modelo } : {}) });
     if (tipo === 'saida' && forma === 'credito') conferirLimiteCartao().catch(() => undefined);
   }
 
@@ -239,11 +240,36 @@ export function FormMovimento({ mov, aoSalvar, origem = 'manual' }: { mov?: Part
         <input type="datetime-local" value={quando} onChange={(e) => setQuando(e.target.value)} />
       </label>
       <BotaoSalvar aoSalvar={salvar} depois={aoSalvar} disabled={!valor || !local.trim()} />
+      {mov?.id && mov.origem === 'notificacao' && <NaoEraGasto mov={mov as Movimento} aoTerminar={aoSalvar} />}
       {mov?.id && (
         <button type="button" className="botao perigo" onClick={async () => { await db.movimentos.delete(mov.id!); if (mov.chave) await esquecerAviso(mov.chave); aoSalvar(); }}>
           <Icone nome="lixo" /> Apagar
         </button>
       )}
     </>
+  );
+}
+
+/**
+ * Lançamento que veio de um aviso e não era gasto (ex.: cotação do dólar, propaganda):
+ * apaga este e os outros do mesmo tipo de aviso, e avisos iguais passam a ser ignorados.
+ */
+function NaoEraGasto({ mov, aoTerminar }: { mov: Movimento; aoTerminar: () => void }) {
+  const iguais = useLiveQuery(() => (mov.modelo ? db.movimentos.filter((m) => m.modelo === mov.modelo).count() : Promise.resolve(1)), [mov.modelo]) ?? 1;
+  return (
+    <div className="cartao areia" style={{ gap: 8, padding: 14 }}>
+      <span className="pequeno">
+        <strong>Isto não foi um gasto?</strong> (ex.: aviso da cotação do dólar, propaganda, simulação)
+      </span>
+      <BotaoSalvar
+        className="botao secundario pequeno"
+        salvo={iguais > 1 ? `${iguais} apagados` : 'Apagado'}
+        aoSalvar={() => naoEraGasto(mov)}
+        depois={aoTerminar}
+      >
+        Não era um gasto{iguais > 1 ? `: apagar os ${iguais} iguais` : ''} e ignorar avisos assim
+      </BotaoSalvar>
+      {!mov.modelo && <span className="mini suave">Este lançamento é de uma versão anterior do app. Avisos iguais a partir de agora já são reconhecidos pelo app novo.</span>}
+    </div>
   );
 }

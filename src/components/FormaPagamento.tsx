@@ -3,6 +3,7 @@ import { db, type FormaPag, type Movimento } from '../db';
 import { conferirLimiteCartao } from '../lib/avisos';
 import { NOMES_FORMA } from '../lib/cartao';
 import { BotaoSalvar } from './Ui';
+import { BotaoNaoEraGasto } from './Lugar';
 import { hora, reais } from '../lib/format';
 
 const OPCOES: FormaPag[] = ['debito', 'pix', 'credito', 'dinheiro', 'boleto'];
@@ -71,6 +72,7 @@ export function FormForma({ mov, restantes, aoAdiar, segurar }: { mov: Movimento
       {forma === 'credito' && parcelas > 1 && <span className="mini suave">{parcelas}x de {reais(mov.valor / parcelas)}. Se o valor do aviso já era o da parcela, corrija o valor no gasto depois.</span>}
       <BotaoSalvar disabled={!forma} aoSalvar={salvar} depois={() => segurar?.(undefined)} />
       <button type="button" className="botao secundario" onClick={aoAdiar}>Responder depois{restantes > 0 ? ` (${restantes} na fila)` : ''}</button>
+      {mov.origem === 'notificacao' && <BotaoNaoEraGasto mov={mov} segurar={segurar} />}
     </>
   );
 }

@@ -19,6 +19,8 @@ interface Capturado {
   /** Débito ou crédito, quando o aviso disse (versões antigas do APK não mandam). */
   forma?: 'credito' | 'debito' | 'pix' | 'boleto';
   parcelas?: number;
+  /** Código do tipo de aviso (versões antigas do APK não mandam). */
+  modelo?: string;
 }
 
 interface LeitorNotificacoes {
@@ -30,6 +32,7 @@ interface LeitorNotificacoes {
   notificar(opcoes: { titulo: string; texto: string }): Promise<void>;
   apps(): Promise<{ configurado: boolean; permitidos: string[]; padrao: AppInfo[]; ignorados: AppInfo[]; instalados: AppInfo[] }>;
   definirApps(opcoes: { pacotes: string[] }): Promise<void>;
+  ignorarModelos(opcoes: { modelos: string[] }): Promise<void>;
 }
 export interface AppInfo {
   pacote: string;
@@ -50,6 +53,29 @@ export async function esquecerAviso(chave: string) {
   if (ehAppAndroid()) await Leitor.confirmar({ ids: [chave.slice(2)] }).catch(() => undefined);
 }
 
+/**
+ * "Não era um gasto": apaga este lançamento e todos os outros do mesmo tipo de aviso,
+ * e o tipo vai para a lista de ignorados (aqui e no leitor do aparelho). Devolve quantos apagou.
+ */
+export async function naoEraGasto(mov: { id?: number; chave: string; modelo?: string }) {
+  const iguais = mov.modelo ? await db.movimentos.filter((m) => m.modelo === mov.modelo).toArray() : [];
+  const apagar = [...new Map([...iguais, mov].map((m) => [m.chave, m])).values()];
+  await db.movimentos.bulkDelete(apagar.map((m) => m.id!).filter(Boolean));
+  for (const m of apagar) await esquecerAviso(m.chave);
+  if (mov.modelo) {
+    const perfil = await db.perfil.get('eu');
+    const lista = [...new Set([...(perfil?.avisosIgnorados ?? []), mov.modelo])].slice(-300);
+    await db.perfil.update('eu', { avisosIgnorados: lista });
+    await enviarIgnorados(lista);
+  }
+  return apagar.length;
+}
+
+/** Passa a lista de tipos de aviso ignorados para o leitor do Android (descarta na hora, sem guardar). */
+export async function enviarIgnorados(lista: string[]) {
+  if (ehAppAndroid()) await Leitor.ignorarModelos({ modelos: lista }).catch(() => undefined);
+}
+
 export async function sincronizar() {
   if (!ehAppAndroid()) return 0;
   const { itens } = await Leitor.pendentes();
@@ -66,7 +92,7 @@ export async function sincronizar() {
     const ja = existentes.get(`n-${i.id}`);
     // Apagado pela pessoa, ou de um app fora da lista de apps de pagamento (ex.: cotação do dólar):
     // descarta de vez no aparelho, para não voltar.
-    if (!ja && (apagados.has(`n-${i.id}`) || !appPermitido(perfil, i.app))) {
+    if (!ja && (apagados.has(`n-${i.id}`) || !appPermitido(perfil, i.app) || (i.modelo && perfil?.avisosIgnorados?.includes(i.modelo)))) {
       resolvidos.push(i.id);
       continue;
     }
@@ -92,6 +118,7 @@ export async function sincronizar() {
       categoria: categorizar(local ?? '', i.tipo),
       origem: 'notificacao' as const,
       chave: `n-${i.id}`,
+      ...(i.modelo ? { modelo: i.modelo } : {}),
     });
     // Sem lugar ainda: continua no aparelho até a pessoa responder (na notificação ou no app).
     if (local) resolvidos.push(i.id);

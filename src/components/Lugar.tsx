@@ -6,10 +6,28 @@ import { inicioParcelas } from '../lib/compras';
 import { conferirLimiteCartao } from '../lib/avisos';
 import { categorizar } from '../lib/categorias';
 import { hora, reais } from '../lib/format';
-import { lugarInformadoNoApp } from '../lib/nativo';
+import { lugarInformadoNoApp, naoEraGasto } from '../lib/nativo';
 import { Icone } from './Icone';
 import { BotaoSalvar, CampoDinheiro, Folha } from './Ui';
 import { FormForma } from './FormaPagamento';
+
+/** Na pergunta que aparece sozinha: o aviso não era de um gasto (ex.: cotação do dólar). */
+export function BotaoNaoEraGasto({ mov, segurar }: { mov: Movimento; segurar?: (m?: Movimento) => void }) {
+  return (
+    <BotaoSalvar
+      className="botao secundario pequeno"
+      style={{ border: 0, background: 'transparent', color: 'var(--terracota-texto)', textDecoration: 'underline' }}
+      salvo="Ignorado"
+      aoSalvar={async () => {
+        segurar?.(mov);
+        await naoEraGasto(mov);
+      }}
+      depois={() => segurar?.(undefined)}
+    >
+      Não foi um gasto (ex.: cotação do dólar)
+    </BotaoSalvar>
+  );
+}
 
 /** Lugares mais usados, para sugerir com um toque. */
 export function useLugaresRecentes(tipo: TipoMov = 'saida') {
@@ -109,6 +127,7 @@ function FormLocal({ mov, restantes, aoAdiar, segurar }: { mov: Movimento; resta
           <Icone nome="check" /> Salvar{restantes > 0 ? ` (faltam ${restantes})` : ''}
         </BotaoSalvar>
         <button type="button" className="botao secundario pequeno" onClick={aoAdiar}>Agora não</button>
+        {mov.origem === 'notificacao' && mov.tipo === 'saida' && <BotaoNaoEraGasto mov={mov} segurar={segurar} />}
       </form>
     </>
   );
@@ -189,6 +208,7 @@ function FormDetalheCompra({ mov, aoAdiar, segurar }: { mov: Movimento; aoAdiar:
       </div>
       <BotaoSalvar disabled={!ok} aoSalvar={salvar} depois={() => segurar(undefined)}><Icone nome="check" /> Salvar</BotaoSalvar>
       <button type="button" className="botao secundario pequeno" onClick={aoAdiar}>Agora não</button>
+      {mov.origem === 'notificacao' && <BotaoNaoEraGasto mov={mov} segurar={segurar} />}
     </>
   );
 }
