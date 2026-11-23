@@ -8,7 +8,7 @@ import { categorizar } from '../lib/categorias';
 import { hora, reais } from '../lib/format';
 import { lugarInformadoNoApp } from '../lib/nativo';
 import { Icone } from './Icone';
-import { CampoDinheiro, Folha } from './Ui';
+import { BotaoSalvar, CampoDinheiro, Folha } from './Ui';
 import { FormForma } from './FormaPagamento';
 
 /** Lugares mais usados, para sugerir com um toque. */
@@ -57,30 +57,33 @@ export function CampoLugar({ tipo, valor, aoMudar, sugestoes, autoFoco }: { tipo
 export function PerguntaLocal() {
   const pendentes = useLiveQuery(async () => (await db.movimentos.orderBy('data').reverse().toArray()).filter((m) => m.localPendente || m.formaPendente || m.detalhePendente), []) ?? [];
   const [adiados, setAdiados] = useState<Set<number>>(new Set());
-  const atual = pendentes.find((m) => !adiados.has(m.id!));
+  // Enquanto o "✓ Salvo" aparece, a pergunta que acabou de ser respondida continua na tela.
+  const [segurando, setSegurando] = useState<Movimento>();
+  const atual = segurando ?? pendentes.find((m) => !adiados.has(m.id!));
   return (
     <Folha
       aberta={!!atual}
       aoFechar={() => atual && setAdiados(new Set(adiados).add(atual.id!))}
       titulo={atual?.localPendente ? (atual.tipo === 'entrada' ? 'De onde veio este dinheiro?' : 'Onde foi este gasto?') : atual?.formaPendente ? 'Débito ou crédito?' : 'Conte sobre esta compra'}
     >
-      {atual?.localPendente && <FormLocal key={atual.id} mov={atual} restantes={pendentes.length - 1} aoAdiar={() => setAdiados(new Set(adiados).add(atual.id!))} />}
+      {atual?.localPendente && <FormLocal key={atual.id} mov={atual} segurar={setSegurando} restantes={pendentes.length - 1} aoAdiar={() => setAdiados(new Set(adiados).add(atual.id!))} />}
       {atual && !atual.localPendente && atual.formaPendente && (
-        <FormForma key={`f${atual.id}`} mov={atual} restantes={pendentes.length - 1} aoAdiar={() => setAdiados(new Set(adiados).add(atual.id!))} />
+        <FormForma key={`f${atual.id}`} mov={atual} segurar={setSegurando} restantes={pendentes.length - 1} aoAdiar={() => setAdiados(new Set(adiados).add(atual.id!))} />
       )}
       {atual && !atual.localPendente && !atual.formaPendente && atual.detalhePendente && (
-        <FormDetalheCompra key={`d${atual.id}`} mov={atual} aoAdiar={() => setAdiados(new Set(adiados).add(atual.id!))} />
+        <FormDetalheCompra key={`d${atual.id}`} mov={atual} segurar={setSegurando} aoAdiar={() => setAdiados(new Set(adiados).add(atual.id!))} />
       )}
     </Folha>
   );
 }
 
-function FormLocal({ mov, restantes, aoAdiar }: { mov: Movimento; restantes: number; aoAdiar: () => void }) {
+function FormLocal({ mov, restantes, aoAdiar, segurar }: { mov: Movimento; restantes: number; aoAdiar: () => void; segurar: (m?: Movimento) => void }) {
   const [local, setLocal] = useState('');
   const sugestoes = useLugaresRecentes(mov.tipo);
   async function salvar() {
     const lugar = local.trim();
-    if (!lugar) return;
+    if (!lugar) return false;
+    segurar(mov);
     const auto = categorizar(lugar, mov.tipo);
     await db.movimentos.update(mov.id!, {
       local: lugar,
@@ -100,11 +103,11 @@ function FormLocal({ mov, restantes, aoAdiar }: { mov: Movimento; restantes: num
         <strong className="valor-grande" style={{ fontSize: 30 }}>{mov.tipo === 'entrada' ? '+' : ''}{reais(mov.valor)}</strong>
         <span className="suave pequeno">Não deu para ler o nome do lugar. Informe para o seu feedback ficar mais claro.</span>
       </motion.div>
-      <form className="coluna" style={{ gap: 14 }} onSubmit={(e) => { e.preventDefault(); salvar(); }}>
+      <form className="coluna" style={{ gap: 14 }} onSubmit={(e) => { e.preventDefault(); e.currentTarget.querySelector<HTMLButtonElement>('.botao-salvar')?.click(); }}>
         <CampoLugar tipo={mov.tipo} valor={local} aoMudar={setLocal} sugestoes={sugestoes} autoFoco />
-        <button type="submit" className="botao" disabled={!local.trim()}>
+        <BotaoSalvar disabled={!local.trim()} aoSalvar={salvar} depois={() => segurar(undefined)}>
           <Icone nome="check" /> Salvar{restantes > 0 ? ` (faltam ${restantes})` : ''}
-        </button>
+        </BotaoSalvar>
         <button type="button" className="botao secundario pequeno" onClick={aoAdiar}>Agora não</button>
       </form>
     </>
@@ -112,7 +115,7 @@ function FormLocal({ mov, restantes, aoAdiar }: { mov: Movimento; restantes: num
 }
 
 /** Compra acima do valor de aviso: finalidade, importância e parcelamento (entra no controle de parcelas e do cartão). */
-function FormDetalheCompra({ mov, aoAdiar }: { mov: Movimento; aoAdiar: () => void }) {
+function FormDetalheCompra({ mov, aoAdiar, segurar }: { mov: Movimento; aoAdiar: () => void; segurar: (m?: Movimento) => void }) {
   const [descricao, setDescricao] = useState(mov.local ?? '');
   const [importancia, setImportancia] = useState<Importancia>();
   const [parcelas, setParcelas] = useState(mov.parcelas ?? 1);
@@ -122,7 +125,8 @@ function FormDetalheCompra({ mov, aoAdiar }: { mov: Movimento; aoAdiar: () => vo
   const ok = Boolean(descricao.trim() && importancia && total);
 
   async function salvar() {
-    if (!ok) return;
+    if (!ok) return false;
+    segurar(mov);
     const i = (juros ?? 0) / 100;
     const valorParcela = parcelas > 1 ? (i > 0 ? (total! * i) / (1 - Math.pow(1 + i, -parcelas)) : total! / parcelas) : total!;
     const perfil = await db.perfil.get('eu');
@@ -183,7 +187,7 @@ function FormDetalheCompra({ mov, aoAdiar }: { mov: Movimento; aoAdiar: () => vo
         <button type="button" className="chip" aria-pressed={noCartao} onClick={() => setNoCartao(true)}>No cartão de crédito</button>
         <button type="button" className="chip" aria-pressed={!noCartao} onClick={() => setNoCartao(false)}>Outra forma</button>
       </div>
-      <button type="button" className="botao" disabled={!ok} onClick={salvar}><Icone nome="check" /> Salvar</button>
+      <BotaoSalvar disabled={!ok} aoSalvar={salvar} depois={() => segurar(undefined)}><Icone nome="check" /> Salvar</BotaoSalvar>
       <button type="button" className="botao secundario pequeno" onClick={aoAdiar}>Agora não</button>
     </>
   );

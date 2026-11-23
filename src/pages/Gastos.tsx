@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icone, ICONE_CATEGORIA } from '../components/Icone';
-import { CampoDinheiro, Dinheiro, Folha, Segmentado } from '../components/Ui';
+import { BotaoSalvar, CampoDinheiro, Dinheiro, Folha, Segmentado } from '../components/Ui';
 import { db, type FormaPag, type Movimento, type OrigemMov, type TipoMov } from '../db';
 import { CampoForma } from '../components/FormaPagamento';
 import { conferirLimiteCartao } from '../lib/avisos';
@@ -194,7 +194,7 @@ export function FormMovimento({ mov, aoSalvar, origem = 'manual' }: { mov?: Part
   const [quando, setQuando] = useState(paraCampo(mov?.data ? new Date(mov.data) : agora));
 
   async function salvar() {
-    if (!valor || !local.trim()) return;
+    if (!valor || !local.trim()) return false;
     const data = new Date(quando).toISOString();
     const lugar = local.trim();
     const auto = categorizar(lugar, tipo);
@@ -207,7 +207,6 @@ export function FormMovimento({ mov, aoSalvar, origem = 'manual' }: { mov?: Part
     }
     else await db.movimentos.add({ ...dados, origem, chave: `${chaveMovimento(data, valor, lugar, tipo)}-${Date.now()}` });
     if (tipo === 'saida' && forma === 'credito') conferirLimiteCartao().catch(() => undefined);
-    aoSalvar();
   }
 
   return (
@@ -239,7 +238,7 @@ export function FormMovimento({ mov, aoSalvar, origem = 'manual' }: { mov?: Part
         Data e hora
         <input type="datetime-local" value={quando} onChange={(e) => setQuando(e.target.value)} />
       </label>
-      <button type="button" className="botao" onClick={salvar} disabled={!valor || !local.trim()}>Salvar</button>
+      <BotaoSalvar aoSalvar={salvar} depois={aoSalvar} disabled={!valor || !local.trim()} />
       {mov?.id && (
         <button type="button" className="botao perigo" onClick={async () => { await db.movimentos.delete(mov.id!); if (mov.chave) await esquecerAviso(mov.chave); aoSalvar(); }}>
           <Icone nome="lixo" /> Apagar

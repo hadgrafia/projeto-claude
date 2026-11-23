@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { db, type Perfil } from '../db';
 import { reais } from '../lib/format';
-import { CampoDinheiro } from './Ui';
+import { BotaoSalvar, CampoDinheiro } from './Ui';
 
 /** Ajustar a renda mensal (salário mais recente) e o gasto estimado a qualquer momento. */
 export function EditarRenda({ perfil, aoSalvar }: { perfil: Perfil; aoSalvar?: () => void }) {
@@ -14,17 +14,11 @@ export function EditarRenda({ perfil, aoSalvar }: { perfil: Perfil; aoSalvar?: (
       <CampoDinheiro rotulo="Gasto mensal estimado" valor={gasto} aoMudar={setGasto} dica="Usado até haver gastos registrados suficientes." />
       {perfil.rendaAtualizadaEm && <span className="mini suave">Última atualização da renda: {new Date(perfil.rendaAtualizadaEm).toLocaleDateString('pt-BR')}</span>}
       {renda && gasto ? <span className="pequeno">Sobra por mês: <strong>{reais(Math.max(0, renda - gasto))}</strong></span> : null}
-      <button
-        type="button"
-        className="botao"
+      <BotaoSalvar
         disabled={!ok}
-        onClick={async () => {
-          await db.perfil.update('eu', { rendaMensal: renda!, gastoMensalEstimado: gasto!, rendaAtualizadaEm: new Date().toISOString() });
-          aoSalvar?.();
-        }}
-      >
-        Salvar
-      </button>
+        aoSalvar={() => db.perfil.update('eu', { rendaMensal: renda!, gastoMensalEstimado: gasto!, rendaAtualizadaEm: new Date().toISOString() })}
+        depois={aoSalvar}
+      />
     </div>
   );
 }

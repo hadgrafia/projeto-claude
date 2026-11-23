@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { db, type Perfil } from '../db';
 import { assinaturasDe, CATEGORIAS_ASSINATURA, diasAte, proximaCobranca, respondeuAssinaturas, servicoDe, SERVICOS, totalMensal, type Assinatura, type Servico } from '../lib/assinaturas';
 import { dataCurta, reais } from '../lib/format';
-import { CampoDinheiro, Folha, Segmentado } from './Ui';
+import { BotaoSalvar, CampoDinheiro, Folha, Segmentado } from './Ui';
 import { Icone } from './Icone';
 import { IconeMarca } from './IconeMarca';
 
@@ -42,9 +42,9 @@ function FormCobranca({ nome, inicial, aoSalvar, aoCancelar }: { nome: string; i
         )}
       </div>
       <div className="grade-2">
-        <button type="button" className="botao pequeno" disabled={!ok} onClick={() => aoSalvar({ valor: valor!, ciclo, dia: dia!, mes: ciclo === 'anual' ? mes : undefined })}>
+        <BotaoSalvar className="botao pequeno" disabled={!ok} salvo={inicial ? 'Salvo' : 'Adicionado'} aoSalvar={() => undefined} depois={() => aoSalvar({ valor: valor!, ciclo, dia: dia!, mes: ciclo === 'anual' ? mes : undefined })}>
           {inicial ? 'Salvar' : 'Adicionar'}
-        </button>
+        </BotaoSalvar>
         <button type="button" className="botao secundario pequeno" onClick={aoCancelar}>Cancelar</button>
       </div>
     </div>
@@ -134,7 +134,7 @@ export function CartaoAssinaturas({ perfil }: { perfil?: Perfil }) {
   const [lista, setLista] = useState<Assinatura[]>(() => assinaturasDe(perfil));
   if (!perfil) return null;
   const minhas = assinaturasDe(perfil);
-  if (respondeuAssinaturas(perfil)) {
+  if (respondeuAssinaturas(perfil) && !aberta) {
     if (!minhas.length) return null;
     const proxima = [...minhas].sort((a, b) => proximaCobranca(a).getTime() - proximaCobranca(b).getTime())[0];
     const dias = diasAte(proximaCobranca(proxima));
@@ -161,9 +161,9 @@ export function CartaoAssinaturas({ perfil }: { perfil?: Perfil }) {
       </button>
       <Folha aberta={aberta} aoFechar={() => setAberta(false)} titulo="Suas assinaturas">
         <EscolherAssinaturas valor={lista} aoMudar={setLista} />
-        <button type="button" className="botao" disabled={!lista.length} onClick={async () => { await salvarAssinaturas(lista); setAberta(false); }}>
+        <BotaoSalvar disabled={!lista.length} aoSalvar={() => salvarAssinaturas(lista)} depois={() => setAberta(false)}>
           Salvar ({lista.length})
-        </button>
+        </BotaoSalvar>
         <button type="button" className="botao secundario pequeno" onClick={async () => { await salvarAssinaturas([]); setAberta(false); }}>
           Não tenho assinaturas
         </button>

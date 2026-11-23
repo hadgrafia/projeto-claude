@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AjustesCartao } from '../components/AjustesExtras';
 import { Avatar } from '../components/Equipe';
 import { Icone } from '../components/Icone';
-import { CampoDinheiro, Entra } from '../components/Ui';
+import { BotaoSalvar, CampoDinheiro, Entra } from '../components/Ui';
 import { db } from '../db';
 import { useDados } from '../hooks';
 import { alertasCartao, estadoCartao, numeroParcela, parcelaNaFatura } from '../lib/cartao';
@@ -27,10 +27,16 @@ export default function Cartao() {
   const semForma = movimentos.filter((m) => m.formaPendente).length;
   const faturaAberta = e.faturas.find((f) => f.mes === e.aberta);
 
+  // Mantém o formulário na tela enquanto o "✓ Salvo" aparece.
+  const [primeiro, setPrimeiro] = useState(false);
   async function salvarLimite() {
-    if (!novoLimite || novoLimite <= 0) return;
+    if (!novoLimite || novoLimite <= 0) return false;
+    if (!e.limite) setPrimeiro(true);
     await db.perfil.update('eu', { limiteCartao: novoLimite });
+  }
+  function depoisDeSalvar() {
     setEditando(false);
+    setPrimeiro(false);
     setMsg('Limite atualizado.');
   }
 
@@ -70,12 +76,12 @@ export default function Cartao() {
         </Entra>
       )}
 
-      {!e.limite && !editando ? (
+      {(!e.limite || primeiro) && !editando ? (
         <section className="cartao" style={{ gap: 12 }}>
           <strong>Qual é o limite do seu cartão?</strong>
           <p className="pequeno suave">Com o limite, o app desconta cada compra no crédito (à vista ou parcelada), mostra a fatura dos próximos meses e avisa antes de estourar.</p>
           <CampoDinheiro rotulo="Limite total" valor={novoLimite} aoMudar={setNovoLimite} dica="Tem mais de um cartão? Some os limites." />
-          <button type="button" className="botao" disabled={!novoLimite} onClick={salvarLimite}>Salvar limite</button>
+          <BotaoSalvar disabled={!novoLimite} aoSalvar={salvarLimite} depois={depoisDeSalvar}>Salvar limite</BotaoSalvar>
         </section>
       ) : (
         <section className="cartao verde" style={{ gap: 10 }}>
@@ -93,7 +99,7 @@ export default function Cartao() {
           {editando && (
             <div className="coluna" style={{ gap: 8, background: 'var(--card)', color: 'var(--texto)', borderRadius: 16, padding: 12 }}>
               <CampoDinheiro rotulo="Novo limite total" valor={novoLimite} aoMudar={setNovoLimite} dica="O banco aumentou ou diminuiu o limite? Ajuste aqui." />
-              <button type="button" className="botao pequeno" disabled={!novoLimite} onClick={salvarLimite}>Salvar</button>
+              <BotaoSalvar className="botao pequeno" disabled={!novoLimite} aoSalvar={salvarLimite} depois={depoisDeSalvar} />
             </div>
           )}
         </section>
@@ -171,7 +177,7 @@ export default function Cartao() {
         <span className="ponta"><Icone nome="seta" /></span>
       </Link>
 
-      {perfil && <AjustesCartao key={`c${perfil.limiteUsadoEm}${perfil.limiteCartao}`} perfil={perfil} titulo="Ajustes do cartão" aoSalvar={setMsg} />}
+      {perfil && <AjustesCartao perfil={perfil} titulo="Ajustes do cartão" aoSalvar={setMsg} />}
       <p className="mini suave">O app nunca acessa o seu banco nem o seu cartão: tudo aqui vem do que você informa, dos avisos que você permitiu ler e dos arquivos que você envia.</p>
     </main>
   );

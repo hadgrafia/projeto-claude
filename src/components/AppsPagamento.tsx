@@ -3,7 +3,7 @@ import { db, type Perfil } from '../db';
 import { APPS_PADRAO, escolheuApps, listaDeApps } from '../lib/appsPagamento';
 import { ehAppAndroid, Leitor, type AppInfo } from '../lib/nativo';
 import { Icone } from './Icone';
-import { Folha } from './Ui';
+import { BotaoSalvar, Folha } from './Ui';
 import { IconeMarca } from './IconeMarca';
 
 export type AppEscolhido = { pacote?: string; nome: string };
@@ -102,16 +102,15 @@ export function AppsPagamento({ perfil, aoSalvar }: { perfil: Perfil; aoSalvar: 
       <h2 style={{ fontSize: 15, fontWeight: 800 }}>Apps de pagamento que o app lê</h2>
       <p className="mini suave">Só os avisos dos apps marcados viram lançamentos. Avisos de outros apps (cotação do dólar, notícias, redes sociais) são ignorados.</p>
       <EscolherApps valor={escolhidos} aoMudar={setEscolhidos} />
-      <button
-        type="button"
+      <BotaoSalvar
         className="botao pequeno"
-        onClick={async () => {
+        aoSalvar={async () => {
           await salvarApps(escolhidos);
           aoSalvar(escolhidos.length ? 'Apps de pagamento salvos.' : 'Nenhum app marcado: os avisos de pagamento não serão lidos.');
         }}
       >
         Salvar apps
-      </button>
+      </BotaoSalvar>
     </section>
   );
 }
@@ -120,7 +119,7 @@ export function AppsPagamento({ perfil, aoSalvar }: { perfil: Perfil; aoSalvar: 
 export function CartaoEscolherApps({ perfil }: { perfil?: Perfil }) {
   const [aberta, setAberta] = useState(false);
   const [escolhidos, setEscolhidos] = useState<AppEscolhido[]>([]);
-  if (!perfil || escolheuApps(perfil)) return null;
+  if (!perfil || (escolheuApps(perfil) && !aberta)) return null;
   return (
     <>
       <button type="button" className="cartao terracota cartao-link" style={{ gridColumn: '1 / -1', flexDirection: 'row', alignItems: 'center', textAlign: 'left', border: 0, cursor: 'pointer' }} onClick={() => setAberta(true)}>
@@ -133,17 +132,9 @@ export function CartaoEscolherApps({ perfil }: { perfil?: Perfil }) {
       </button>
       <Folha aberta={aberta} aoFechar={() => setAberta(false)} titulo="Apps de pagamento">
         <EscolherApps valor={escolhidos} aoMudar={setEscolhidos} />
-        <button
-          type="button"
-          className="botao"
-          disabled={!escolhidos.length}
-          onClick={async () => {
-            await salvarApps(escolhidos);
-            setAberta(false);
-          }}
-        >
+        <BotaoSalvar disabled={!escolhidos.length} aoSalvar={() => salvarApps(escolhidos)} depois={() => setAberta(false)}>
           Salvar ({escolhidos.length})
-        </button>
+        </BotaoSalvar>
       </Folha>
     </>
   );

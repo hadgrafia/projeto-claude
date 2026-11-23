@@ -313,3 +313,9 @@ h1, h2, h3, p { margin: 0; }
 /* Alerta em vermelho (cartão: limite acima da renda, fatura que passa da renda). */
 .cartao.alerta-vermelho { background: #B3261E; color: #fff; border: 0; }
 .cartao.alerta-vermelho .suave, .cartao.alerta-vermelho .mini { color: rgba(255, 255, 255, 0.88); }
+
+/* Botão "Salvar" que vira "✓ Salvo" */
+.botao.botao-salvar { transition: background-color 0.25s ease, color 0.25s ease, transform 0.15s ease; }
+.botao.botao-salvar.salvo, .botao.botao-salvar.salvo:disabled { background: #2E7D4F; color: #fff; border-color: #2E7D4F; opacity: 1; }
+.botao.botao-salvar.erro { background: #B3261E; color: #fff; border-color: #B3261E; }
+.botao.botao-salvar:active { transform: scale(0.98); }

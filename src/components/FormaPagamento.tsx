@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { db, type FormaPag, type Movimento } from '../db';
 import { conferirLimiteCartao } from '../lib/avisos';
 import { NOMES_FORMA } from '../lib/cartao';
+import { BotaoSalvar } from './Ui';
 import { hora, reais } from '../lib/format';
 
 const OPCOES: FormaPag[] = ['debito', 'pix', 'credito', 'dinheiro', 'boleto'];
@@ -40,12 +41,13 @@ export function CampoForma({ forma, parcelas, aoMudar, rotulo = 'Como foi pago?'
 }
 
 /** Pergunta "débito ou crédito?" para um gasto que chegou sem essa informação. */
-export function FormForma({ mov, restantes, aoAdiar }: { mov: Movimento; restantes: number; aoAdiar: () => void }) {
+export function FormForma({ mov, restantes, aoAdiar, segurar }: { mov: Movimento; restantes: number; aoAdiar: () => void; segurar?: (m?: Movimento) => void }) {
   const [forma, setForma] = useState<FormaPag>();
   const [parcelas, setParcelas] = useState(1);
 
   async function salvar() {
-    if (!forma) return;
+    if (!forma) return false;
+    segurar?.(mov);
     await db.movimentos.update(mov.id!, { forma, parcelas: forma === 'credito' && parcelas > 1 ? parcelas : undefined, formaPendente: false });
     if (forma === 'credito') conferirLimiteCartao().catch(() => undefined);
   }
@@ -67,7 +69,7 @@ export function FormForma({ mov, restantes, aoAdiar }: { mov: Movimento; restant
         }}
       />
       {forma === 'credito' && parcelas > 1 && <span className="mini suave">{parcelas}x de {reais(mov.valor / parcelas)}. Se o valor do aviso já era o da parcela, corrija o valor no gasto depois.</span>}
-      <button type="button" className="botao" disabled={!forma} onClick={salvar}>Salvar</button>
+      <BotaoSalvar disabled={!forma} aoSalvar={salvar} depois={() => segurar?.(undefined)} />
       <button type="button" className="botao secundario" onClick={aoAdiar}>Responder depois{restantes > 0 ? ` (${restantes} na fila)` : ''}</button>
     </>
   );

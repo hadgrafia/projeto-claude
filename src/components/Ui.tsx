@@ -1,5 +1,5 @@
 import { animate, AnimatePresence, motion, useMotionValue, useTransform } from 'framer-motion';
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { reais, reaisCurto } from '../lib/format';
 import { Icone } from './Icone';
 
@@ -179,4 +179,70 @@ export function Markdown({ texto }: { texto: string }) {
     } else blocos.push(<p key={i}>{inline(l, `p${i}`)}</p>);
   }
   return <div className="markdown">{blocos}</div>;
+}
+
+/**
+ * Botão de salvar com retorno visível: "Salvando…" → "✓ Salvo" (verde) por um instante.
+ * `aoSalvar` faz o trabalho (devolva false para não marcar como salvo, ex.: dado faltando).
+ * `depois` roda quando o "Salvo" já apareceu (fechar a janela, mudar de tela).
+ */
+export function BotaoSalvar({
+  aoSalvar,
+  depois,
+  children = 'Salvar',
+  salvo = 'Salvo',
+  className = 'botao',
+  disabled,
+  style,
+}: {
+  aoSalvar: () => unknown;
+  depois?: () => void;
+  children?: ReactNode;
+  salvo?: string;
+  className?: string;
+  disabled?: boolean;
+  style?: CSSProperties;
+}) {
+  const [estado, setEstado] = useState<'livre' | 'salvando' | 'salvo' | 'erro'>('livre');
+  const vivo = useRef(true);
+  useEffect(() => () => void (vivo.current = false), []);
+  async function clicar() {
+    if (estado === 'salvando') return;
+    setEstado('salvando');
+    try {
+      const r = await aoSalvar();
+      if (!vivo.current) return;
+      if (r === false) return setEstado('livre');
+      setEstado('salvo');
+      navigator.vibrate?.(15);
+      window.setTimeout(() => depois?.(), 750);
+      window.setTimeout(() => vivo.current && setEstado('livre'), 1800);
+    } catch {
+      if (!vivo.current) return;
+      setEstado('erro');
+      window.setTimeout(() => vivo.current && setEstado('livre'), 2500);
+    }
+  }
+  return (
+    <button
+      type="button"
+      className={`${className} botao-salvar ${estado === 'salvo' ? 'salvo' : ''} ${estado === 'erro' ? 'erro' : ''}`}
+      disabled={disabled || estado === 'salvando'}
+      onClick={clicar}
+      style={style}
+      aria-live="polite"
+    >
+      {estado === 'salvando' ? (
+        'Salvando…'
+      ) : estado === 'salvo' ? (
+        <motion.span initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <Icone nome="check" /> {salvo}
+        </motion.span>
+      ) : estado === 'erro' ? (
+        'Não foi possível salvar. Tente de novo'
+      ) : (
+        children
+      )}
+    </button>
+  );
 }

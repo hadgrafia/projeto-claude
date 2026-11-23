@@ -166,12 +166,12 @@ export default function Ajustes() {
 
       <section className="cartao">
         <h2 style={{ fontSize: 15, fontWeight: 800 }}>Renda mensal</h2>
-        {perfil && <EditarRenda key={perfil.rendaAtualizadaEm} perfil={perfil} aoSalvar={() => aviso('Renda atualizada. Os planos foram recalculados.')} />}
+        {perfil && <EditarRenda perfil={perfil} aoSalvar={() => aviso('Renda atualizada. Os planos foram recalculados.')} />}
       </section>
 
       <PedidosConvite />
 
-      {perfil && <AjustesCartao key={`c${perfil.limiteUsadoEm}`} perfil={perfil} aoSalvar={aviso} />}
+      {perfil && <AjustesCartao perfil={perfil} aoSalvar={aviso} />}
       {perfil && <AjustesContato perfil={perfil} aoSalvar={aviso} />}
 
       <section className="cartao">
@@ -241,7 +241,7 @@ export default function Ajustes() {
       </Link>
 
       <RegistroAutomatico />
-      {perfil && <AppsPagamento key={`apps-${(perfil.appsPagamento ?? []).length}`} perfil={perfil} aoSalvar={aviso} />}
+      {perfil && <AppsPagamento perfil={perfil} aoSalvar={aviso} />}
 
       <section className="cartao areia">
         <Instalar />

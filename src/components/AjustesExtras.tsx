@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { db, type Perfil } from '../db';
 import { pedirPermissaoAvisos } from '../lib/avisos';
-import { CampoDinheiro } from './Ui';
+import { BotaoSalvar, CampoDinheiro } from './Ui';
 
 /** Cartão de crédito e valor a partir do qual o app pergunta sobre a compra. */
 export function AjustesCartao({ perfil, aoSalvar, titulo = 'Cartão e compras' }: { perfil: Perfil; aoSalvar: (msg: string) => void; titulo?: string }) {
   const [limite, setLimite] = useState<number | undefined>(perfil.limiteCartao);
   const [usado, setUsado] = useState<number | undefined>(perfil.limiteUsado);
   const [aviso, setAviso] = useState<number | undefined>(perfil.limiteAvisoCompra ?? 100);
+  useEffect(() => setLimite(perfil.limiteCartao), [perfil.limiteCartao]);
+  useEffect(() => setUsado(perfil.limiteUsado), [perfil.limiteUsado]);
   const [fecha, setFecha] = useState(perfil.cartaoFechamento ? String(perfil.cartaoFechamento) : '');
   const [vence, setVence] = useState(perfil.cartaoVencimento ? String(perfil.cartaoVencimento) : '');
   const dia = (v: string) => {
@@ -32,10 +34,9 @@ export function AjustesCartao({ perfil, aoSalvar, titulo = 'Cartão e compras' }
       <span className="mini suave">Com esses dias, o app sabe em qual fatura cada compra cai. Sem eles, a compra entra na fatura do mês seguinte.</span>
       <CampoDinheiro rotulo="Perguntar sobre compras a partir de" valor={aviso} aoMudar={setAviso} dica="O app pede a finalidade e o parcelamento das compras acima deste valor." />
       {perfil.limiteUsadoEm && <span className="mini suave">Uso do limite informado em {new Date(perfil.limiteUsadoEm).toLocaleDateString('pt-BR')}.</span>}
-      <button
-        type="button"
+      <BotaoSalvar
         className="botao pequeno"
-        onClick={async () => {
+        aoSalvar={async () => {
           await db.perfil.update('eu', {
             limiteCartao: limite,
             limiteUsado: usado,
@@ -46,9 +47,7 @@ export function AjustesCartao({ perfil, aoSalvar, titulo = 'Cartão e compras' }
           });
           aoSalvar('Cartão e compras salvos.');
         }}
-      >
-        Salvar
-      </button>
+      />
     </section>
   );
 }
@@ -89,20 +88,17 @@ export function AjustesContato({ perfil, aoSalvar }: { perfil: Perfil; aoSalvar:
         Avisos dos agentes (Nina, Gabriela, Matheus e Leo avisam por conta própria: plano atrasado, cartão quase no fim, Selic mudou). Desmarque para eles só responderem quando você chamar.
       </label>
       <span className="mini suave">Seus contatos ficam guardados no seu celular e só são usados para os avisos do app.</span>
-      <button
-        type="button"
+      <BotaoSalvar
         className="botao pequeno"
         disabled={!emailOk || !celularOk}
-        onClick={async () => {
+        aoSalvar={async () => {
           let permitido = noCelular;
           if (noCelular) permitido = await pedirPermissaoAvisos();
           await db.perfil.update('eu', { email: email.trim() || undefined, celular: celularLimpo || undefined, avisos: { celular: permitido, email: porEmail, agentes } });
           setNoCelular(permitido);
           aoSalvar(noCelular && !permitido ? 'Salvo. Para receber avisos no celular, permita as notificações do app nas configurações do aparelho.' : 'Contato e avisos salvos.');
         }}
-      >
-        Salvar
-      </button>
+      />
     </section>
   );
 }
@@ -113,12 +109,16 @@ export function TrocarSenha({ aoSalvar }: { aoSalvar: (m: string) => void }) {
   const [nova, setNova] = useState('');
   const [repetir, setRepetir] = useState('');
   const [erro, setErro] = useState('');
-  const [ocupado, setOcupado] = useState(false);
   async function salvar() {
     setErro('');
-    if (nova.length < 8 || !/[a-zA-ZÀ-ú]/.test(nova) || !/\d/.test(nova)) return setErro('A senha nova precisa ter pelo menos 8 caracteres, com letras e números.');
-    if (nova !== repetir) return setErro('As duas senhas novas não estão iguais.');
-    setOcupado(true);
+    if (nova.length < 8 || !/[a-zA-ZÀ-ú]/.test(nova) || !/\d/.test(nova)) {
+      setErro('A senha nova precisa ter pelo menos 8 caracteres, com letras e números.');
+      return false;
+    }
+    if (nova !== repetir) {
+      setErro('As duas senhas novas não estão iguais.');
+      return false;
+    }
     try {
       const r = await fetch('/api/conta/senha', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ atual, nova }) });
       const c = (await r.json().catch(() => ({}))) as { erro?: string };
@@ -129,8 +129,7 @@ export function TrocarSenha({ aoSalvar }: { aoSalvar: (m: string) => void }) {
       aoSalvar('Senha trocada. Os outros aparelhos foram desconectados.');
     } catch (e) {
       setErro((e as Error).message);
-    } finally {
-      setOcupado(false);
+      return false;
     }
   }
   return (
@@ -140,7 +139,7 @@ export function TrocarSenha({ aoSalvar }: { aoSalvar: (m: string) => void }) {
         <label className="campo">Senha atual<input type="password" autoComplete="current-password" value={atual} onChange={(e) => setAtual(e.target.value)} /></label>
         <label className="campo">Senha nova<input type="password" autoComplete="new-password" value={nova} onChange={(e) => setNova(e.target.value)} /></label>
         <label className="campo">Repita a senha nova<input type="password" autoComplete="new-password" value={repetir} onChange={(e) => setRepetir(e.target.value)} /></label>
-        <button type="button" className="botao pequeno" disabled={ocupado || !atual || !nova || !navigator.onLine} onClick={salvar}>{ocupado ? 'Salvando…' : 'Salvar senha nova'}</button>
+        <BotaoSalvar className="botao pequeno" disabled={!atual || !nova || !navigator.onLine} aoSalvar={salvar} salvo="Senha salva">Salvar senha nova</BotaoSalvar>
         {erro && <p className="pequeno" role="alert">{erro}</p>}
       </div>
     </details>

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Avatar, PainelAgentes, useEquipe } from '../components/Equipe';
 import { Icone } from '../components/Icone';
-import { Markdown } from '../components/Ui';
+import { BotaoSalvar, Markdown } from '../components/Ui';
 import { db, type Importancia, type TipoInvestimento, type TipoMov } from '../db';
 import { acharPlano, AGENTES, baixar, gastoDoTexto, TELAS, impostoDoAno, perguntar, planilhaDoMes, prepararAnexo, resumoDoMes, type Acao, type IdAgente } from '../lib/agentes';
 import { selicVista } from '../lib/agentesAvisos';
@@ -421,21 +421,20 @@ function CartaoAcao({ acao, feita, aoFazer, equipe }: { acao: Acao; feita?: bool
       <div className="acao">
         <span className="pequeno">Cartão: <strong>{partes.join(' · ')}</strong></span>
         {feitoOu(
-          <button
-            type="button"
+          <BotaoSalvar
             className="botao pequeno"
-            onClick={async () => {
+            depois={aoFazer}
+            aoSalvar={async () => {
               await db.perfil.update('eu', {
                 ...(acao.limite ? { limiteCartao: acao.limite } : {}),
                 ...(acao.usado != null ? { limiteUsado: acao.usado, limiteUsadoEm: new Date().toISOString() } : {}),
                 ...(diaOk(acao.fechamento) ? { cartaoFechamento: diaOk(acao.fechamento) } : {}),
                 ...(diaOk(acao.vencimento) ? { cartaoVencimento: diaOk(acao.vencimento) } : {}),
               });
-              aoFazer();
             }}
           >
             Salvar no app
-          </button>,
+          </BotaoSalvar>,
         )}
       </div>
     );

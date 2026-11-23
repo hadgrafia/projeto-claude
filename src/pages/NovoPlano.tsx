@@ -1,8 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Icone, ICONE_PLANO } from '../components/Icone';
-import { CampoDinheiro, Dinheiro, Folha } from '../components/Ui';
+import { BotaoSalvar, CampoDinheiro, Dinheiro, Folha } from '../components/Ui';
 import { db, type TipoPlano } from '../db';
 import { useDados, useSelic } from '../hooks';
 import * as fipe from '../lib/fipe';
@@ -68,8 +68,9 @@ export default function NovoPlano() {
   const faltando = [!meta && 'a meta (preencha as perguntas acima)', !prazo && 'quando você quer atingir o plano'].filter(Boolean) as string[];
   const set = (k: string, v: unknown) => setResp((r) => ({ ...r, [k]: v }));
 
+  const destino = useRef<string>();
   async function salvar() {
-    if (!tipo || !resultado) return;
+    if (!tipo || !resultado) return false;
     const dados = {
       nome: nome.trim() || PLANOS[tipo].nomePadrao,
       tipo,
@@ -84,10 +85,10 @@ export default function NovoPlano() {
       await db.planos.update(Number(id), dados);
       const salvo = await db.planos.get(Number(id));
       if (salvo?.conjunto) await enviarDefinicao(salvo).catch(() => alert('O plano foi salvo neste aparelho, mas não foi enviado ao grupo agora. Ele é atualizado quando a conexão voltar.'));
-      navegar(`/planos/${id}`, { replace: true });
+      destino.current = `/planos/${id}`;
     } else {
       const novo = await db.planos.add({ ...dados, criadoEm: new Date().toISOString() });
-      navegar(`/planos/${novo}`, { replace: true });
+      destino.current = `/planos/${novo}`;
     }
   }
 
@@ -189,10 +190,10 @@ export default function NovoPlano() {
       />
       {faltando.length > 0 && <p className="cartao areia pequeno" role="status">Para continuar, responda: {faltando.join(' e ')}.</p>}
 
-      <motion.button type="button" whileTap={{ scale: 0.97 }} className="botao seta" onClick={salvar} disabled={faltando.length > 0}>
+      <BotaoSalvar className="botao seta" aoSalvar={salvar} depois={() => destino.current && navegar(destino.current, { replace: true })} disabled={faltando.length > 0} salvo={editando ? 'Salvo' : 'Plano criado'}>
         {editando ? 'Salvar alterações' : 'Criar plano'}
         <span className="ponta"><Icone nome="check" /></span>
-      </motion.button>
+      </BotaoSalvar>
 
       <Folha aberta={fipeAberta} aoFechar={() => setFipeAberta(false)} titulo="Tabela FIPE">
         <BuscaFipe

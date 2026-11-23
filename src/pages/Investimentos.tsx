@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { Icone } from '../components/Icone';
-import { CampoDinheiro, Dinheiro, Entra, Folha, Markdown, Segmentado } from '../components/Ui';
+import { BotaoSalvar, CampoDinheiro, Dinheiro, Entra, Folha, Markdown, Segmentado } from '../components/Ui';
 import { db, lerCache, salvarCache, type Investimento, type PerfilRisco, type TipoInvestimento } from '../db';
 import { situacaoPlano, useDados, useOnline, useSelic } from '../hooks';
 import { pct, reais, reaisCurto } from '../lib/format';
@@ -226,7 +226,6 @@ function FormInvestimento({ inv, planos, aoSalvar }: { inv?: Investimento; plano
     const dados = { ...f, nome: f.nome.trim() || NOMES_INVESTIMENTO[f.tipo], atualizadoEm: new Date().toISOString() };
     if (inv?.id) await db.investimentos.update(inv.id, dados);
     else await db.investimentos.add(dados);
-    aoSalvar();
   }
 
   return (
@@ -262,7 +261,7 @@ function FormInvestimento({ inv, planos, aoSalvar }: { inv?: Investimento; plano
           {planos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
         </select>
       </label>
-      <button type="button" className="botao" onClick={salvar}>Salvar</button>
+      <BotaoSalvar aoSalvar={salvar} depois={aoSalvar} />
       {inv?.id && (
         <button type="button" className="botao perigo" onClick={async () => { await db.investimentos.delete(inv.id!); aoSalvar(); }}>
           <Icone nome="lixo" /> Apagar
@@ -278,14 +277,13 @@ function QuestionarioPerfil({ aoSalvar }: { aoSalvar: () => void }) {
   return (
     <>
       <PerguntasPerfil respostas={r} aoResponder={(i, v) => setR((x) => Object.assign([...x], { [i]: v }))} />
-      <button
-        type="button"
-        className="botao"
+      <BotaoSalvar
         disabled={PERGUNTAS_PERFIL.some((_, i) => r[i] === undefined)}
-        onClick={async () => { await db.perfil.update('eu', { perfilRisco: calcularPerfil(r.map((x) => x ?? 0)) }); aoSalvar(); }}
+        aoSalvar={() => db.perfil.update('eu', { perfilRisco: calcularPerfil(r.map((x) => x ?? 0)) })}
+        depois={aoSalvar}
       >
         Salvar perfil
-      </button>
+      </BotaoSalvar>
     </>
   );
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { pegarArquivoParaImportar } from '../lib/compartilhar';
 import { useNavigate } from 'react-router-dom';
 import { Icone } from '../components/Icone';
-import { Entra, Segmentado } from '../components/Ui';
+import { BotaoSalvar, Entra, Segmentado } from '../components/Ui';
 import { db, type Movimento } from '../db';
 import { itensCartao } from '../lib/cartao';
 import { conciliar } from '../lib/conciliar';
@@ -76,7 +76,6 @@ export default function Importar() {
         await db.movimentos.update(i.igual.id, { forma: i.forma, parcelas: i.parcelas, formaPendente: false });
       }
     }
-    navegar('/gastos');
   }
 
   const selecionados = itens.filter((i) => i.ok);
@@ -191,9 +190,9 @@ export default function Importar() {
               </Entra>
             ))}
           </div>
-          <button type="button" className="botao" disabled={!selecionados.length} onClick={salvar}>
+          <BotaoSalvar disabled={!selecionados.length} aoSalvar={salvar} depois={() => navegar('/gastos')} salvo={`${selecionados.length} lançamentos salvos`}>
             Salvar {selecionados.length} lançamentos
-          </button>
+          </BotaoSalvar>
         </>
       )}
     </main>
