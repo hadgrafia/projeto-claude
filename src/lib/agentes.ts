@@ -1,7 +1,7 @@
 import type { Compra, Investimento, Movimento, Perfil, Plano } from '../db';
 import { NOMES_CATEGORIAS } from './categorias';
 import { compromissoDoMes } from './compras';
-import { alertasCartao, estadoCartao, NOMES_FORMA } from './cartao';
+import { alertasCartao, estadoCartao, NOMES_FORMA, tetoCartaoPorPlanos } from './cartao';
 import { analisarMes } from './feedback';
 import { chaveMes, mesLongo, reais } from './format';
 import { cdiDaSelic, recomendar as recomendarInvest } from './invest';
@@ -24,6 +24,8 @@ export interface Situacao {
   previsao?: string;
   meses: number;
   prazoMeses?: number;
+  /** Quanto falta guardar por mês, só da pessoa, para chegar no prazo (sem prazo: o que já separa). */
+  minhaParteMes?: number;
 }
 
 /**
@@ -85,11 +87,31 @@ export function montarContexto(d: {
     selicAnual: d.selic,
     cdiAnual: cdi,
     cartao: resumoCartao(d),
+    cartaoParaOsPlanos: tetoParaContexto(d),
     parcelasNesteMes: Math.round(compromissoDoMes(d.compras, mes)),
     comprasParceladas: d.compras.slice(-20).map((c) => ({ descricao: c.descricao, valor: c.valor, parcelas: c.parcelas, valorParcela: Math.round(c.valorParcela), inicio: c.inicio, noCartao: c.noCartao })),
     valorParaAvisoDeCompra: d.perfil?.limiteAvisoCompra ?? 100,
     assinaturas: (d.perfil?.assinaturas ?? []).map((a) => ({ nome: a.nome, valor: a.valor, ciclo: a.ciclo, diaCobranca: a.dia, mesCobranca: a.mes, proxima: proximaCobranca(a).toISOString().slice(0, 10) })),
     assinaturasPorMes: Math.round(totalMensal(d.perfil?.assinaturas ?? []) * 100) / 100,
+  };
+}
+
+/** Quanto dá para gastar no cartão por mês sem atrasar cada plano (Leo e Gabriela). */
+function tetoParaContexto(d: { planos: Plano[]; movimentos: Movimento[]; renda: number; gasto: number; situacoes: Map<number, Situacao> }) {
+  if (!d.planos.length) return undefined;
+  const t = tetoCartaoPorPlanos(
+    d.renda,
+    d.gasto,
+    d.movimentos,
+    d.planos.map((p) => ({ id: p.id!, nome: p.nome, prazo: p.prazo, precisaPorMes: d.situacoes.get(p.id!)?.minhaParteMes ?? 0 })),
+  );
+  const r = Math.round;
+  return {
+    gastosForaDoCartaoPorMes: r(t.foraDoCartao),
+    gastoMedioNoCartaoPorMes: r(t.cartaoTipico),
+    porPlano: t.porPlano.map((p) => ({ plano: p.nome, prazoDesejado: p.prazo, precisaGuardarPorMes: r(p.precisaPorMes), maximoNoCartaoPorMes: r(p.teto) })),
+    todosOsPlanosJuntos: { precisaGuardarPorMes: r(t.todos.precisa), maximoNoCartaoPorMes: r(t.todos.teto) },
+    explicacao: 'maximoNoCartaoPorMes = renda − gastos fora do cartão − o que o plano precisa por mês. Negativo: mesmo sem cartão, o prazo não fecha.',
   };
 }
 

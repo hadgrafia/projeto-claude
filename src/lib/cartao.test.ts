@@ -121,3 +121,28 @@ describe('enviar extrato ou fatura', () => {
     expect(misto[0].formaPendente).toBe(true);
   });
 });
+
+describe('quanto gastar no cartão para chegar nos planos', () => {
+  it('renda − gastos fora do cartão − o que o plano precisa', async () => {
+    const { tetoCartaoPorPlanos } = await import('./cartao');
+    const hoje = new Date(2026, 10, 23);
+    // Outubro: R$ 1.500 no total, R$ 500 no crédito → fora do cartão R$ 1.000.
+    const movs = [
+      mov({ data: new Date(2026, 9, 5).toISOString(), valor: 1000, forma: 'debito' }),
+      mov({ data: new Date(2026, 9, 6).toISOString(), valor: 500, forma: 'credito' }),
+    ];
+    const t = tetoCartaoPorPlanos(4000, 1500, movs, [
+      { id: 1, nome: 'Casa', prazo: '2028-12', precisaPorMes: 1800 },
+      { id: 2, nome: 'Viagem', prazo: '2027-07', precisaPorMes: 600 },
+    ], hoje);
+    expect(t.cartaoTipico).toBe(500);
+    expect(t.foraDoCartao).toBe(1000);
+    expect(t.porPlano.map((p) => p.teto)).toEqual([1200, 2400]);
+    expect(t.todos).toEqual({ precisa: 2400, teto: 600 });
+  });
+  it('prazo que não fecha fica negativo', async () => {
+    const { tetoCartaoPorPlanos } = await import('./cartao');
+    const t = tetoCartaoPorPlanos(3000, 2500, [], [{ id: 1, nome: 'Carro', prazo: '2027-01', precisaPorMes: 900 }]);
+    expect(t.porPlano[0].teto).toBe(-400);
+  });
+});

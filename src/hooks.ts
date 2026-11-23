@@ -55,6 +55,15 @@ export function useOnline() {
 }
 
 /** Números de um plano: progresso, aporte, previsão e quanto precisaria para cumprir o prazo. */
+/**
+ * Quanto a PESSOA precisa guardar por mês para o plano: para chegar na data desejada
+ * (descontando o que outras pessoas do plano em conjunto já colocam); sem data, o que já separa hoje.
+ */
+export function minhaParteMes(s: { necessario?: number; aporte: number; meuAporte: number }) {
+  if (s.necessario === undefined) return s.meuAporte;
+  return Math.max(0, s.necessario - (s.aporte - s.meuAporte));
+}
+
 export function situacaoPlano(
   plano: import('./db').Plano,
   investimentos: import('./db').Investimento[],

@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { db } from '../db';
-import { situacaoPlano, useDados, useSelic } from '../hooks';
+import { minhaParteMes, situacaoPlano, useDados, useSelic } from '../hooks';
 import { AGENTES, montarContexto, type IdAgente, type Situacao } from '../lib/agentes';
 import { destaques } from '../lib/agentesAvisos';
 
@@ -15,7 +15,7 @@ export function useEquipe() {
     const situacoes = new Map<number, Situacao>();
     for (const p of dados.planos) {
       const s = situacaoPlano(p, dados.investimentos, dados.livre, selic?.valor);
-      situacoes.set(p.id!, { guardado: s.guardado, aporte: s.aporte, pct: s.pct, previsao: s.previsao, meses: s.meses, prazoMeses: s.prazoMeses });
+      situacoes.set(p.id!, { guardado: s.guardado, aporte: s.aporte, pct: s.pct, previsao: s.previsao, meses: s.meses, prazoMeses: s.prazoMeses, minhaParteMes: minhaParteMes(s) });
     }
     const base = { perfil: dados.perfil, planos: dados.planos, movimentos: dados.movimentos, investimentos: dados.investimentos, compras, renda: dados.renda.mensal, gasto: dados.gasto, livre: dados.livre, selic: selic?.valor, situacoes };
     return { ...dados, compras, selic: selic?.valor, contexto: () => montarContexto(base), destaques: destaques(base) };

@@ -184,3 +184,55 @@ export function alertasCartao(e: EstadoCartao, renda: number, investido: number)
     semCobertura: tirariaDosInvestimentos > investido,
   };
 }
+
+/**
+ * Quanto dá para gastar no cartão por mês sem atrasar os planos.
+ *
+ * Conta: renda − gastos fora do cartão (débito, Pix, dinheiro, boleto) − o que o plano precisa por mês.
+ * Os gastos fora do cartão vêm da média dos últimos 3 meses completos com registros
+ * (o mesmo período do "gasto típico"), descontando o que foi no crédito.
+ */
+export interface PlanoParaTeto {
+  id: number;
+  nome: string;
+  /** Mês desejado (AAAA-MM), se a pessoa definiu. */
+  prazo?: string;
+  /** Quanto a pessoa precisa guardar por mês: para chegar no prazo, ou o que já separa hoje (sem prazo). */
+  precisaPorMes: number;
+}
+
+export interface TetoCartao {
+  renda: number;
+  gastoTipico: number;
+  /** Média por mês gasta no crédito nos mesmos meses. */
+  cartaoTipico: number;
+  foraDoCartao: number;
+  porPlano: (PlanoParaTeto & { teto: number })[];
+  /** Todos os planos juntos. */
+  todos: { precisa: number; teto: number };
+}
+
+export function tetoCartaoPorPlanos(renda: number, gastoTipico: number, movimentos: Movimento[], planos: PlanoParaTeto[], hoje = new Date()): TetoCartao {
+  const atual = chaveMes(hoje);
+  const total = new Map<string, number>();
+  const credito = new Map<string, number>();
+  for (const m of movimentos) {
+    if (m.tipo !== 'saida') continue;
+    const k = m.data.slice(0, 7);
+    total.set(k, (total.get(k) ?? 0) + m.valor);
+    if (m.forma === 'credito') credito.set(k, (credito.get(k) ?? 0) + m.valor);
+  }
+  const meses = [1, 2, 3].map((i) => somarMeses(atual, -i)).filter((k) => (total.get(k) ?? 0) > 0);
+  const cartaoTipico = meses.length ? meses.reduce((a, k) => a + (credito.get(k) ?? 0), 0) / meses.length : 0;
+  const foraDoCartao = Math.max(0, gastoTipico - cartaoTipico);
+  const base = renda - foraDoCartao;
+  const precisa = planos.reduce((a, p) => a + p.precisaPorMes, 0);
+  return {
+    renda,
+    gastoTipico,
+    cartaoTipico,
+    foraDoCartao,
+    porPlano: planos.map((p) => ({ ...p, teto: base - p.precisaPorMes })),
+    todos: { precisa, teto: base - precisa },
+  };
+}

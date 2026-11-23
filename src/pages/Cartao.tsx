@@ -6,8 +6,8 @@ import { Avatar } from '../components/Equipe';
 import { Icone } from '../components/Icone';
 import { BotaoSalvar, CampoDinheiro, Entra } from '../components/Ui';
 import { db } from '../db';
-import { useDados } from '../hooks';
-import { alertasCartao, estadoCartao, numeroParcela, parcelaNaFatura } from '../lib/cartao';
+import { minhaParteMes, situacaoPlano, useDados, useSelic } from '../hooks';
+import { alertasCartao, estadoCartao, numeroParcela, parcelaNaFatura, tetoCartaoPorPlanos } from '../lib/cartao';
 import { dataCurta, mesLongo, reais, reaisCurto } from '../lib/format';
 
 /**
@@ -16,7 +16,8 @@ import { dataCurta, mesLongo, reais, reaisCurto } from '../lib/format';
  */
 export default function Cartao() {
   const navegar = useNavigate();
-  const { perfil, movimentos, investimentos, renda } = useDados();
+  const { perfil, movimentos, investimentos, renda, gasto, planos, livre } = useDados();
+  const selic = useSelic();
   const compras = useLiveQuery(() => db.compras.toArray(), []) ?? [];
   const e = useMemo(() => estadoCartao(perfil, compras, movimentos), [perfil, compras, movimentos]);
   const investido = investimentos.reduce((a, i) => a + i.saldo, 0);
@@ -26,6 +27,17 @@ export default function Cartao() {
   const [msg, setMsg] = useState('');
   const semForma = movimentos.filter((m) => m.formaPendente).length;
   const faturaAberta = e.faturas.find((f) => f.mes === e.aberta);
+  const teto = useMemo(
+    () =>
+      tetoCartaoPorPlanos(
+        renda.mensal,
+        gasto,
+        movimentos,
+        planos.map((p) => ({ id: p.id!, nome: p.nome, prazo: p.prazo, precisaPorMes: minhaParteMes(situacaoPlano(p, investimentos, livre, selic?.valor)) })),
+      ),
+    [renda.mensal, gasto, movimentos, planos, investimentos, livre, selic?.valor],
+  );
+  const valorFatura = faturaAberta?.valor ?? 0;
 
   // Mantém o formulário na tela enquanto o "✓ Salvo" aparece.
   const [primeiro, setPrimeiro] = useState(false);
@@ -123,6 +135,64 @@ export default function Cartao() {
           </span>
         </section>
       )}
+
+      <h2 className="secao">Quanto gastar no cartão por mês</h2>
+      <section className="cartao" style={{ gap: 12 }}>
+        <p className="pequeno">
+          Para não atrasar os seus planos, o cartão precisa caber no que sobra da renda depois dos gastos fora do cartão e do que cada plano precisa guardar por mês.
+        </p>
+        <div className="coluna" style={{ gap: 4 }}>
+          <div className="entre pequeno"><span>Renda por mês</span><strong className="num" style={{ whiteSpace: 'nowrap' }}>{reais(teto.renda)}</strong></div>
+          <div className="entre pequeno"><span>Gastos fora do cartão (débito, Pix, dinheiro)</span><strong className="num" style={{ whiteSpace: 'nowrap' }}>− {reais(teto.foraDoCartao)}</strong></div>
+          {teto.cartaoTipico > 0 && <span className="mini suave">Nos últimos meses, você gastou em média {reais(teto.cartaoTipico)} por mês no cartão.</span>}
+        </div>
+        {planos.length === 0 ? (
+          <Link to="/planos/novo" className="pequeno" style={{ color: 'var(--terracota-texto)', fontWeight: 700 }}>Crie um plano com data desejada para ver o limite de gastos no cartão para chegar lá.</Link>
+        ) : (
+          <div className="lista">
+            {teto.porPlano.map((p) => (
+              <div key={p.id} className="item" style={{ cursor: 'default', alignItems: 'flex-start' }}>
+                <span className={`circulo ${p.teto <= 0 ? 'terracota' : 'manter'}`}><Icone nome="bandeira" /></span>
+                <span className="cresce coluna" style={{ gap: 3 }}>
+                  <strong>{p.nome}{p.prazo ? ` até ${mesLongo(p.prazo)} de ${p.prazo.slice(0, 4)}` : ''}</strong>
+                  <span className="pequeno suave">
+                    {p.prazo ? `Precisa guardar ${reais(p.precisaPorMes)} por mês para chegar no prazo.` : `Sem data desejada: conta o que você já separa (${reais(p.precisaPorMes)} por mês).`}
+                  </span>
+                  {p.teto > 0 ? (
+                    <span className="pequeno">
+                      Para chegar lá, gaste no máximo <strong>{reais(p.teto)} por mês</strong> no cartão.
+                      {valorFatura > p.teto ? <span style={{ color: 'var(--terracota-texto)', fontWeight: 700 }}> A fatura aberta ({reais(valorFatura)}) já passa disso.</span> : null}
+                    </span>
+                  ) : (
+                    <span className="pequeno" style={{ color: 'var(--terracota-texto)', fontWeight: 700 }}>
+                      Com os gastos de hoje, esse prazo não fecha nem sem usar o cartão: faltam {reais(-p.teto)} por mês. Corte gastos, aumente a renda ou ajuste a data no plano.
+                    </span>
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+        {planos.length > 1 && (
+          <div className={`cartao ${teto.todos.teto > 0 ? 'verde' : 'alerta-vermelho'}`} style={{ padding: 14, gap: 4 }}>
+            <span className="mini" style={{ opacity: 0.85 }}>Todos os planos juntos ({reais(teto.todos.precisa)} por mês)</span>
+            {teto.todos.teto > 0 ? (
+              <>
+                <strong>No cartão, até {reais(teto.todos.teto)} por mês</strong>
+                {(teto.cartaoTipico > teto.todos.teto || valorFatura > teto.todos.teto) && (
+                  <span className="mini">
+                    {valorFatura > teto.todos.teto ? `A fatura aberta (${reais(valorFatura)}) já passa disso. ` : ''}
+                    {teto.cartaoTipico > teto.todos.teto ? `Você tem gastado ${reais(teto.cartaoTipico)} por mês no cartão: para manter todos os planos no prazo, reduza ou ajuste as datas.` : ''}
+                  </span>
+                )}
+              </>
+            ) : (
+              <strong>Não fecha: faltam {reais(-teto.todos.teto)} por mês, mesmo sem cartão</strong>
+            )}
+          </div>
+        )}
+        <span className="mini suave">Os gastos fora do cartão são a média dos últimos 3 meses com registros (ou a estimativa que você deu no início). Marque "Crédito" nos gastos para a conta ficar certa.</span>
+      </section>
 
       <h2 className="secao">Faturas</h2>
       <div className="lista">
