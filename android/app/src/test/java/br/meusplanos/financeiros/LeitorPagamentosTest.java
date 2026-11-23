@@ -39,4 +39,19 @@ public class LeitorPagamentosTest {
         assertNull(LeitorPagamentos.ler("Dólar hoje", "Dólar comercial: compra R$ 5,43 e venda R$ 5,44"));
         assertNull(LeitorPagamentos.ler("Cotação", "Euro fecha a R$ 6,12"));
     }
+
+    @Test
+    public void formaDePagamento() {
+        assertEquals("credito", LeitorPagamentos.ler("Compra no crédito", "Compra no crédito de R$ 300,00 em LOJA X em 3x aprovada").forma);
+        assertEquals(3, LeitorPagamentos.ler("Compra no crédito", "Compra no crédito de R$ 300,00 em LOJA X em 3x aprovada").parcelas);
+        assertEquals("debito", LeitorPagamentos.ler("Compra no débito", "Compra no débito de R$ 23,50 em PADARIA aprovada").forma);
+        assertEquals("pix", LeitorPagamentos.ler("Pix enviado", "Você enviou um Pix de R$ 50,00 para Maria Silva").forma);
+        // Sem dizer: o app pergunta.
+        assertNull(LeitorPagamentos.ler("Compra aprovada", "Compra de R$ 89,90 aprovada no cartão final 4321").forma);
+        // Compra com o limite disponível no texto continua sendo compra.
+        assertEquals(45.0, LeitorPagamentos.ler("Compra aprovada", "Compra de R$ 45,00 aprovada em FARMACIA. Limite disponível R$ 955,00").valor, 0.001);
+        // Lembretes de fatura e de limite não são gastos.
+        assertNull(LeitorPagamentos.ler("Fatura", "Sua fatura de R$ 800,00 vence amanhã"));
+        assertNull(LeitorPagamentos.ler("Limite", "Seu limite disponível agora é R$ 2.000,00"));
+    }
 }

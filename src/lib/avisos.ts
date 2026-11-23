@@ -34,12 +34,12 @@ export async function avisar(titulo: string, texto: string, chave?: string) {
 
 /** Depois de registrar uma compra: avisa se o limite do cartão está quase no fim. */
 export async function conferirLimiteCartao() {
-  const { limiteDisponivel } = await import('./compras');
+  const { estadoCartao } = await import('./cartao');
   const perfil = await db.perfil.get('eu');
   if (!perfil?.limiteCartao) return;
-  const compras = await db.compras.toArray();
-  const livre = limiteDisponivel(perfil.limiteCartao, perfil.limiteUsado, perfil.limiteUsadoEm, compras) ?? 0;
-  const usado = 1 - livre / perfil.limiteCartao;
+  const e = estadoCartao(perfil, await db.compras.toArray(), await db.movimentos.toArray());
+  const livre = e.disponivel;
+  const usado = e.uso;
   if (usado >= 0.8)
     await avisar(
       'Limite do cartão quase no fim',

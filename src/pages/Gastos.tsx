@@ -3,7 +3,9 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icone, ICONE_CATEGORIA } from '../components/Icone';
 import { CampoDinheiro, Dinheiro, Folha, Segmentado } from '../components/Ui';
-import { db, type Movimento, type OrigemMov, type TipoMov } from '../db';
+import { db, type FormaPag, type Movimento, type OrigemMov, type TipoMov } from '../db';
+import { CampoForma } from '../components/FormaPagamento';
+import { conferirLimiteCartao } from '../lib/avisos';
 import { useDados } from '../hooks';
 import { categorizar, ehEssencial, NOMES_CATEGORIAS } from '../lib/categorias';
 import { analisarMes, type Status } from '../lib/feedback';
@@ -153,7 +155,9 @@ export default function Gastos() {
                       <span className="pequeno suave">
                         {m.categoria} · {m.origem === 'extrato' ? 'extrato' : hora(m.data)}
                         {m.avisadoPor ? ` · ${m.avisadoPor}` : ''}
+                        {m.forma === 'credito' ? ` · crédito${m.parcelaAtual && m.parcelas ? ` ${m.parcelaAtual}/${m.parcelas}` : m.parcelas && m.parcelas > 1 ? ` ${m.parcelas}x` : ''}` : m.forma ? ` · ${m.forma === 'debito' ? 'débito' : m.forma}` : ''}
                       </span>
+                      {m.formaPendente && <span className="mini" style={{ color: 'var(--terracota-texto)', fontWeight: 600 }}>Débito ou crédito? Toque para dizer</span>}
                     </span>
                     <span className="coluna" style={{ alignItems: 'flex-end', gap: 4 }}>
                       <strong className="num" style={{ color: m.tipo === 'entrada' ? 'var(--manter-tx)' : undefined }}>{m.tipo === 'entrada' ? '+' : ''}{reais(m.valor)}</strong>
@@ -183,6 +187,8 @@ export function FormMovimento({ mov, aoSalvar, origem = 'manual' }: { mov?: Part
   const [local, setLocal] = useState(mov?.local ?? '');
   const sugestoes = useLugaresRecentes(tipo);
   const [categoria, setCategoria] = useState(mov?.categoria ?? '');
+  const [forma, setForma] = useState<FormaPag | undefined>(mov?.forma);
+  const [parcelas, setParcelas] = useState<number | undefined>(mov?.parcelas);
   const agora = new Date();
   const paraCampo = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   const [quando, setQuando] = useState(paraCampo(mov?.data ? new Date(mov.data) : agora));
@@ -193,12 +199,14 @@ export function FormMovimento({ mov, aoSalvar, origem = 'manual' }: { mov?: Part
     const lugar = local.trim();
     const auto = categorizar(lugar, tipo);
     const cat = tipo === 'entrada' ? 'Entrada' : categoria || (mov?.categoria && mov.categoria !== 'Outros' && auto === 'Outros' ? mov.categoria : auto);
-    const dados = { data, valor, tipo, descricao: mov?.id && mov.descricao && mov.origem !== 'manual' ? mov.descricao : lugar, local: lugar, localPendente: false, categoria: cat };
+    const pagamento = tipo === 'saida' ? { forma, parcelas: forma === 'credito' && parcelas && parcelas > 1 ? parcelas : undefined, formaPendente: !forma && Boolean(mov?.formaPendente) } : { forma: undefined, parcelas: undefined, formaPendente: false };
+    const dados = { data, valor, tipo, descricao: mov?.id && mov.descricao && mov.origem !== 'manual' ? mov.descricao : lugar, local: lugar, localPendente: false, categoria: cat, ...pagamento };
     if (mov?.id) {
       await db.movimentos.update(mov.id, dados);
       if (mov.localPendente && mov.chave) lugarInformadoNoApp(mov.chave);
     }
     else await db.movimentos.add({ ...dados, origem, chave: `${chaveMovimento(data, valor, lugar, tipo)}-${Date.now()}` });
+    if (tipo === 'saida' && forma === 'credito') conferirLimiteCartao().catch(() => undefined);
     aoSalvar();
   }
 
@@ -216,6 +224,17 @@ export function FormMovimento({ mov, aoSalvar, origem = 'manual' }: { mov?: Part
           </select>
         </label>
       )}
+      {tipo === 'saida' && (
+        <CampoForma
+          forma={forma}
+          parcelas={parcelas}
+          aoMudar={(f, n) => {
+            setForma(f);
+            setParcelas(n);
+          }}
+        />
+      )}
+      {tipo === 'saida' && forma === 'credito' && (parcelas ?? 1) > 1 && valor ? <span className="mini suave">{parcelas}x de {reais(valor / parcelas!)} na fatura do cartão.</span> : null}
       <label className="campo">
         Data e hora
         <input type="datetime-local" value={quando} onChange={(e) => setQuando(e.target.value)} />

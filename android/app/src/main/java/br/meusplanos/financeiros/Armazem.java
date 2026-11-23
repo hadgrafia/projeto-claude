@@ -59,6 +59,8 @@ final class Armazem {
             o.put("valor", p.valor);
             o.put("tipo", p.tipo);
             if (p.local != null) o.put("local", p.local);
+            if (p.forma != null) o.put("forma", p.forma);
+            if (p.parcelas > 1) o.put("parcelas", p.parcelas);
             o.put("app", app);
             JSONArray a = itens(c);
             a.put(o);

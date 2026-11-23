@@ -26,6 +26,8 @@ const CAMINHOS: Record<string, string[]> = {
   tela: ['M3 5h18v14H3z', 'M10 9l5 3-5 3z'],
   etiqueta: ['M3 12V3h9l9 9-9 9z', 'M7.5 7.5h.01'],
   raio: ['M13 3 5 14h6l-1 7 8-11h-6z'],
+  cartao: ['M3 6h18v12H3z', 'M3 10h18', 'M7 15h4'],
+  calendario: ['M4 6h16v14H4z', 'M4 10h16', 'M8 3v4M16 3v4'],
   cofre: ['M4 6h16v13H4z', 'M12 15a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z', 'M7 19v2M17 19v2'],
   documento: ['M7 3h7l5 5v13H7z', 'M14 3v5h5M10 13h6M10 17h6'],
   lixo: ['M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3'],

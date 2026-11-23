@@ -1,12 +1,13 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Icone } from '../components/Icone';
 import { CampoDinheiro, Entra } from '../components/Ui';
 import { db, type Importancia } from '../db';
 import { situacaoPlano, useDados, useSelic } from '../hooks';
-import { compromissoDoMes, inicioParcelas, limiteDisponivel, parcelasNoMes, recomendar, saldoDevedor } from '../lib/compras';
+import { compromissoDoMes, contextoDeCompra, inicioParcelas, parcelasNoMes, recomendar, saldoDevedor } from '../lib/compras';
+import { estadoCartao } from '../lib/cartao';
 import { mesCurto, reais, reaisCurto, somarMeses } from '../lib/format';
 import { conferirLimiteCartao } from '../lib/avisos';
 
@@ -19,7 +20,7 @@ const IMPORTANCIAS: { valor: Importancia; rotulo: string; dica: string }[] = [
 /** Conselheiro de compras: antes de comprar, mostra se vale e como pagar. */
 export default function Compra() {
   const navegar = useNavigate();
-  const { perfil, planos, investimentos, livre, renda } = useDados();
+  const { perfil, planos, investimentos, livre, renda, movimentos } = useDados();
   const selic = useSelic();
   const compras = useLiveQuery(() => db.compras.toArray(), []) ?? [];
   const [descricao, setDescricao] = useState('');
@@ -34,17 +35,18 @@ export default function Compra() {
   const [salvo, setSalvo] = useState('');
 
   const aportePlanos = planos.reduce((a, p) => a + situacaoPlano(p, investimentos, livre, selic?.valor).meuAporte, 0);
-  const disponivel = limiteDisponivel(perfil?.limiteCartao, perfil?.limiteUsado, perfil?.limiteUsadoEm, compras);
+  const cartao = useMemo(() => estadoCartao(perfil, compras, movimentos), [perfil, compras, movimentos]);
+  const ctx = useMemo(() => contextoDeCompra({ perfil, compras, movimentos, renda: renda.mensal, livre, aportePlanos }), [perfil, compras, movimentos, renda.mensal, livre, aportePlanos]);
   const pronto = Boolean(descricao.trim() && importancia && valor && valor > 0);
   const rec = useMemo(
     () =>
       pronto
         ? recomendar(
             { valor: valor!, importancia: importancia!, maxSemJuros, comJuros: temJuros && jurosMes ? { parcelas: parcelasJuros, jurosMes } : undefined, descontoAVista: desconto, noCartao },
-            { renda: renda.mensal, livre, compromissoMensal: compromissoDoMes(compras), limiteDisponivel: disponivel, limiteTotal: perfil?.limiteCartao, aportePlanos },
+            ctx,
           )
         : undefined,
-    [pronto, valor, importancia, maxSemJuros, temJuros, jurosMes, parcelasJuros, desconto, noCartao, renda.mensal, livre, compras, disponivel, perfil?.limiteCartao, aportePlanos],
+    [pronto, valor, importancia, maxSemJuros, temJuros, jurosMes, parcelasJuros, desconto, noCartao, ctx],
   );
 
   async function registrar() {
@@ -57,7 +59,7 @@ export default function Compra() {
       juros: rec.juros,
       valorParcela: rec.valorParcela,
       noCartao,
-      inicio: inicioParcelas(noCartao),
+      inicio: inicioParcelas(noCartao, new Date(), perfil),
       criadaEm: new Date().toISOString(),
     });
     setSalvo(`Compra registrada: ${rec.parcelas}x de ${reais(rec.valorParcela)}.`);
@@ -82,6 +84,7 @@ export default function Compra() {
     navegar(`/planos/${id}`);
   }
 
+  const avulsas = cartao.parceladas.filter((i) => !i.chave.startsWith('c'));
   const ativas = compras.filter((c) => saldoDevedor(c) > 0).sort((a, b) => a.inicio.localeCompare(b.inicio));
   const proximoMes = somarMeses(new Date().toISOString().slice(0, 7), 1);
   const cor = rec?.decisao === 'adiar' || rec?.decisao === 'nao-cabe' ? 'terracota' : rec?.decisao === 'com-juros' ? 'areia' : 'verde';
@@ -165,11 +168,17 @@ export default function Compra() {
             </label>
           </div>
         )}
-        {perfil?.limiteCartao ? (
-          <span className="mini suave">Limite do cartão disponível: {reaisCurto(disponivel ?? 0)} de {reaisCurto(perfil.limiteCartao)}. Atualize em Ajustes.</span>
+        {noCartao && (cartao.limite ? (
+          <Link to="/cartao" className="cartao areia" style={{ gap: 4, textDecoration: 'none', color: 'inherit', padding: 12 }}>
+            <span className="mini suave">Seu cartão agora</span>
+            <span className="pequeno">
+              Fatura aberta: <strong>{reaisCurto(ctx.faturaAtual ?? 0)}</strong> · Limite livre: <strong>{reaisCurto(cartao.disponivel)}</strong> de {reaisCurto(cartao.limite)}
+            </span>
+            <span className="mini suave">A recomendação já considera a fatura e o limite. Toque para ver o cartão.</span>
+          </Link>
         ) : (
-          <span className="mini suave">Informe o limite do seu cartão em Ajustes para o app avisar antes de estourar.</span>
-        )}
+          <Link to="/cartao" className="mini suave">Informe o limite do seu cartão para o app olhar a fatura antes de dizer se dá para comprar.</Link>
+        ))}
       </section>
 
       <AnimatePresence mode="wait">
@@ -201,7 +210,21 @@ export default function Compra() {
       {salvo && <p className="cartao manter pequeno" role="status">{salvo}</p>}
 
       <h2 className="secao">Compras parceladas</h2>
-      {ativas.length === 0 && <p className="vazio">Nenhuma parcela em aberto.</p>}
+      {ativas.length === 0 && avulsas.length === 0 && <p className="vazio">Nenhuma parcela em aberto.</p>}
+      {avulsas.length > 0 && (
+        <div className="lista">
+          {avulsas.map((i) => (
+            <Link key={i.chave} to="/cartao" className="item" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <span className="circulo rever"><Icone nome="cartao" /></span>
+              <span className="cresce coluna" style={{ gap: 2 }}>
+                <strong>{i.descricao}</strong>
+                <span className="pequeno suave">{i.parcelas}x de {reais(i.valorParcela)} no cartão · até {mesCurto(somarMeses(i.inicio, i.parcelas - 1))}</span>
+              </span>
+              <strong className="num">{reaisCurto(i.valorParcela)}</strong>
+            </Link>
+          ))}
+        </div>
+      )}
       {ativas.length > 0 && (
         <div className="lista">
           {ativas.map((c, i) => (

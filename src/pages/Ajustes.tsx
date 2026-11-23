@@ -222,6 +222,15 @@ export default function Ajustes() {
         </div>
       </section>
 
+      <Link to="/cartao" className="cartao cartao-link" style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <span className="circulo terracota"><Icone nome="cartao" /></span>
+        <span className="cresce coluna" style={{ gap: 2 }}>
+          <strong>Cartão de crédito</strong>
+          <span className="pequeno suave">Limite, faturas, parcelas e dias de fechamento e vencimento.</span>
+        </span>
+        <Icone nome="direita" />
+      </Link>
+
       <Link to="/assinaturas" className="cartao cartao-link" style={{ flexDirection: 'row', alignItems: 'center' }}>
         <span className="avatar-agente" style={{ width: 40, height: 40, background: '#C08A3E', fontSize: 17 }}>L</span>
         <span className="cresce coluna" style={{ gap: 2 }}>

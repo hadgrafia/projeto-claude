@@ -20,11 +20,19 @@ public final class LeitorPagamentos {
         public final double valor;
         public final String tipo; // "saida" ou "entrada"
         public final String local; // null quando não deu para descobrir
+        public final String forma; // "credito", "debito", "pix", "boleto" ou null (o app pergunta)
+        public final int parcelas; // 0 quando não informado
 
         Pagamento(double valor, String tipo, String local) {
+            this(valor, tipo, local, null, 0);
+        }
+
+        Pagamento(double valor, String tipo, String local, String forma, int parcelas) {
             this.valor = valor;
             this.tipo = tipo;
             this.local = local;
+            this.forma = forma;
+            this.parcelas = parcelas;
         }
     }
 
@@ -38,9 +46,22 @@ public final class LeitorPagamentos {
         "compra", "pagamento", "pago", "paga", "enviad[oa]", "d[eé]bito", "transfer[eê]ncia (realizada|enviada)",
         "saque", "aprovad[ao]", "voc[eê] (pagou|transferiu|enviou)", "pix (enviado|realizado)", "fatura");
     private static final Pattern[] IGNORAR = compilar(
-        "limite dispon[ií]vel", "c[oó]digo de (verifica|seguran)", "token", "senha", "oferta", "promo", "cashback dispon",
+        "c[oó]digo de (verifica|seguran)", "token", "senha", "oferta", "promo", "cashback dispon",
+        // Lembretes da fatura não são gastos (as compras já entram uma a uma).
+        "fatura (fechou|fechada|vence|venceu|est[aá] (dispon|fechada|aberta)|dispon[ií]vel|do m[eê]s)", "vence (hoje|amanh)",
         // Cotações e mercado: não são pagamentos (ex.: aviso diário do dólar).
         "cota[cç][aã]o", "\\bd[oó]lar(es)?\\b", "\\beuro(s)?\\b", "bitcoin", "\\bbtc\\b", "ibovespa", "c[aâ]mbio", "bolsa de valores", "a[cç][aã]o (subiu|caiu)", "fechou em (alta|queda)");
+    /** Aviso só sobre o limite ("seu limite disponível aumentou"). "Compra aprovada… limite disponível" é compra. */
+    private static final Pattern SO_LIMITE = Pattern.compile("limite (dispon[ií]vel|do cart[aã]o)", F);
+    private static final Pattern TEM_PAGAMENTO = Pattern.compile("compra|aprovad|pagamento|pago|d[eé]bito|pix", F);
+    // Forma de pagamento (mesma lógica de formaDoTexto em src/lib/cartao.ts).
+    private static final Pattern CREDITO_CONTA = Pattern.compile("cr[eé]dito em conta|cr[eé]dito recebido", F);
+    private static final Pattern PAGA_FATURA = Pattern.compile("pagamento (da|de) fatura|fatura paga", F);
+    private static final Pattern CREDITO = Pattern.compile("\\bcr[eé]dito\\b", F);
+    private static final Pattern DEBITO = Pattern.compile("\\bd[eé]bito\\b", F);
+    private static final Pattern PIX = Pattern.compile("\\bpix\\b|\\bted\\b|\\bdoc\\b|transfer[eê]ncia", F);
+    private static final Pattern BOLETO = Pattern.compile("\\bboleto\\b", F);
+    private static final Pattern VEZES = Pattern.compile("\\b(?:em\\s+)?(\\d{1,2})\\s?x\\b|\\bem\\s+(\\d{1,2})\\s+(?:vezes|parcelas)\\b", F);
     private static final Pattern VOCE_PAGOU = Pattern.compile("voc[eê] (pagou|transferiu|enviou)", F);
 
     private static final String FIM =
@@ -84,6 +105,7 @@ public final class LeitorPagamentos {
     public static Pagamento ler(CharSequence titulo, CharSequence texto) {
         String completo = ((titulo == null ? "" : titulo) + " " + (texto == null ? "" : texto)).trim().replaceAll("\\s+", " ");
         if (completo.isEmpty() || algum(IGNORAR, completo)) return null;
+        if (SO_LIMITE.matcher(completo).find() && !TEM_PAGAMENTO.matcher(completo).find()) return null;
         Matcher m = VALOR.matcher(completo);
         if (!m.find()) return null;
         double valor;
@@ -97,7 +119,23 @@ public final class LeitorPagamentos {
         boolean saida = algum(SAIDA, completo);
         if (!entrada && !saida) return null;
         String tipo = entrada && !VOCE_PAGOU.matcher(completo).find() ? "entrada" : "saida";
-        return new Pagamento(valor, tipo, extrairLocal(completo, tipo));
+        if (!"saida".equals(tipo)) return new Pagamento(valor, tipo, extrairLocal(completo, tipo));
+        String forma = null;
+        if (CREDITO_CONTA.matcher(completo).find()) forma = null;
+        else if (PAGA_FATURA.matcher(completo).find()) forma = "debito";
+        else if (CREDITO.matcher(completo).find()) forma = "credito";
+        else if (DEBITO.matcher(completo).find()) forma = "debito";
+        else if (PIX.matcher(completo).find()) forma = "pix";
+        else if (BOLETO.matcher(completo).find()) forma = "boleto";
+        int parcelas = 0;
+        Matcher v = VEZES.matcher(completo);
+        if (v.find()) {
+            int n = Integer.parseInt(v.group(1) != null ? v.group(1) : v.group(2));
+            if (n >= 2 && n <= 48) parcelas = n;
+        }
+        if (forma == null && parcelas > 0) forma = "credito";
+        if (!"credito".equals(forma)) parcelas = 0;
+        return new Pagamento(valor, tipo, extrairLocal(completo, tipo), forma, parcelas);
     }
 
     static String extrairLocal(String texto, String tipo) {

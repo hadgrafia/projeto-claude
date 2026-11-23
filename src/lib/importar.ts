@@ -1,5 +1,6 @@
 import Papa from 'papaparse';
-import type { Movimento, TipoMov } from '../db';
+import type { Movimento, Perfil, TipoMov } from '../db';
+import { formaDoTexto, mesDaFatura } from './cartao';
 import { categorizar } from './categorias';
 import { lerValor } from './format';
 import { localDoExtrato } from './lugar';
@@ -153,4 +154,50 @@ export async function lerArquivoExtrato(arquivo: File): Promise<NovoMovimento[]>
   const texto = await arquivo.text();
   if (nome.endsWith('.ofx') || /<OFX>/i.test(texto)) return lerOFX(texto);
   return lerCSV(texto);
+}
+
+/** De onde veio o arquivo: extrato da conta (débito, Pix…), fatura do cartão (crédito) ou não se sabe. */
+export type TipoArquivo = 'conta' | 'fatura' | 'misto';
+
+const PAGAMENTO_FATURA = /pagamento (recebido|de fatura|da fatura|efetuado)|pagto\.? (fatura|recebido)|^pagamento$|cr[eé]dito de pagamento/i;
+
+/**
+ * Marca a forma de pagamento de cada lançamento lido.
+ *  - Extrato da conta: o que o texto disser (Pix, boleto…) ou débito.
+ *  - Fatura do cartão: tudo no crédito, com "PARC 03/10" lido como parcela 3 de 10.
+ *    Pagamentos da própria fatura são tirados (já aparecem no extrato da conta).
+ *  - Não sei: o que o texto disser; se não disser, o app pergunta depois.
+ */
+export function aplicarTipoArquivo(lidos: NovoMovimento[], tipo: TipoArquivo, perfil?: Perfil, faturaMes?: string): NovoMovimento[] {
+  if (tipo === 'fatura') {
+    // Em faturas, as compras costumam vir positivas (CSV) ou negativas (OFX): a maioria são compras.
+    const positivos = lidos.filter((l) => l.tipo === 'entrada').length;
+    const inverter = positivos > lidos.length / 2;
+    const ultima = lidos.reduce((a, l) => (l.data > a ? l.data : a), '');
+    const mes = faturaMes ?? (ultima ? mesDaFatura(new Date(ultima), perfil?.cartaoFechamento, perfil?.cartaoVencimento) : undefined);
+    return lidos
+      .filter((l) => !PAGAMENTO_FATURA.test(l.descricao))
+      .map((l) => {
+        const tipoMov: TipoMov = inverter ? (l.tipo === 'entrada' ? 'saida' : 'entrada') : l.tipo;
+        if (tipoMov === 'entrada') return { ...l, tipo: tipoMov, categoria: 'Entrada', chave: chaveMovimento(l.data, l.valor, l.descricao, tipoMov) };
+        const f = formaDoTexto(l.descricao);
+        return {
+          ...l,
+          tipo: tipoMov,
+          categoria: inverter ? categorizar(l.descricao, 'saida') : l.categoria,
+          chave: chaveMovimento(l.data, l.valor, l.descricao, tipoMov),
+          forma: 'credito' as const,
+          formaPendente: false,
+          ...(f.parcelas ? { parcelas: f.parcelas } : {}),
+          ...(f.parcelaAtual ? { parcelaAtual: f.parcelaAtual } : {}),
+          ...(mes ? { faturaMes: mes } : {}),
+        };
+      });
+  }
+  return lidos.map((l) => {
+    if (l.tipo !== 'saida') return l;
+    const f = formaDoTexto(l.descricao);
+    if (tipo === 'conta') return { ...l, forma: f.forma && f.forma !== 'credito' ? f.forma : 'debito', formaPendente: false };
+    return { ...l, forma: f.forma, ...(f.parcelas ? { parcelas: f.parcelas } : {}), formaPendente: !f.forma };
+  });
 }

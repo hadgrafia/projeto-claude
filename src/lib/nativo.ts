@@ -16,6 +16,9 @@ interface Capturado {
   tipo: 'saida' | 'entrada';
   local?: string;
   app: string;
+  /** Débito ou crédito, quando o aviso disse (versões antigas do APK não mandam). */
+  forma?: 'credito' | 'debito' | 'pix' | 'boleto';
+  parcelas?: number;
 }
 
 interface LeitorNotificacoes {
@@ -84,6 +87,7 @@ export async function sincronizar() {
       local,
       localPendente: !local,
       detalhePendente: i.tipo === 'saida' && i.valor >= aviso,
+      ...(i.tipo === 'saida' ? { forma: i.forma, parcelas: i.forma === 'credito' && i.parcelas && i.parcelas > 1 ? i.parcelas : undefined, formaPendente: !i.forma } : {}),
       avisadoPor: i.app,
       categoria: categorizar(local ?? '', i.tipo),
       origem: 'notificacao' as const,

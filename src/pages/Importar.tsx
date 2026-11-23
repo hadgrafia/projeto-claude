@@ -2,18 +2,22 @@ import { useEffect, useState } from 'react';
 import { pegarArquivoParaImportar } from '../lib/compartilhar';
 import { useNavigate } from 'react-router-dom';
 import { Icone } from '../components/Icone';
-import { Entra } from '../components/Ui';
+import { Entra, Segmentado } from '../components/Ui';
 import { db, type Movimento } from '../db';
+import { itensCartao } from '../lib/cartao';
 import { conciliar } from '../lib/conciliar';
 import { NOMES_CATEGORIAS } from '../lib/categorias';
-import { dataCurta, reais } from '../lib/format';
-import { lerArquivoExtrato, type NovoMovimento } from '../lib/importar';
+import { dataCurta, mesLongo, reais, somarMeses, chaveMes } from '../lib/format';
+import { aplicarTipoArquivo, lerArquivoExtrato, type NovoMovimento, type TipoArquivo } from '../lib/importar';
 
 export default function Importar() {
   const navegar = useNavigate();
   const [itens, setItens] = useState<(NovoMovimento & { ok: boolean; repetido: boolean; igual?: Movimento; exato?: boolean })[]>([]);
   const [estado, setEstado] = useState<'' | 'lendo' | 'erro' | 'pronto'>('');
   const [msg, setMsg] = useState('');
+  const [tipoArq, setTipoArq] = useState<TipoArquivo>('conta');
+  const [faturaMes, setFaturaMes] = useState<string>();
+  const [arquivo, setArquivo] = useState<File>();
 
   // Extrato que chegou por "Compartilhar" no app do banco.
   useEffect(() => {
@@ -22,16 +26,33 @@ export default function Importar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function ler(arquivo: File) {
+  // Mudou o tipo do arquivo (conta, fatura) ou o mês da fatura: lê de novo.
+  useEffect(() => {
+    if (arquivo) ler(arquivo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipoArq, faturaMes]);
+
+  async function ler(arq: File) {
+    setArquivo(arq);
     setEstado('lendo');
     try {
-      const lidos = await lerArquivoExtrato(arquivo);
+      const perfil = await db.perfil.get('eu');
+      const lidos = aplicarTipoArquivo(await lerArquivoExtrato(arq), tipoArq, perfil, faturaMes);
+      // Fatura: parcela 2, 3… de uma compra que o app já acompanha não entra de novo.
+      const noCartao = tipoArq === 'fatura' ? itensCartao(perfil, await db.compras.toArray(), await db.movimentos.toArray()) : [];
+      const parcelaConhecida = (l: NovoMovimento) =>
+        Boolean(l.parcelaAtual && l.parcelaAtual > 1 && noCartao.some((i) => i.parcelas === l.parcelas && Math.abs(i.valorParcela - l.valor) <= Math.max(0.05, l.valor * 0.02)));
       // Compara com o que já foi registrado (avisos do banco, comprovantes, à mão, extratos anteriores).
       const datas = lidos.map((l) => new Date(l.data).getTime());
       const de = new Date(Math.min(...datas) - 4 * 864e5).toISOString();
       const ate = new Date(Math.max(...datas) + 4 * 864e5).toISOString();
       const existentes = lidos.length ? await db.movimentos.where('data').between(de, ate, true, true).toArray() : [];
-      setItens(conciliar(lidos, existentes).map(({ item, igual, exato }) => ({ ...item, igual, exato, repetido: Boolean(igual), ok: !igual })));
+      setItens(
+        conciliar(lidos, existentes).map(({ item, igual, exato }) => {
+          const conhecida = !igual && parcelaConhecida(item);
+          return { ...item, igual, exato, repetido: Boolean(igual) || conhecida, ok: !igual && !conhecida };
+        }),
+      );
       setEstado('pronto');
       setMsg(lidos.length ? '' : 'Não encontrei lançamentos neste arquivo. Tente o formato OFX ou CSV, que todo banco exporta.');
     } catch {
@@ -49,6 +70,10 @@ export default function Importar() {
     for (const i of itens) {
       if (!i.ok && i.igual?.id && i.igual.localPendente && i.local?.trim()) {
         await db.movimentos.update(i.igual.id, { local: i.local.trim(), descricao: i.local.trim(), localPendente: false });
+      }
+      // O aviso não disse se foi débito ou crédito, mas o extrato/fatura diz.
+      if (!i.ok && i.igual?.id && i.igual.formaPendente && i.forma) {
+        await db.movimentos.update(i.igual.id, { forma: i.forma, parcelas: i.parcelas, formaPendente: false });
       }
     }
     navegar('/gastos');
@@ -70,6 +95,36 @@ export default function Importar() {
         </div>
       </div>
       <p className="subtitulo">Aceita PDF, OFX e CSV. OFX e CSV são os mais precisos; PDF depende do layout de cada banco, então confira a lista antes de salvar.</p>
+
+      <Segmentado
+        rotulo="Que arquivo é este?"
+        valor={tipoArq}
+        aoMudar={setTipoArq}
+        opcoes={[
+          { valor: 'conta', rotulo: 'Extrato da conta' },
+          { valor: 'fatura', rotulo: 'Fatura do cartão' },
+          { valor: 'misto', rotulo: 'Não sei' },
+        ]}
+      />
+      <span className="mini suave">
+        {tipoArq === 'conta'
+          ? 'Gastos da conta entram como débito, Pix ou boleto.'
+          : tipoArq === 'fatura'
+            ? 'Tudo entra no crédito e no limite do cartão. "PARC 03/10" é lido como parcela 3 de 10. O pagamento da fatura fica de fora (ele já está no extrato da conta).'
+            : 'O que o arquivo não disser se foi no débito ou no crédito, o app pergunta depois.'}
+      </span>
+      {tipoArq === 'fatura' && (
+        <label className="campo">
+          Esta fatura vence em
+          <select value={faturaMes ?? ''} onChange={(e) => setFaturaMes(e.target.value || undefined)}>
+            <option value="">Descobrir pelas datas</option>
+            {[-1, 0, 1, 2].map((k) => {
+              const m = somarMeses(chaveMes(new Date()), k);
+              return <option key={m} value={m}>{mesLongo(m)} de {m.slice(0, 4)}</option>;
+            })}
+          </select>
+        </label>
+      )}
 
       <label className="botao seta" style={{ cursor: 'pointer' }}>
         {estado === 'lendo' ? 'Lendo arquivo…' : 'Escolher arquivo do extrato'}
@@ -105,6 +160,10 @@ export default function Importar() {
                       style={{ border: 0, borderBottom: `1px dashed ${m.local ? 'transparent' : 'var(--terracota-texto)'}`, background: 'transparent', fontWeight: 700, fontSize: 14, padding: '2px 0', width: '100%' }}
                     />
                     {m.local !== m.descricao && <span className="mini suave" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.descricao}</span>}
+                    {m.repetido && !m.igual && <span className="mini" style={{ fontWeight: 600 }}>✓ Parcela {m.parcelaAtual}/{m.parcelas} de uma compra que o app já acompanha.</span>}
+                    {m.tipo === 'saida' && m.forma === 'credito' && m.parcelas && m.parcelas > 1 && !m.repetido && (
+                      <span className="mini suave">Crédito · {m.parcelaAtual ? `parcela ${m.parcelaAtual} de ${m.parcelas}` : `${m.parcelas}x`}</span>
+                    )}
                     {m.igual && (
                       <span className="mini" style={{ color: 'var(--verde-texto, var(--texto))', fontWeight: 600 }}>
                         ✓ Já registrado {origemTexto(m.igual)}{m.igual.local ? ` (${m.igual.local}, ${dataCurta(m.igual.data)})` : ` em ${dataCurta(m.igual.data)}`}

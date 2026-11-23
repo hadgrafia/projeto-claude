@@ -309,3 +309,7 @@ h1, h2, h3, p { margin: 0; }
 .grade-servicos { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; max-height: 340px; overflow-y: auto; padding: 2px; }
 .servico { display: grid; justify-items: center; gap: 6px; text-align: center; background: var(--card); border: 1px solid var(--borda); border-radius: 18px; padding: 10px 6px; cursor: pointer; color: var(--texto); line-height: 1.2; }
 .servico:active { transform: scale(0.96); }
+
+/* Alerta em vermelho (cartão: limite acima da renda, fatura que passa da renda). */
+.cartao.alerta-vermelho { background: #B3261E; color: #fff; border: 0; }
+.cartao.alerta-vermelho .suave, .cartao.alerta-vermelho .mini { color: rgba(255, 255, 255, 0.88); }

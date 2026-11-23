@@ -8,7 +8,9 @@ import { db, type Importancia, type TipoInvestimento, type TipoMov } from '../db
 import { acharPlano, AGENTES, baixar, gastoDoTexto, TELAS, impostoDoAno, perguntar, planilhaDoMes, prepararAnexo, resumoDoMes, type Acao, type IdAgente } from '../lib/agentes';
 import { selicVista } from '../lib/agentesAvisos';
 import { categorizar, NOMES_CATEGORIAS } from '../lib/categorias';
-import { compromissoDoMes, limiteDisponivel, recomendar } from '../lib/compras';
+import { contextoDeCompra, recomendar } from '../lib/compras';
+import { NOMES_FORMA } from '../lib/cartao';
+import { conferirLimiteCartao } from '../lib/avisos';
 import { jaRegistrado } from '../lib/conciliar';
 import { chaveMes, dataCurta, mesLongo, reais } from '../lib/format';
 import { chaveMovimento } from '../lib/importar';
@@ -246,12 +248,16 @@ function CartaoAcao({ acao, feita, aoFazer, equipe }: { acao: Acao; feita?: bool
     const categoria = tipo === 'entrada' ? 'Entrada' : acao.categoria && NOMES_CATEGORIAS.includes(acao.categoria) ? acao.categoria : categorizar(local, tipo);
     const data = acao.data && /^\d{4}-\d{2}-\d{2}$/.test(acao.data) ? new Date(`${acao.data}T12:00:00`).toISOString() : new Date().toISOString();
     const igual = jaRegistrado({ valor: acao.valor, tipo, data, local }, equipe.movimentos);
+    const forma = tipo === 'saida' ? (['credito', 'debito', 'pix', 'dinheiro', 'boleto'] as const).find((f) => f === acao.forma) : undefined;
+    const parcelas = forma === 'credito' && acao.parcelas && acao.parcelas > 1 ? Math.min(48, Math.round(acao.parcelas)) : undefined;
     return (
       <div className="acao">
         <span className="pequeno">
           {tipo === 'saida' ? 'Gasto' : 'Entrada'} de <strong>{reais(acao.valor)}</strong>
           {local ? <> em <strong>{local}</strong></> : ''} · {categoria} · {dataCurta(data)}
+          {forma ? ` · ${NOMES_FORMA[forma]}${parcelas ? ` em ${parcelas}x` : ''}` : ''}
         </span>
+        {tipo === 'saida' && !forma && !feita && <span className="mini suave">Depois de registrar, o app pergunta se foi no débito ou no crédito.</span>}
         {igual && !feita && <span className="mini">Parece já registrado: {reais(igual.valor)}{igual.local ? ` em ${igual.local}` : ''} ({dataCurta(igual.data)}).</span>}
         {feita ? (
           <span className="mini">✓ Registrado</span>
@@ -261,13 +267,25 @@ function CartaoAcao({ acao, feita, aoFazer, equipe }: { acao: Acao; feita?: bool
               type="button"
               className="botao pequeno"
               onClick={async () => {
-                await db.movimentos.add({ data, valor: acao.valor!, tipo, descricao: local || (tipo === 'saida' ? 'Gasto' : 'Entrada'), local: local || undefined, localPendente: !local, categoria, origem: 'manual', chave: `${chaveMovimento(data, acao.valor!, local, tipo)}-${Date.now()}` });
+                await db.movimentos.add({
+                  data,
+                  valor: acao.valor!,
+                  tipo,
+                  descricao: local || (tipo === 'saida' ? 'Gasto' : 'Entrada'),
+                  local: local || undefined,
+                  localPendente: !local,
+                  categoria,
+                  origem: 'manual',
+                  chave: `${chaveMovimento(data, acao.valor!, local, tipo)}-${Date.now()}`,
+                  ...(tipo === 'saida' ? { forma, parcelas, formaPendente: !forma } : {}),
+                });
+                if (forma === 'credito') conferirLimiteCartao().catch(() => undefined);
                 aoFazer();
               }}
             >
               {igual ? 'Registrar mesmo assim' : 'Registrar'}
             </button>
-            <button type="button" className="botao secundario pequeno" onClick={() => navegar(`/lancar?valor=${acao.valor}&local=${encodeURIComponent(local)}&tipo=${tipo}`)}>Editar</button>
+            <button type="button" className="botao secundario pequeno" onClick={() => navegar(`/lancar?valor=${acao.valor}&local=${encodeURIComponent(local)}&tipo=${tipo}${forma ? `&forma=${forma}` : ''}${parcelas ? `&parcelas=${parcelas}` : ''}`)}>Editar</button>
           </div>
         )}
       </div>
@@ -279,14 +297,7 @@ function CartaoAcao({ acao, feita, aoFazer, equipe }: { acao: Acao; feita?: bool
     const aportePlanos = equipe.planos.reduce((a, p) => a + situacaoPlano(p, equipe.investimentos, equipe.livre, equipe.selic).meuAporte, 0);
     const rec = recomendar(
       { valor: acao.valor, importancia, maxSemJuros: Math.max(1, acao.maxSemJuros ?? 1), noCartao: acao.noCartao ?? true },
-      {
-        renda: equipe.renda.mensal,
-        livre: equipe.livre,
-        compromissoMensal: compromissoDoMes(equipe.compras),
-        limiteDisponivel: limiteDisponivel(equipe.perfil?.limiteCartao, equipe.perfil?.limiteUsado, equipe.perfil?.limiteUsadoEm, equipe.compras),
-        limiteTotal: equipe.perfil?.limiteCartao,
-        aportePlanos,
-      },
+      contextoDeCompra({ perfil: equipe.perfil, compras: equipe.compras, movimentos: equipe.movimentos, renda: equipe.renda.mensal, livre: equipe.livre, aportePlanos }),
     );
     return (
       <div className="acao">
@@ -398,20 +409,28 @@ function CartaoAcao({ acao, feita, aoFazer, equipe }: { acao: Acao; feita?: bool
     );
   }
 
-  if (acao.tipo === 'cartao' && (acao.limite || acao.usado != null)) {
+  const diaOk = (d?: number | null) => (d && d >= 1 && d <= 31 ? Math.round(d) : undefined);
+  if (acao.tipo === 'cartao' && (acao.limite || acao.usado != null || diaOk(acao.fechamento) || diaOk(acao.vencimento))) {
+    const partes = [
+      acao.limite ? `limite ${reais(acao.limite)}` : '',
+      acao.usado != null ? `usado ${reais(acao.usado)}` : '',
+      diaOk(acao.fechamento) ? `fecha dia ${diaOk(acao.fechamento)}` : '',
+      diaOk(acao.vencimento) ? `vence dia ${diaOk(acao.vencimento)}` : '',
+    ].filter(Boolean);
     return (
       <div className="acao">
-        <span className="pequeno">
-          Cartão: {acao.limite ? <>limite <strong>{reais(acao.limite)}</strong></> : ''}
-          {acao.limite && acao.usado != null ? ' · ' : ''}
-          {acao.usado != null ? <>usado <strong>{reais(acao.usado)}</strong></> : ''}
-        </span>
+        <span className="pequeno">Cartão: <strong>{partes.join(' · ')}</strong></span>
         {feitoOu(
           <button
             type="button"
             className="botao pequeno"
             onClick={async () => {
-              await db.perfil.update('eu', { ...(acao.limite ? { limiteCartao: acao.limite } : {}), ...(acao.usado != null ? { limiteUsado: acao.usado, limiteUsadoEm: new Date().toISOString() } : {}) });
+              await db.perfil.update('eu', {
+                ...(acao.limite ? { limiteCartao: acao.limite } : {}),
+                ...(acao.usado != null ? { limiteUsado: acao.usado, limiteUsadoEm: new Date().toISOString() } : {}),
+                ...(diaOk(acao.fechamento) ? { cartaoFechamento: diaOk(acao.fechamento) } : {}),
+                ...(diaOk(acao.vencimento) ? { cartaoVencimento: diaOk(acao.vencimento) } : {}),
+              });
               aoFazer();
             }}
           >

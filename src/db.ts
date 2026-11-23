@@ -29,6 +29,9 @@ export interface Perfil {
   /** Cartão de crédito: limite total e quanto já está usado (informado pela pessoa). */
   limiteCartao?: number;
   limiteUsado?: number;
+  /** Dia do mês em que a fatura fecha e em que vence (opcionais; sem eles, a compra cai na fatura do mês seguinte). */
+  cartaoFechamento?: number;
+  cartaoVencimento?: number;
   limiteUsadoEm?: string;
   /** Contato para avisos do app. */
   email?: string;
@@ -93,6 +96,8 @@ export interface Conjunto {
 export type TipoMov = 'saida' | 'entrada';
 export type OrigemMov = 'manual' | 'extrato' | 'notificacao';
 
+export type FormaPag = 'debito' | 'credito' | 'pix' | 'dinheiro' | 'boleto';
+
 export interface Movimento {
   id?: number;
   /** ISO completo (data e hora). Qualquer dia e horário é aceito. */
@@ -108,6 +113,16 @@ export interface Movimento {
   detalhePendente?: boolean;
   /** App ou banco que avisou (só o nome do app, nunca o texto da notificação). */
   avisadoPor?: string;
+  /** Como foi pago (só nos gastos). Crédito entra na fatura e desconta do limite do cartão. */
+  forma?: FormaPag;
+  /** Crédito parcelado: em quantas vezes (o valor é o total da compra, salvo quando há parcelaAtual). */
+  parcelas?: number;
+  /** Lido de uma fatura: esta linha é a parcela N (o valor já é o da parcela). */
+  parcelaAtual?: number;
+  /** Lido de uma fatura: mês (AAAA-MM) em que essa fatura vence. */
+  faturaMes?: string;
+  /** true quando o aviso ou o extrato não disse se foi débito ou crédito: o app pergunta. */
+  formaPendente?: boolean;
   categoria: string;
   origem: OrigemMov;
   /** Assinatura para evitar duplicados ao importar o mesmo extrato duas vezes. */

@@ -1,6 +1,7 @@
 import type { Compra, Investimento, Movimento, Perfil, Plano } from '../db';
 import { NOMES_CATEGORIAS } from './categorias';
-import { compromissoDoMes, limiteDisponivel } from './compras';
+import { compromissoDoMes } from './compras';
+import { alertasCartao, estadoCartao, NOMES_FORMA } from './cartao';
 import { analisarMes } from './feedback';
 import { chaveMes, mesLongo, reais } from './format';
 import { cdiDaSelic, recomendar as recomendarInvest } from './invest';
@@ -12,7 +13,7 @@ export const AGENTES: Record<IdAgente, { nome: string; papel: string; cor: strin
   nina: { nome: 'Nina', papel: 'Gastos, resumos e Imposto de Renda', cor: '#B4552D', exemplo: 'Gastei 25 no sorvete da Borelli' },
   gabriela: { nome: 'Gabriela', papel: 'Planos e metas', cor: '#3B4A3A', exemplo: 'Quero juntar para a casa nova em 2028' },
   matheus: { nome: 'Matheus', papel: 'Investimentos', cor: '#5F7A5A', exemplo: 'Onde guardo o dinheiro da Casa Nova?' },
-  leo: { nome: 'Leo', papel: 'Antes de comprar', cor: '#8F4A2B', exemplo: 'Posso comprar um celular de R$ 2.000?' },
+  leo: { nome: 'Leo', papel: 'Compras e cartão', cor: '#8F4A2B', exemplo: 'Como está a fatura do meu cartão?' },
   lari: { nome: 'Lari', papel: 'Assinaturas e cobranças', cor: '#C08A3E', exemplo: 'Quanto gasto com assinaturas?' },
 };
 
@@ -64,7 +65,7 @@ export function montarContexto(d: {
     perfilInvestidor: d.perfil?.perfilRisco,
     categoriasPossiveis: NOMES_CATEGORIAS,
     gastosPorMes: meses.map(([k, v]) => ({ mes: k, saidas: Math.round(v.saidas), entradas: Math.round(v.entradas), porCategoria: v.categorias })),
-    ultimosLancamentos: d.movimentos.slice(0, 60).map((m) => ({ data: m.data.slice(0, 10), tipo: m.tipo, valor: m.valor, lugar: m.local ?? m.descricao, categoria: m.categoria })),
+    ultimosLancamentos: d.movimentos.slice(0, 60).map((m) => ({ data: m.data.slice(0, 10), tipo: m.tipo, valor: m.valor, lugar: m.local ?? m.descricao, categoria: m.categoria, ...(m.forma ? { forma: NOMES_FORMA[m.forma] } : {}), ...(m.parcelas && m.parcelas > 1 ? { parcelas: m.parcelas } : {}) })),
     sugestoesDoMes: analisarMes(d.movimentos, d.renda).map((s) => ({ categoria: s.categoria, status: s.status, economiaPossivelMes: Math.round(s.ganhoMensal), explicacao: s.texto })),
     planos: d.planos.map((p) => {
       const s = d.situacoes.get(p.id!);
@@ -83,14 +84,40 @@ export function montarContexto(d: {
     investimentos: d.investimentos.map((i) => ({ nome: i.nome, tipo: i.tipo, saldo: Math.round(i.saldo), plano: d.planos.find((p) => p.id === i.planoId)?.nome })),
     selicAnual: d.selic,
     cdiAnual: cdi,
-    cartao: d.perfil?.limiteCartao
-      ? { limite: d.perfil.limiteCartao, disponivel: Math.round(limiteDisponivel(d.perfil.limiteCartao, d.perfil.limiteUsado, d.perfil.limiteUsadoEm, d.compras) ?? 0) }
-      : undefined,
+    cartao: resumoCartao(d),
     parcelasNesteMes: Math.round(compromissoDoMes(d.compras, mes)),
     comprasParceladas: d.compras.slice(-20).map((c) => ({ descricao: c.descricao, valor: c.valor, parcelas: c.parcelas, valorParcela: Math.round(c.valorParcela), inicio: c.inicio, noCartao: c.noCartao })),
     valorParaAvisoDeCompra: d.perfil?.limiteAvisoCompra ?? 100,
     assinaturas: (d.perfil?.assinaturas ?? []).map((a) => ({ nome: a.nome, valor: a.valor, ciclo: a.ciclo, diaCobranca: a.dia, mesCobranca: a.mes, proxima: proximaCobranca(a).toISOString().slice(0, 10) })),
     assinaturasPorMes: Math.round(totalMensal(d.perfil?.assinaturas ?? []) * 100) / 100,
+  };
+}
+
+/** Cartão de crédito para o Leo: limite, fatura, parcelas e alertas, já calculados aqui no aparelho. */
+function resumoCartao(d: { perfil?: Perfil; compras: Compra[]; movimentos: Movimento[]; investimentos: Investimento[]; renda: number }) {
+  const e = estadoCartao(d.perfil, d.compras, d.movimentos);
+  if (!e.limite && !e.itens.length) return undefined;
+  const investido = d.investimentos.reduce((a, i) => a + i.saldo, 0);
+  const al = alertasCartao(e, d.renda, investido);
+  const r = (v: number) => Math.round(v * 100) / 100;
+  return {
+    limite: e.limite || undefined,
+    limiteUsado: r(e.usado),
+    limiteDisponivel: r(e.disponivel),
+    porcentoUsado: Math.round(e.uso * 100),
+    diaFechamento: d.perfil?.cartaoFechamento,
+    diaVencimento: d.perfil?.cartaoVencimento,
+    faturaAberta: e.aberta,
+    faturas: e.faturas.map((f) => ({ venceEm: f.mes, valor: r(f.valor) })),
+    tetoRecomendadoFatura: r(al.usoSeguroMes),
+    faturaAlta: al.faturaAlta,
+    faturaPassaDaRenda: al.tirariaDosInvestimentos > 0,
+    tirariaDosInvestimentos: r(al.tirariaDosInvestimentos),
+    nemInvestimentosCobrem: al.semCobertura,
+    limiteMaiorQueRenda: al.limiteAcimaDaRenda,
+    limiteMaiorQueRendaMaisInvestimentos: al.limiteAcimaDeTudo,
+    comprasNoCredito: e.itens.slice(0, 25).map((i) => ({ descricao: i.descricao, data: i.data.slice(0, 10), total: r(i.valor), parcelas: i.parcelas, valorParcela: r(i.valorParcela), primeiraFatura: i.inicio })),
+    gastosSemFormaDePagamento: d.movimentos.filter((m) => m.formaPendente).length,
   };
 }
 
@@ -196,6 +223,10 @@ export interface Acao {
   plano?: string | null;
   limite?: number | null;
   usado?: number | null;
+  fechamento?: number | null;
+  vencimento?: number | null;
+  forma?: string | null;
+  parcelas?: number | null;
   tela?: string | null;
   ciclo?: string | null;
   dia?: number | null;
@@ -280,4 +311,5 @@ export const TELAS: Record<string, { rota: string; nome: string }> = {
   antes_de_comprar: { rota: '/compra', nome: 'Antes de comprar' },
   ajustes: { rota: '/ajustes', nome: 'Ajustes' },
   assinaturas: { rota: '/assinaturas', nome: 'Assinaturas' },
+  cartao: { rota: '/cartao', nome: 'Cartão' },
 };

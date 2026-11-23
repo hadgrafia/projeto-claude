@@ -3,6 +3,7 @@ import { categorizar } from './categorias';
 import { lerValor } from './format';
 import { chaveMovimento } from './importar';
 import { extrairLocal } from './lugar';
+import { formaDoTexto } from './cartao';
 
 /**
  * Lê o TEXTO de uma notificação (de qualquer banco ou app de pagamento) e tenta
@@ -20,17 +21,22 @@ const SAIDA = [
   /saque/i, /aprovad[ao]/i, /voc[eê] (pagou|transferiu|enviou)/i, /pix (enviado|realizado)/i, /fatura/i,
 ];
 const IGNORAR = [
-  /limite dispon[ií]vel/i, /c[oó]digo de (verifica|seguran)/i, /token/i, /senha/i, /oferta/i, /promo/i, /cashback dispon/i,
+  /c[oó]digo de (verifica|seguran)/i, /token/i, /senha/i, /oferta/i, /promo/i, /cashback dispon/i,
+  // Lembretes da fatura não são gastos (as compras já entram uma a uma).
+  /fatura (fechou|fechada|vence|venceu|est[aá] (dispon|fechada|aberta)|dispon[ií]vel|do m[eê]s)/i, /vence (hoje|amanh)/i,
   // Cotações e mercado: não são pagamentos (ex.: aviso diário do dólar).
   /cota[cç][aã]o/i, /\bd[oó]lar(es)?\b/i, /\beuro(s)?\b/i, /bitcoin/i, /\bbtc\b/i, /ibovespa/i, /c[aâ]mbio/i, /bolsa de valores/i, /a[cç][aã]o (subiu|caiu)/i, /fechou em (alta|queda)/i,
 ];
 
+/** Aviso só sobre o limite (ex.: "seu limite disponível aumentou"). "Compra aprovada… limite disponível R$ X" é compra. */
+const SO_LIMITE = (t: string) => /limite (dispon[ií]vel|do cart[aã]o)/i.test(t) && !/compra|aprovad|pagamento|pago|d[eé]bito|pix/i.test(t);
+
 /** Avisos que nunca são pagamento (códigos, ofertas, cotação do dólar etc.). */
-export const avisoIgnoravel = (texto: string) => IGNORAR.some((r) => r.test(texto));
+export const avisoIgnoravel = (texto: string) => SO_LIMITE(texto) || IGNORAR.some((r) => r.test(texto));
 
 export function lerNotificacao(app: string, titulo: string, texto: string, quando = new Date()): Omit<Movimento, 'id'> | null {
   const completo = `${titulo} ${texto}`.trim();
-  if (IGNORAR.some((r) => r.test(completo))) return null;
+  if (avisoIgnoravel(completo)) return null;
   const m = completo.match(VALOR);
   if (!m) return null;
   const valor = lerValor(m[1]);
@@ -45,7 +51,10 @@ export function lerNotificacao(app: string, titulo: string, texto: string, quand
   const local = extrairLocal(completo, tipo);
   const descricao = local ?? (tipo === 'entrada' ? 'Entrada' : 'Gasto');
   const data = quando.toISOString();
+  // Débito ou crédito? Se o aviso não disser, o app pergunta (e em quantas vezes).
+  const forma = tipo === 'saida' ? formaDoTexto(completo) : {};
   return {
+    ...(tipo === 'saida' ? { forma: forma.forma, parcelas: forma.parcelas, formaPendente: !forma.forma } : {}),
     data,
     valor,
     tipo,

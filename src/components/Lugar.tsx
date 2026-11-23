@@ -9,6 +9,7 @@ import { hora, reais } from '../lib/format';
 import { lugarInformadoNoApp } from '../lib/nativo';
 import { Icone } from './Icone';
 import { CampoDinheiro, Folha } from './Ui';
+import { FormForma } from './FormaPagamento';
 
 /** Lugares mais usados, para sugerir com um toque. */
 export function useLugaresRecentes(tipo: TipoMov = 'saida') {
@@ -54,17 +55,20 @@ export function CampoLugar({ tipo, valor, aoMudar, sugestoes, autoFoco }: { tipo
  * Aparece sozinha assim que o app abre ou recebe um gasto novo; um de cada vez.
  */
 export function PerguntaLocal() {
-  const pendentes = useLiveQuery(async () => (await db.movimentos.orderBy('data').reverse().toArray()).filter((m) => m.localPendente || m.detalhePendente), []) ?? [];
+  const pendentes = useLiveQuery(async () => (await db.movimentos.orderBy('data').reverse().toArray()).filter((m) => m.localPendente || m.formaPendente || m.detalhePendente), []) ?? [];
   const [adiados, setAdiados] = useState<Set<number>>(new Set());
   const atual = pendentes.find((m) => !adiados.has(m.id!));
   return (
     <Folha
       aberta={!!atual}
       aoFechar={() => atual && setAdiados(new Set(adiados).add(atual.id!))}
-      titulo={atual?.localPendente ? (atual.tipo === 'entrada' ? 'De onde veio este dinheiro?' : 'Onde foi este gasto?') : 'Conte sobre esta compra'}
+      titulo={atual?.localPendente ? (atual.tipo === 'entrada' ? 'De onde veio este dinheiro?' : 'Onde foi este gasto?') : atual?.formaPendente ? 'Débito ou crédito?' : 'Conte sobre esta compra'}
     >
       {atual?.localPendente && <FormLocal key={atual.id} mov={atual} restantes={pendentes.length - 1} aoAdiar={() => setAdiados(new Set(adiados).add(atual.id!))} />}
-      {atual && !atual.localPendente && atual.detalhePendente && (
+      {atual && !atual.localPendente && atual.formaPendente && (
+        <FormForma key={`f${atual.id}`} mov={atual} restantes={pendentes.length - 1} aoAdiar={() => setAdiados(new Set(adiados).add(atual.id!))} />
+      )}
+      {atual && !atual.localPendente && !atual.formaPendente && atual.detalhePendente && (
         <FormDetalheCompra key={`d${atual.id}`} mov={atual} aoAdiar={() => setAdiados(new Set(adiados).add(atual.id!))} />
       )}
     </Folha>
@@ -111,9 +115,9 @@ function FormLocal({ mov, restantes, aoAdiar }: { mov: Movimento; restantes: num
 function FormDetalheCompra({ mov, aoAdiar }: { mov: Movimento; aoAdiar: () => void }) {
   const [descricao, setDescricao] = useState(mov.local ?? '');
   const [importancia, setImportancia] = useState<Importancia>();
-  const [parcelas, setParcelas] = useState(1);
+  const [parcelas, setParcelas] = useState(mov.parcelas ?? 1);
   const [juros, setJuros] = useState<number>();
-  const [noCartao, setNoCartao] = useState(true);
+  const [noCartao, setNoCartao] = useState(mov.forma ? mov.forma === 'credito' : true);
   const [total, setTotal] = useState<number | undefined>(mov.valor);
   const ok = Boolean(descricao.trim() && importancia && total);
 
@@ -121,6 +125,7 @@ function FormDetalheCompra({ mov, aoAdiar }: { mov: Movimento; aoAdiar: () => vo
     if (!ok) return;
     const i = (juros ?? 0) / 100;
     const valorParcela = parcelas > 1 ? (i > 0 ? (total! * i) / (1 - Math.pow(1 + i, -parcelas)) : total! / parcelas) : total!;
+    const perfil = await db.perfil.get('eu');
     await db.transaction('rw', db.compras, db.movimentos, async () => {
       await db.compras.add({
         descricao: descricao.trim(),
@@ -130,11 +135,11 @@ function FormDetalheCompra({ mov, aoAdiar }: { mov: Movimento; aoAdiar: () => vo
         juros: juros ?? 0,
         valorParcela,
         noCartao,
-        inicio: inicioParcelas(noCartao, new Date(mov.data)),
+        inicio: inicioParcelas(noCartao, new Date(mov.data), perfil),
         movimentoChave: mov.chave,
         criadaEm: new Date().toISOString(),
       });
-      await db.movimentos.update(mov.id!, { detalhePendente: false });
+      await db.movimentos.update(mov.id!, { detalhePendente: false, forma: noCartao ? 'credito' : mov.forma === 'credito' ? undefined : mov.forma, parcelas: noCartao && parcelas > 1 ? parcelas : undefined });
     });
     if (noCartao) conferirLimiteCartao().catch(() => undefined);
   }

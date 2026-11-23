@@ -7,6 +7,7 @@ import { Instalar } from '../components/Instalar';
 import { PainelAgentes } from '../components/Equipe';
 import { CartaoEscolherApps } from '../components/AppsPagamento';
 import { CartaoAssinaturas } from '../components/Assinaturas';
+import { ResumoCartao } from '../components/CartaoCredito';
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
@@ -65,6 +66,7 @@ export default function Inicio() {
 
       <CartaoEscolherApps perfil={perfil} />
       <CartaoAssinaturas perfil={perfil} />
+      <ResumoCartao perfil={perfil} movimentos={movimentos} investimentos={investimentos} renda={renda.mensal} />
       <Instalar compacto />
       <PainelAgentes compacto />
 

@@ -4,15 +4,32 @@ import { pedirPermissaoAvisos } from '../lib/avisos';
 import { CampoDinheiro } from './Ui';
 
 /** Cartão de crédito e valor a partir do qual o app pergunta sobre a compra. */
-export function AjustesCartao({ perfil, aoSalvar }: { perfil: Perfil; aoSalvar: (msg: string) => void }) {
+export function AjustesCartao({ perfil, aoSalvar, titulo = 'Cartão e compras' }: { perfil: Perfil; aoSalvar: (msg: string) => void; titulo?: string }) {
   const [limite, setLimite] = useState<number | undefined>(perfil.limiteCartao);
   const [usado, setUsado] = useState<number | undefined>(perfil.limiteUsado);
   const [aviso, setAviso] = useState<number | undefined>(perfil.limiteAvisoCompra ?? 100);
+  const [fecha, setFecha] = useState(perfil.cartaoFechamento ? String(perfil.cartaoFechamento) : '');
+  const [vence, setVence] = useState(perfil.cartaoVencimento ? String(perfil.cartaoVencimento) : '');
+  const dia = (v: string) => {
+    const n = Math.floor(Number(v));
+    return n >= 1 && n <= 31 ? n : undefined;
+  };
   return (
     <section className="cartao">
-      <h2 style={{ fontSize: 15, fontWeight: 800 }}>Cartão e compras</h2>
+      <h2 style={{ fontSize: 15, fontWeight: 800 }}>{titulo}</h2>
       <CampoDinheiro rotulo="Limite total do cartão de crédito" valor={limite} aoMudar={setLimite} dica="Tem mais de um cartão? Some os limites." />
       <CampoDinheiro rotulo="Quanto do limite já está usado hoje" valor={usado} aoMudar={setUsado} dica="Veja no app do seu banco (fatura atual + parcelas futuras). Atualize de vez em quando." />
+      <div className="grade-2">
+        <label className="campo">
+          Fatura fecha no dia
+          <input inputMode="numeric" value={fecha} onChange={(e) => setFecha(e.target.value.replace(/\D/g, '').slice(0, 2))} placeholder="Ex.: 3" />
+        </label>
+        <label className="campo">
+          Vence no dia
+          <input inputMode="numeric" value={vence} onChange={(e) => setVence(e.target.value.replace(/\D/g, '').slice(0, 2))} placeholder="Ex.: 10" />
+        </label>
+      </div>
+      <span className="mini suave">Com esses dias, o app sabe em qual fatura cada compra cai. Sem eles, a compra entra na fatura do mês seguinte.</span>
       <CampoDinheiro rotulo="Perguntar sobre compras a partir de" valor={aviso} aoMudar={setAviso} dica="O app pede a finalidade e o parcelamento das compras acima deste valor." />
       {perfil.limiteUsadoEm && <span className="mini suave">Uso do limite informado em {new Date(perfil.limiteUsadoEm).toLocaleDateString('pt-BR')}.</span>}
       <button
@@ -24,6 +41,8 @@ export function AjustesCartao({ perfil, aoSalvar }: { perfil: Perfil; aoSalvar: 
             limiteUsado: usado,
             limiteUsadoEm: usado !== perfil.limiteUsado || !perfil.limiteUsadoEm ? new Date().toISOString() : perfil.limiteUsadoEm,
             limiteAvisoCompra: aviso && aviso > 0 ? aviso : 100,
+            cartaoFechamento: dia(fecha),
+            cartaoVencimento: dia(vence),
           });
           aoSalvar('Cartão e compras salvos.');
         }}

@@ -98,7 +98,7 @@ export default function Lancar() {
       )}
       <section className="cartao">
         <FormMovimento
-          mov={lido ? { valor: lido.valor, local: lido.local, tipo: lido.tipo, categoria: lido.tipo === 'saida' ? lido.categoria : '' } : undefined}
+          mov={lido ? { valor: lido.valor, local: lido.local, tipo: lido.tipo, categoria: lido.tipo === 'saida' ? lido.categoria : '', forma: lido.forma, parcelas: lido.parcelas } : undefined}
           origem="notificacao"
           aoSalvar={() => navegar('/gastos', { replace: true })}
         />

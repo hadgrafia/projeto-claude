@@ -1,8 +1,8 @@
 import type { IdAgente, Situacao } from './agentes';
-import type { Compra, Movimento, Perfil, Plano } from '../db';
+import type { Compra, Investimento, Movimento, Perfil, Plano } from '../db';
 import { lerCache, salvarCache } from '../db';
 import { avisar } from './avisos';
-import { limiteDisponivel } from './compras';
+import { alertasCartao, estadoCartao } from './cartao';
 import { analisarMes } from './feedback';
 import { mesCurto, reais } from './format';
 import { diasAte, proximaCobranca } from './assinaturas';
@@ -16,7 +16,7 @@ export interface Destaque {
 }
 
 /** O que cada agente tem a dizer agora, calculado aqui no aparelho. */
-export function destaques(d: { perfil?: Perfil; planos: Plano[]; movimentos: Movimento[]; compras: Compra[]; renda: number; selic?: number; situacoes: Map<number, Situacao> }): Destaque[] {
+export function destaques(d: { perfil?: Perfil; planos: Plano[]; movimentos: Movimento[]; compras: Compra[]; investimentos?: Investimento[]; renda: number; selic?: number; situacoes: Map<number, Situacao> }): Destaque[] {
   const lista: Destaque[] = [];
   const hoje = new Date().toISOString().slice(0, 10);
   // Lari: cobranças de assinaturas nos próximos 3 dias.
@@ -31,13 +31,27 @@ export function destaques(d: { perfil?: Perfil; planos: Plano[]; movimentos: Mov
         chave: `lari-${a.id}-${quando.toISOString().slice(0, 10)}`,
       });
   }
-  // Leo: cartão quase no fim.
-  if (d.perfil?.limiteCartao) {
-    const livre = limiteDisponivel(d.perfil.limiteCartao, d.perfil.limiteUsado, d.perfil.limiteUsadoEm, d.compras) ?? 0;
-    const usado = 1 - livre / d.perfil.limiteCartao;
-    if (usado >= 0.8)
-      lista.push({ agente: 'leo', texto: `O cartão está com ${Math.round(usado * 100)}% do limite usado (restam ${reais(livre)}). Melhor segurar novas compras no cartão até a fatura baixar.`, link: '/compra', chave: `leo-cartao-${hoje}` });
+  // Leo: cartão de crédito (fatura alta, limite quase no fim, perguntas de débito ou crédito).
+  const cartao = estadoCartao(d.perfil, d.compras, d.movimentos);
+  if (cartao.limite || cartao.itens.length) {
+    const investido = (d.investimentos ?? []).reduce((a, i) => a + i.saldo, 0);
+    const al = alertasCartao(cartao, d.renda, investido);
+    if (al.faturaAlta)
+      lista.push({
+        agente: 'leo',
+        texto:
+          al.tirariaDosInvestimentos > 0
+            ? `Fatura alta: ${reais(al.fatura)}, mais do que a sua renda. ${al.semCobertura ? 'Nem os investimentos cobrem: pare de usar o cartão e fale com o banco antes do vencimento.' : `Para pagar inteira, sairiam ${reais(al.tirariaDosInvestimentos)} dos investimentos.`} Nunca pague só o mínimo.`
+            : `Fatura alta: ${reais(al.fatura)} (${d.renda > 0 ? Math.round((al.fatura / d.renda) * 100) : 100}% da renda; o recomendado é até 30%). Segure as compras no crédito até ela baixar.`,
+        link: '/cartao',
+        chave: `leo-fatura-${cartao.aberta}-${Math.round(al.fatura / 100)}`,
+      });
+    if (cartao.limite && cartao.uso >= 0.8)
+      lista.push({ agente: 'leo', texto: `O cartão está com ${Math.round(cartao.uso * 100)}% do limite usado (restam ${reais(cartao.disponivel)}). Melhor segurar novas compras no cartão até a fatura baixar.`, link: '/cartao', chave: `leo-cartao-${hoje}` });
   }
+  const semForma = d.movimentos.filter((m) => m.formaPendente).length;
+  if (semForma)
+    lista.push({ agente: 'leo', texto: `${semForma === 1 ? 'Um gasto chegou' : `${semForma} gastos chegaram`} sem dizer se foi no débito ou no crédito. Responda para a fatura e o limite ficarem certos.`, link: '/gastos', chave: `leo-forma-${hoje}-${semForma}` });
   // Gabriela: plano que não chega no prazo desejado.
   for (const p of d.planos) {
     const s = d.situacoes.get(p.id!);

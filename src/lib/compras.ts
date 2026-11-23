@@ -1,5 +1,6 @@
-import type { Compra, Importancia } from '../db';
-import { chaveMes, mesesEntre, somarMeses } from './format';
+import type { Compra, Importancia, Movimento, Perfil } from '../db';
+import { estadoCartao, mesDaFatura, parcelaNaFatura } from './cartao';
+import { chaveMes, mesesEntre } from './format';
 import { parcelaPrice } from './finance';
 
 /**
@@ -24,6 +25,8 @@ export interface Contexto {
   limiteTotal?: number;
   /** Soma do que vai para os planos por mês (para estimar o atraso). */
   aportePlanos: number;
+  /** Fatura do cartão em que a compra cairia (já registrada, sem esta compra). */
+  faturaAtual?: number;
 }
 
 export interface Pedido {
@@ -84,7 +87,50 @@ export function limiteDisponivel(limite: number | undefined, usado: number | und
   return Math.max(0, limite - (usado ?? 0) - depois);
 }
 
+/** Monta o contexto do conselheiro com o cartão (limite, fatura) e as parcelas já assumidas. */
+export function contextoDeCompra(d: { perfil?: Perfil; compras: Compra[]; movimentos: Movimento[]; renda: number; livre: number; aportePlanos: number }): Contexto {
+  const e = estadoCartao(d.perfil, d.compras, d.movimentos);
+  const mes = chaveMes(new Date());
+  // Gastos no crédito parcelado que não viraram "compra": as parcelas deste mês também ocupam o orçamento.
+  const parcelasAvulsas = e.itens.filter((i) => !i.chave.startsWith('c') && i.parcelas > 1).reduce((a, i) => a + parcelaNaFatura(i, mes), 0);
+  return {
+    renda: d.renda,
+    livre: d.livre,
+    compromissoMensal: compromissoDoMes(d.compras, mes) + parcelasAvulsas,
+    limiteDisponivel: e.limite ? e.disponivel : undefined,
+    limiteTotal: e.limite || undefined,
+    aportePlanos: d.aportePlanos,
+    faturaAtual: e.faturas.find((f) => f.mes === e.aberta)?.valor ?? 0,
+  };
+}
+
 export function recomendar(p: Pedido, ctx: Contexto): Recomendacao {
+  const r = recomendarBase(p, ctx);
+  if (!p.noCartao || ctx.faturaAtual === undefined || r.decisao === 'adiar') return r;
+  // Olha a fatura: a 1ª parcela entra nela. Se a fatura passar da renda, não dá para pagar sem dívida.
+  const nova = ctx.faturaAtual + r.valorParcela;
+  if (ctx.renda > 0 && nova > ctx.renda) {
+    const mensal = Math.max(r.espacoMensal, ctx.livre * 0.2, 1);
+    const meses = Math.ceil(p.valor / mensal);
+    return {
+      ...r,
+      decisao: 'nao-cabe',
+      titulo: 'Não dá para comprar agora no cartão',
+      explicacao: [
+        `Sua fatura já está em ${r$(ctx.faturaAtual)}. Com esta compra iria para ${r$(nova)}, mais do que a sua renda do mês (${r$(ctx.renda)}).`,
+        'Pagar só parte da fatura gera juros altos (rotativo) e pode sujar o seu nome.',
+        `Juntando ${r$(mensal)}/mês, dá para comprar à vista em ${meses} ${meses === 1 ? 'mês' : 'meses'}.`,
+      ],
+      mesesParaJuntar: meses,
+    };
+  }
+  if (ctx.renda > 0 && nova > ctx.renda * 0.3)
+    r.alertas.push(`A fatura do cartão ficaria em ${r$(nova)} (${Math.round((nova / ctx.renda) * 100)}% da sua renda). O recomendado é até 30%: evite outras compras no crédito até ela baixar.`);
+  else r.alertas.push(`A fatura do cartão ficaria em ${r$(nova)}, dentro do recomendado (até 30% da renda).`);
+  return r;
+}
+
+function recomendarBase(p: Pedido, ctx: Contexto): Recomendacao {
   const espacoMensal = Math.max(0, Math.min(ctx.livre * 0.3, ctx.renda * 0.15) - ctx.compromissoMensal);
   const alertas: string[] = [];
   const atraso = (total: number) => (ctx.aportePlanos > 0 ? Math.ceil(total / ctx.aportePlanos) : 0);
@@ -198,5 +244,6 @@ export function recomendar(p: Pedido, ctx: Contexto): Recomendacao {
   };
 }
 
-/** Mês da primeira parcela: o mês que vem para cartão (fatura), este mês para os outros. */
-export const inicioParcelas = (noCartao: boolean, hoje = new Date()) => (noCartao ? somarMeses(chaveMes(hoje), 1) : chaveMes(hoje));
+/** Mês da primeira parcela: a fatura onde a compra cai (cartão), este mês para os outros. */
+export const inicioParcelas = (noCartao: boolean, hoje = new Date(), perfil?: Pick<Perfil, 'cartaoFechamento' | 'cartaoVencimento'>) =>
+  noCartao ? mesDaFatura(hoje, perfil?.cartaoFechamento, perfil?.cartaoVencimento) : chaveMes(hoje);

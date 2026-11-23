@@ -1,4 +1,5 @@
-import type { TipoMov } from '../db';
+import type { FormaPag, TipoMov } from '../db';
+import { formaDoTexto } from './cartao';
 import { categorizar } from './categorias';
 import { lerValor } from './format';
 import { extrairLocal, limparLocal, ehLocalValido } from './lugar';
@@ -17,6 +18,8 @@ export interface Lido {
   tipo: TipoMov;
   categoria: string;
   origemTexto?: string;
+  forma?: FormaPag;
+  parcelas?: number;
 }
 
 const VALOR = /R\$\s?-?\s?(\d{1,3}(?:\.\d{3})*(?:,\d{2})|\d+(?:,\d{2})?)/i;
@@ -45,7 +48,8 @@ export function lerComprovante(texto: string): Lido | null {
     if (achado && ehLocalValido(limparLocal(achado))) local = limparLocal(achado);
   }
   local ??= extrairLocal(t.replace(/\n/g, ' '), tipo);
-  return { valor, local, tipo, categoria: categorizar(`${local ?? ''} ${t}`, tipo) };
+  const f = tipo === 'saida' ? formaDoTexto(t) : {};
+  return { valor, local, tipo, categoria: categorizar(`${local ?? ''} ${t}`, tipo), forma: f.forma, parcelas: f.parcelas };
 }
 
 /** Lê o que veio no link (texto de notificação, ou valor e lugar prontos). */
@@ -56,7 +60,7 @@ export function lerParametros(p: URLSearchParams): Lido | null {
   if (texto || titulo) {
     if (avisoIgnoravel(`${titulo} ${texto}`)) return null;
     const n = lerNotificacao(app || 'Automação', titulo, texto);
-    if (n) return { valor: n.valor, local: n.local, tipo: n.tipo, categoria: n.categoria, origemTexto: app || undefined };
+    if (n) return { valor: n.valor, local: n.local, tipo: n.tipo, categoria: n.categoria, origemTexto: app || undefined, forma: n.forma, parcelas: n.parcelas };
     const c = lerComprovante(`${titulo}\n${texto}`);
     if (c) return { ...c, origemTexto: app || undefined };
     return null;
@@ -66,7 +70,11 @@ export function lerParametros(p: URLSearchParams): Lido | null {
   const local = localBruto && ehLocalValido(limparLocal(localBruto)) ? limparLocal(localBruto) : undefined;
   if (!valor && !local) return null;
   const tipo: TipoMov = p.get('tipo') === 'entrada' ? 'entrada' : 'saida';
-  return { valor: valor ? Math.abs(valor) : undefined, local, tipo, categoria: categorizar(local ?? '', tipo), origemTexto: (p.get('origem') ?? '').slice(0, 40) || undefined };
+  const formaP = p.get('forma') ?? '';
+  const forma = (['credito', 'debito', 'pix', 'dinheiro', 'boleto'] as const).find((f) => f === formaP);
+  const parcelasP = Number(p.get('parcelas'));
+  return {
+    ...(tipo === 'saida' && forma ? { forma, parcelas: forma === 'credito' && parcelasP >= 2 && parcelasP <= 48 ? Math.floor(parcelasP) : undefined } : {}), valor: valor ? Math.abs(valor) : undefined, local, tipo, categoria: categorizar(local ?? '', tipo), origemTexto: (p.get('origem') ?? '').slice(0, 40) || undefined };
 }
 
 /** O que foi compartilhado com o app (guardado pelo service worker por um instante). */
