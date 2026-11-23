@@ -60,7 +60,7 @@ export function montarContexto(d: {
   const cdi = d.selic ? cdiDaSelic(d.selic) : undefined;
   return {
     hoje: hoje.toISOString().slice(0, 10),
-    nome: d.perfil?.nome,
+    // Sem nome, e-mail ou qualquer dado que identifique a pessoa: a IA recebe só os números.
     rendaMensal: Math.round(d.renda),
     gastoMensalTipico: Math.round(d.gasto),
     livrePorMesParaPlanos: Math.round(d.livre),

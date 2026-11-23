@@ -1,3 +1,4 @@
+import { cifrar, decifrar } from '../cripto';
 import { json, quemEsta, type Env } from '../tipos';
 
 /**
@@ -9,29 +10,6 @@ import { json, quemEsta, type Env } from '../tipos';
  */
 const PARTE = 900_000;
 const MAX = 7_000_000;
-
-const b64 = (b: ArrayBuffer | Uint8Array) => {
-  const u = b instanceof Uint8Array ? b : new Uint8Array(b);
-  let s = '';
-  for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000));
-  return btoa(s);
-};
-const deB64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
-
-async function chave(env: Env) {
-  if (!env.DADOS_CHAVE) throw new Error('DADOS_CHAVE não configurada');
-  return crypto.subtle.importKey('raw', deB64(env.DADOS_CHAVE), 'AES-GCM', false, ['encrypt', 'decrypt']);
-}
-async function cifrar(env: Env, texto: string, email: string) {
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: new TextEncoder().encode(email) }, await chave(env), new TextEncoder().encode(texto));
-  return `${b64(iv)}.${b64(ct)}`;
-}
-async function decifrar(env: Env, blob: string, email: string) {
-  const [iv, ct] = blob.split('.');
-  const claro = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: deB64(iv), additionalData: new TextEncoder().encode(email) }, await chave(env), deB64(ct));
-  return new TextDecoder().decode(claro);
-}
 
 export const onRequest: PagesFunction<Env> = async ({ request, env, data }) => {
   const email = quemEsta(data);

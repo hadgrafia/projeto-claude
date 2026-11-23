@@ -66,11 +66,20 @@ fEntrar.addEventListener('submit', async (ev) => {
   const email = fEntrar.email.value.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return avisar(fEntrar, 'Digite um e-mail válido.');
   if (!fEntrar.senha.value) return avisar(fEntrar, 'Digite sua senha.');
+  const pedeCodigo = !$('#passo-codigo').hidden;
+  const codigo = fEntrar.codigo.value.trim();
+  if (pedeCodigo && !codigo) return avisar(fEntrar, 'Digite o código do app autenticador.');
   const botao = fEntrar.querySelector('[type=submit]');
   botao.disabled = true;
   avisar(fEntrar, 'Entrando…', '');
   try {
-    await enviar('/api/conta/entrar', { email, senha: fEntrar.senha.value });
+    const r = await enviar('/api/conta/entrar', { email, senha: fEntrar.senha.value, ...(pedeCodigo ? { codigo } : {}) });
+    if (r.precisaCodigo) {
+      // Verificação em duas etapas: a senha está certa, falta o código do app autenticador.
+      $('#passo-codigo').hidden = false;
+      fEntrar.codigo.focus();
+      return avisar(fEntrar, 'Senha certa. Agora digite o código do app autenticador.', '');
+    }
     avisar(fEntrar, 'Tudo certo!', 'ok');
     irParaApp();
   } catch (e) {

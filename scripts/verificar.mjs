@@ -30,6 +30,10 @@ const rotulos = {
   convitesPessoais: 'Convites pessoais (link para criar conta)',
   contas: 'Contas (e-mail e senha)',
   copiaDasContas: 'Cópia cifrada das contas (dados em qualquer aparelho)',
+  protecaoDaConta: 'Proteção da conta (duas etapas e aparelhos conectados)',
+  apiProtegida: 'Dados só com login',
+  outrosSitesBarrados: 'Pedidos de outros sites recusados',
+  robosDeIaBarrados: 'Robôs de IA barrados',
   paginaInicial: 'Página inicial',
   paginaEntrar: 'Página Entrar',
   appProtegido: 'App só abre com login',
@@ -52,8 +56,21 @@ for (const [nome, caminho, esperado] of [
     r[nome] = `sem resposta (${e.cause?.code ?? e.message})`;
   }
 }
+// Proteções: sem login a API não entrega dados, pedidos de outros sites são recusados e robôs de IA são barrados.
+async function conferir(nome, fazer, esperado) {
+  try {
+    const resp = await fazer();
+    r[nome] = resp.status === esperado ? 'ok' : `respondeu ${resp.status} (esperado ${esperado})`;
+  } catch (e) {
+    r[nome] = `sem resposta (${e.cause?.code ?? e.message})`;
+  }
+}
+await conferir('apiProtegida', () => fetch(`${URL_APP}/api/dados`, { redirect: 'manual' }), 401);
+await conferir('outrosSitesBarrados', () => fetch(`${URL_APP}/api/conta/entrar`, { method: 'POST', headers: { Origin: 'https://site-estranho.example', 'Content-Type': 'application/json' }, body: '{}' }), 403);
+await conferir('robosDeIaBarrados', () => fetch(`${URL_APP}/`, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; GPTBot/1.2; +https://openai.com/gptbot)' } }), 403);
+
 // Itens que, se falharem, fazem o robô voltar para a versão anterior (o site não pode ficar quebrado).
-const CRITICOS = ['banco', 'exigeLogin', 'convitesPessoais', 'contas', 'copiaDasContas', 'paginaInicial', 'paginaEntrar', 'appProtegido'];
+const CRITICOS = ['banco', 'exigeLogin', 'protecaoDaConta', 'apiProtegida', 'outrosSitesBarrados', 'convitesPessoais', 'contas', 'copiaDasContas', 'paginaInicial', 'paginaEntrar', 'appProtegido'];
 let critico = false;
 let falhou = false;
 console.log('\n===== Relatório do app publicado =====');

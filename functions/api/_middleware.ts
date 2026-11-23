@@ -1,4 +1,4 @@
-import { lerSessao } from '../auth';
+import { exigeLogin, lerSessao } from '../auth';
 import { json, type Env } from '../tipos';
 
 /**
@@ -12,16 +12,26 @@ export const onRequest: PagesFunction<Env> = async (ctx) => {
   const url = new URL(ctx.request.url);
   const caminho = url.pathname;
   const metodo = ctx.request.method;
-  // Pedidos que mudam algo só podem vir do próprio site (contra ataques de outros sites).
-  const origem = ctx.request.headers.get('Origin');
-  if (metodo !== 'GET' && metodo !== 'HEAD' && origem && origem !== url.origin) return json({ erro: 'Origem não permitida.' }, 403);
+  // Pedidos que mudam algo só podem vir do próprio site (contra ataques de outros sites):
+  // a origem tem de ser a mesma, o navegador não pode marcar o pedido como vindo de outro site
+  // e o conteúdo tem de ser JSON (um formulário de outro site não consegue enviar JSON).
+  if (metodo !== 'GET' && metodo !== 'HEAD') {
+    const origem = ctx.request.headers.get('Origin');
+    if (origem && origem !== url.origin) return json({ erro: 'Origem não permitida.' }, 403);
+    const site = ctx.request.headers.get('Sec-Fetch-Site');
+    if (site && site !== 'same-origin' && site !== 'none') return json({ erro: 'Origem não permitida.' }, 403);
+    const tipo = ctx.request.headers.get('Content-Type') ?? '';
+    const temCorpo = Number(ctx.request.headers.get('Content-Length') ?? 0) > 0 || ctx.request.headers.has('Transfer-Encoding');
+    if (temCorpo && !tipo.toLowerCase().startsWith('application/json')) return json({ erro: 'Formato não aceito.' }, 415);
+  }
+  if (!['GET', 'HEAD', 'POST', 'PUT', 'DELETE'].includes(metodo)) return json({ erro: 'Método não aceito.' }, 405);
   const tamanho = Number(ctx.request.headers.get('Content-Length') ?? 0);
   // Os agentes recebem áudio, foto ou PDF (até ~5 MB); o resto da API, só textos pequenos.
   if (tamanho > (caminho === '/api/agente' || caminho === '/api/dados' ? 8_000_000 : 64_000)) return json({ erro: 'Arquivo grande demais.' }, 413);
 
   let renovar: string | undefined;
   const publica = PUBLICAS.includes(caminho) || caminho.startsWith('/api/conta/');
-  if (!publica && ctx.env.EXIGIR_ACCESS === '1') {
+  if (!publica && exigeLogin(ctx.env)) {
     const s = await lerSessao(ctx.env, ctx.request);
     if (!s.email) return json({ erro: 'Sua sessão expirou. Entre de novo com seu e-mail e senha.', sessao: true }, 401);
     ctx.data.email = s.email;
@@ -33,7 +43,9 @@ export const onRequest: PagesFunction<Env> = async (ctx) => {
   resp.headers.set('Referrer-Policy', 'no-referrer');
   resp.headers.set('Cache-Control', 'no-store');
   resp.headers.set('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
-  resp.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  resp.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+  resp.headers.set('Cross-Origin-Resource-Policy', 'same-origin');
+  resp.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet, noai, noimageai');
   if (renovar) resp.headers.append('Set-Cookie', renovar);
   return resp;
 };

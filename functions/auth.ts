@@ -9,7 +9,20 @@ import { sha256, type Env } from './tipos';
  */
 
 export const COOKIE = '__Host-mp_sessao';
-export const DURACAO_SESSAO = 30 * 24 * 3600 * 1000; // 30 dias
+export const DURACAO_SESSAO = 30 * 24 * 3600 * 1000; // 30 dias sem usar: sai sozinho
+/** Mesmo usando sempre, a sessão vence em 180 dias e a pessoa entra de novo com a senha. */
+export const VIDA_MAXIMA_SESSAO = 180 * 24 * 3600 * 1000;
+
+/** Login exigido em tudo, a não ser que o servidor diga explicitamente o contrário (só no teste local). */
+export const exigeLogin = (env: Env) => env.EXIGIR_ACCESS !== '0';
+
+/** "Android · Chrome", "iPhone · Safari", "App Android"… (só o tipo, nada que identifique a pessoa). */
+export function descreverAparelho(ua: string) {
+  const sistema = /Android/i.test(ua) ? 'Android' : /iPhone/i.test(ua) ? 'iPhone' : /iPad/i.test(ua) ? 'iPad' : /Windows/i.test(ua) ? 'Windows' : /Mac OS X|Macintosh/i.test(ua) ? 'Mac' : /Linux/i.test(ua) ? 'Linux' : 'Aparelho';
+  if (/; wv\)/.test(ua) && sistema === 'Android') return 'App Android';
+  const nav = /Edg\//.test(ua) ? 'Edge' : /SamsungBrowser/.test(ua) ? 'Samsung Internet' : /OPR\/|Opera/.test(ua) ? 'Opera' : /Firefox|FxiOS/.test(ua) ? 'Firefox' : /Chrome|CriOS/.test(ua) ? 'Chrome' : /Safari/.test(ua) ? 'Safari' : 'Navegador';
+  return `${sistema} · ${nav}`;
+}
 const ITERACOES = 100_000; // máximo permitido pela Cloudflare
 export const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i;
 
@@ -61,28 +74,48 @@ export function problemaNaSenha(senha: string, email: string) {
 export const cookieSessao = (token: string, maxAge: number) => `${COOKIE}=${token}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(maxAge / 1000)}`;
 export const lerCookie = (req: Request) => req.headers.get('Cookie')?.match(new RegExp(`(?:^|;\\s*)${COOKIE.replace(/[-]/g, '\\-')}=([A-Za-z0-9_-]{20,})`))?.[1];
 
-export async function criarSessao(env: Env, email: string) {
+export async function criarSessao(env: Env, email: string, req?: Request) {
   const token = aleatorio();
   const agora = Date.now();
+  const hash = await sha256(token);
   await env.DB.batch([
-    env.DB.prepare('DELETE FROM sessoes WHERE expira < ?').bind(agora),
-    env.DB.prepare('INSERT INTO sessoes (hash, email, expira, criada_em) VALUES (?, ?, ?, ?)').bind(await sha256(token), email, agora + DURACAO_SESSAO, agora),
+    env.DB.prepare('DELETE FROM sessoes WHERE expira < ? OR criada_em < ?').bind(agora, agora - VIDA_MAXIMA_SESSAO),
+    env.DB.prepare('DELETE FROM sessoes_info WHERE hash NOT IN (SELECT hash FROM sessoes)'),
+    env.DB.prepare('INSERT INTO sessoes (hash, email, expira, criada_em) VALUES (?, ?, ?, ?)').bind(hash, email, agora + DURACAO_SESSAO, agora),
+    env.DB.prepare('INSERT OR REPLACE INTO sessoes_info (hash, aparelho, pais, ultimo_uso) VALUES (?, ?, ?, ?)').bind(
+      hash,
+      descreverAparelho(req?.headers.get('User-Agent') ?? ''),
+      (req?.headers.get('CF-IPCountry') ?? '').slice(0, 2) || null,
+      agora,
+    ),
   ]);
   return cookieSessao(token, DURACAO_SESSAO);
 }
 
 /** E-mail da sessão (ou vazio). Renova a sessão quando faltam menos de 15 dias. */
-export async function lerSessao(env: Env, req: Request): Promise<{ email: string; renovar?: string }> {
+export async function lerSessao(env: Env, req: Request): Promise<{ email: string; renovar?: string; hash?: string }> {
   const token = lerCookie(req);
   if (!token) return { email: '' };
   const hash = await sha256(token);
-  const s = await env.DB.prepare('SELECT s.email, s.expira FROM sessoes s JOIN contas c ON c.email = s.email WHERE s.hash = ?').bind(hash).first<{ email: string; expira: number }>();
-  if (!s || s.expira < Date.now()) return { email: '' };
-  if (s.expira - Date.now() < DURACAO_SESSAO / 2) {
-    await env.DB.prepare('UPDATE sessoes SET expira = ? WHERE hash = ?').bind(Date.now() + DURACAO_SESSAO, hash).run();
-    return { email: s.email, renovar: cookieSessao(token, DURACAO_SESSAO) };
+  const s = await env.DB.prepare(
+    'SELECT s.email, s.expira, s.criada_em, i.ultimo_uso FROM sessoes s JOIN contas c ON c.email = s.email LEFT JOIN sessoes_info i ON i.hash = s.hash WHERE s.hash = ?',
+  )
+    .bind(hash)
+    .first<{ email: string; expira: number; criada_em: number; ultimo_uso: number | null }>();
+  const agora = Date.now();
+  if (!s || s.expira < agora || s.criada_em < agora - VIDA_MAXIMA_SESSAO) return { email: '' };
+  // Último uso (para a lista de aparelhos conectados): no máximo uma escrita por hora.
+  if (!s.ultimo_uso || agora - s.ultimo_uso > 3600_000)
+    await env.DB.prepare('INSERT INTO sessoes_info (hash, aparelho, ultimo_uso) VALUES (?, ?, ?) ON CONFLICT(hash) DO UPDATE SET ultimo_uso = excluded.ultimo_uso')
+      .bind(hash, descreverAparelho(req.headers.get('User-Agent') ?? ''), agora)
+      .run()
+      .catch(() => undefined);
+  if (s.expira - agora < DURACAO_SESSAO / 2) {
+    const novo = Math.min(agora + DURACAO_SESSAO, s.criada_em + VIDA_MAXIMA_SESSAO);
+    await env.DB.prepare('UPDATE sessoes SET expira = ? WHERE hash = ?').bind(novo, hash).run();
+    return { email: s.email, renovar: cookieSessao(token, novo - agora), hash };
   }
-  return { email: s.email };
+  return { email: s.email, hash };
 }
 
 /**

@@ -1,4 +1,4 @@
-import { lerSessao } from '../auth';
+import { exigeLogin, lerSessao } from '../auth';
 import type { Env } from '../tipos';
 
 /**
@@ -31,7 +31,7 @@ const CSP = [
 
 export const onRequest: PagesFunction<Env> = async (ctx) => {
   const url = new URL(ctx.request.url);
-  if (ctx.env.EXIGIR_ACCESS !== '1' || LIVRES.test(url.pathname)) return ctx.next();
+  if (!exigeLogin(ctx.env) || LIVRES.test(url.pathname)) return ctx.next();
   const s = await lerSessao(ctx.env, ctx.request);
   if (!s.email) {
     const pagina = (ctx.request.headers.get('Accept') ?? '').includes('text/html') || url.pathname.endsWith('/') || url.pathname.endsWith('.html');
@@ -48,7 +48,10 @@ export const onRequest: PagesFunction<Env> = async (ctx) => {
   resp.headers.set('X-Content-Type-Options', 'nosniff');
   resp.headers.set('Referrer-Policy', 'no-referrer');
   resp.headers.set('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=(), payment=(), usb=(), bluetooth=()');
-  resp.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  resp.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+  resp.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+  resp.headers.set('Cross-Origin-Resource-Policy', 'same-origin');
+  resp.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet, noai, noimageai');
   if (s.renovar) resp.headers.append('Set-Cookie', s.renovar);
   return resp;
 };

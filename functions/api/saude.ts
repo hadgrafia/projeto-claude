@@ -1,3 +1,4 @@
+import { exigeLogin, iguais } from '../auth';
 import { json, type Env } from '../tipos';
 import { ordemModelos, regioes, testarModelo, tokenGoogle, type ContaServico } from './analise';
 import { conversarComGemini, testarGemini } from './gemini';
@@ -8,7 +9,7 @@ import { ESQUEMA_AGENTES, paraAcoes, SISTEMA_AGENTES } from './agente';
  * Responde apenas "ok" ou o motivo do problema: nunca devolve chaves, e-mails ou dados.
  */
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
-  if (!env.VERIFICACAO || request.headers.get('X-Verificacao') !== env.VERIFICACAO) return json({ erro: 'Não autorizado.' }, 401);
+  if (!env.VERIFICACAO || !iguais(request.headers.get('X-Verificacao') ?? '', env.VERIFICACAO)) return json({ erro: 'Não autorizado.' }, 401);
   const r: Record<string, string> = {};
 
   try {
@@ -19,7 +20,14 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   }
 
   r.emailAdministradora = env.ADMIN_EMAIL ? 'ok' : 'não configurado';
-  r.exigeLogin = env.EXIGIR_ACCESS === '1' ? 'ok' : 'DESLIGADO';
+  r.exigeLogin = exigeLogin(env) ? 'ok' : 'DESLIGADO';
+  try {
+    await env.DB.prepare('SELECT COUNT(*) FROM dois_fatores').first();
+    await env.DB.prepare('SELECT COUNT(*) FROM sessoes_info').first();
+    r.protecaoDaConta = 'ok';
+  } catch (e) {
+    r.protecaoDaConta = `erro: ${(e as Error).message}`;
+  }
   try {
     const n = await env.DB.prepare('SELECT COUNT(DISTINCT email) AS n FROM dados_conta').first<{ n: number }>();
     r.copiaDasContas = env.DADOS_CHAVE ? `ok (${n?.n ?? 0} contas com cópia)` : 'DADOS_CHAVE não configurada';

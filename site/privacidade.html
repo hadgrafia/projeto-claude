@@ -46,10 +46,20 @@
 <p>Quando você pede uma análise, o app envia somente os números do plano (tipo, valores, prazo, renda mensal e perfil de investidor), sem nome, e-mail, banco ou lista de gastos. A análise é feita por IA no Google Cloud (Vertex AI: Claude ou Gemini) e o resultado fica salvo no seu celular.</p>
 
 <h2>Agentes (Nina, Gabriela, Matheus e Leo)</h2>
-<p>Quando você conversa com os agentes, o app envia a sua mensagem (e o áudio, foto ou PDF que você anexar) junto com um resumo dos seus números: renda, gastos por mês e categoria, últimos lançamentos (data, valor, lugar e categoria), planos, investimentos e limite do cartão. Nunca são enviados senha, dados de conta bancária, número de cartão ou o texto das notificações. A resposta é gerada por IA no Google Cloud (Vertex AI) e não fica guardada no servidor; a conversa fica só no seu aparelho. Nada é registrado sem você confirmar. Os avisos por conta própria dos agentes podem ser desligados em Ajustes.</p>
+<p>Quando você conversa com os agentes, o app envia a sua mensagem (e o áudio, foto ou PDF que você anexar) junto com um resumo dos seus números (sem nome nem e-mail): renda, gastos por mês e categoria, últimos lançamentos (data, valor, lugar e categoria), planos, investimentos e limite do cartão. Nunca são enviados senha, dados de conta bancária, número de cartão ou o texto das notificações. A resposta é gerada por IA no Google Cloud (Vertex AI) e não fica guardada no servidor; a conversa fica só no seu aparelho. Nada é registrado sem você confirmar. Os avisos por conta própria dos agentes podem ser desligados em Ajustes.</p>
 
 <h2>Segurança</h2>
-<p>O app é protegido por senha de 6 dígitos (guardada apenas como hash) e, se você quiser, por digital ou reconhecimento facial. A cópia de segurança é cifrada com a sua senha.</p>
+<ul>
+<li><strong>Só convidados:</strong> o app e todos os dados só abrem com uma conta criada por convite pessoal. Sem login, o servidor não entrega nem o app.</li>
+<li><strong>Verificação em duas etapas (opcional, recomendada):</strong> além da senha, um código de 6 dígitos do app autenticador do seu celular. Quem descobrir a sua senha não entra sem o seu celular. Os códigos de recuperação são guardados só como hash.</li>
+<li><strong>Cada conta só vê os próprios dados:</strong> o servidor identifica você pela sessão, nunca por um número que possa ser trocado. A cópia da conta é cifrada (AES-256) e presa ao seu e-mail: mesmo quem tivesse acesso ao banco de dados não conseguiria ler nem trocar os dados entre contas.</li>
+<li><strong>Aparelhos conectados:</strong> em Ajustes você vê onde a sua conta está aberta (tipo de aparelho, país aproximado e último uso; nunca o IP) e desconecta qualquer um. O app avisa quando a conta é aberta num aparelho novo. As sessões vencem sozinhas depois de 30 dias sem uso e, no máximo, em 180 dias.</li>
+<li><strong>Contra quem tenta adivinhar senhas:</strong> número de tentativas limitado por e-mail e por conexão; senha guardada só como hash (PBKDF2).</li>
+<li><strong>Contra ataques de outros sites e vírus:</strong> o app só roda código próprio (nenhum anúncio, rastreador ou script de terceiros), não abre dentro de outros sites e só aceita pedidos vindos dele mesmo. As bibliotecas são conferidas contra falhas conhecidas a cada publicação.</li>
+<li><strong>Robôs e IA de terceiros:</strong> robôs de IA e coletores de dados conhecidos são bloqueados em todas as páginas, e nenhuma página do app aparece em buscadores. A IA usada pelos agentes (Google Cloud, Vertex AI) recebe só números, sem nome nem e-mail, e não usa os dados para treinamento.</li>
+<li><strong>No aparelho:</strong> bloqueio do app com senha de 6 dígitos (guardada apenas como hash) e, se você quiser, digital ou reconhecimento facial. A cópia de segurança em arquivo é cifrada com a sua senha.</li>
+<li><strong>Sem acesso ao banco:</strong> o app nunca entra no app ou na conta do seu banco e nunca movimenta dinheiro.</li>
+</ul>
 
 <h2>Seus direitos (LGPD)</h2>
 <p>Como os dados ficam no seu aparelho, você pode apagá-los a qualquer momento em Ajustes → Apagar todos os dados. Para sair de um plano em conjunto, use "Sair do grupo"; quando o último participante sai, o plano é apagado do servidor. Dúvidas: fale com a administradora que te convidou.</p>

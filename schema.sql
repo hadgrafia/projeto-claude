@@ -80,3 +80,21 @@ CREATE TABLE IF NOT EXISTS dados_conta (
   atualizado_em INTEGER NOT NULL,
   PRIMARY KEY (email, parte)
 );
+-- Verificação em duas etapas (app autenticador). O segredo fica cifrado com DADOS_CHAVE;
+-- dos códigos de recuperação, o servidor guarda só o hash.
+CREATE TABLE IF NOT EXISTS dois_fatores (
+  email TEXT PRIMARY KEY,
+  segredo TEXT,
+  pendente TEXT,
+  recuperacao TEXT,
+  ultimo_passo INTEGER NOT NULL DEFAULT 0,
+  ativado_em INTEGER
+);
+-- Aparelhos conectados: tipo de aparelho/navegador, país aproximado e último uso
+-- (nunca o IP). Uma linha por sessão; some junto com a sessão.
+CREATE TABLE IF NOT EXISTS sessoes_info (
+  hash TEXT PRIMARY KEY,
+  aparelho TEXT NOT NULL,
+  pais TEXT,
+  ultimo_uso INTEGER NOT NULL
+);

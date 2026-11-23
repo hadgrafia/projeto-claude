@@ -41,6 +41,10 @@
         <label>Senha
           <span class="campo-senha"><input name="senha" type="password" autocomplete="current-password" required maxlength="128"><button type="button" class="mostrar">Mostrar</button></span>
         </label>
+        <div id="passo-codigo" hidden>
+          <label>Código de verificação<input name="codigo" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="9" placeholder="6 dígitos"></label>
+          <p class="nota" style="margin:6px 0 0">Abra o app autenticador no seu celular e digite o código de 6 dígitos do Meus Planos. Perdeu o celular? Use um dos seus códigos de recuperação (ex.: ABCD-EFGH).</p>
+        </div>
         <button class="botao botao-terracota" type="submit">Entrar</button>
         <p class="retorno" role="status" aria-live="polite"></p>
         <div class="links-conta">

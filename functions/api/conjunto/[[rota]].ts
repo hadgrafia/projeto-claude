@@ -1,3 +1,4 @@
+import { iguais } from '../../auth';
 import { blobValido, idValido, json, quemEsta, sha256, type Env } from '../../tipos';
 
 /**
@@ -20,7 +21,7 @@ async function autenticar(env: Env, req: Request, planoId: string) {
   const [membroId, segredo] = (req.headers.get('X-Membro') ?? '').split(':');
   if (!idValido(membroId) || !idValido(segredo)) return null;
   const m = await env.DB.prepare('SELECT membro_id, hash FROM membros WHERE plano_id = ? AND membro_id = ?').bind(planoId, membroId).first<{ membro_id: string; hash: string }>();
-  if (!m || m.hash !== (await sha256(segredo))) return null;
+  if (!m || !iguais(m.hash, await sha256(segredo))) return null;
   return membroId;
 }
 

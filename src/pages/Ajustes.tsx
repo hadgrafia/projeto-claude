@@ -5,6 +5,7 @@ import { Folha, Segmentado } from '../components/Ui';
 import { CriarSenha, TecladoPin } from '../components/Bloqueio';
 import { EditarRenda } from '../components/EditarRenda';
 import { AjustesCartao, AjustesContato, ExcluirConta, TrocarSenha } from '../components/AjustesExtras';
+import { Aparelhos, DuasEtapas } from '../components/ProtecaoConta';
 import { Instalar } from '../components/Instalar';
 import { RegistroAutomatico } from '../components/RegistroAutomatico';
 import { AppsPagamento } from '../components/AppsPagamento';
@@ -190,6 +191,9 @@ export default function Ajustes() {
         </div>
         <TrocarSenha aoSalvar={aviso} />
       </section>
+
+      <DuasEtapas />
+      <Aparelhos />
 
       <section className="cartao">
         <h2 style={{ fontSize: 15, fontWeight: 800 }}>Cópia de segurança</h2>
