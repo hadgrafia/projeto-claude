@@ -82,6 +82,33 @@ final class Armazem {
         prefs(c).edit().putString(ITENS, a.toString()).apply();
     }
 
+    static synchronized JSONObject obter(Context c, String id) {
+        JSONArray a = itens(c);
+        for (int i = 0; i < a.length(); i++) {
+            JSONObject o = a.optJSONObject(i);
+            if (o != null && id.equals(o.optString("id"))) return o;
+        }
+        return null;
+    }
+
+    /** Resposta "débito ou crédito" (e em quantas vezes) dada direto na notificação. */
+    static synchronized void definirForma(Context c, String id, String forma, int parcelas, boolean perguntarVezes) {
+        JSONArray a = itens(c);
+        try {
+            for (int i = 0; i < a.length(); i++) {
+                JSONObject o = a.getJSONObject(i);
+                if (!id.equals(o.optString("id"))) continue;
+                o.put("forma", forma);
+                if (parcelas > 1) o.put("parcelas", parcelas);
+                else o.remove("parcelas");
+                if (perguntarVezes) o.put("perguntarVezes", true);
+                else o.remove("perguntarVezes");
+            }
+        } catch (JSONException ignored) {
+        }
+        prefs(c).edit().putString(ITENS, a.toString()).apply();
+    }
+
     static synchronized JSONArray listar(Context c) {
         JSONArray a = itens(c);
         JSONArray validos = new JSONArray();

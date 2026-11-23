@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { db, type FormaPag, type Movimento } from '../db';
 import { conferirLimiteCartao } from '../lib/avisos';
 import { NOMES_FORMA } from '../lib/cartao';
+import { lugarInformadoNoApp } from '../lib/nativo';
 import { BotaoSalvar } from './Ui';
 import { BotaoNaoEraGasto } from './Lugar';
 import { hora, reais } from '../lib/format';
@@ -51,6 +52,8 @@ export function FormForma({ mov, restantes, aoAdiar, segurar }: { mov: Movimento
     segurar?.(mov);
     await db.movimentos.update(mov.id!, { forma, parcelas: forma === 'credito' && parcelas > 1 ? parcelas : undefined, formaPendente: false });
     if (forma === 'credito') conferirLimiteCartao().catch(() => undefined);
+    // Respondido no app: fecha a pergunta que estava na notificação.
+    if (!mov.localPendente) lugarInformadoNoApp(mov.chave);
   }
 
   return (

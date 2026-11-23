@@ -77,7 +77,8 @@ public class ServicoNotificacoes extends NotificationListenerService {
         String app = nomeDoApp(sbn.getPackageName(), ex);
         String id = UUID.randomUUID().toString();
         Armazem.adicionar(this, id, agora, p, app, modelo);
-        if (p.local == null) Avisos.perguntarLocal(this, id, p, app);
+        // Faltou o lugar ou (num gasto) se foi débito ou crédito: pergunta na própria notificação.
+        if (p.local == null || ("saida".equals(p.tipo) && p.forma == null)) Avisos.perguntar(this, id);
     }
 
     private String nomeDoApp(String pacote, Bundle ex) {

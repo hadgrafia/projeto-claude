@@ -21,6 +21,8 @@ interface Capturado {
   parcelas?: number;
   /** Código do tipo de aviso (versões antigas do APK não mandam). */
   modelo?: string;
+  /** Respondeu "Crédito" na notificação e ainda falta dizer em quantas vezes. */
+  perguntarVezes?: boolean;
 }
 
 interface LeitorNotificacoes {
@@ -89,6 +91,11 @@ export async function sincronizar() {
   const apagados = new Set((await lerCache<string[]>('notificacoes-apagadas'))?.valor ?? []);
   for (const i of itens) {
     const local = i.local?.trim() || undefined;
+    // Forma já respondida (no aviso do banco ou na notificação, inclusive as parcelas).
+    const forma = i.tipo === 'saida' && i.forma && !i.perguntarVezes ? i.forma : undefined;
+    const parcelas = forma === 'credito' && i.parcelas && i.parcelas > 1 ? i.parcelas : undefined;
+    // Sai da fila do aparelho quando não falta mais nada (lugar e, nos gastos, débito ou crédito).
+    const completo = Boolean(local) && (i.tipo === 'entrada' || Boolean(forma));
     const ja = existentes.get(`n-${i.id}`);
     // Apagado pela pessoa, ou de um app fora da lista de apps de pagamento (ex.: cotação do dólar):
     // descarta de vez no aparelho, para não voltar.
@@ -102,7 +109,9 @@ export async function sincronizar() {
         const auto = categorizar(local, i.tipo);
         await db.movimentos.update(ja.id!, { local, localPendente: false, descricao: local, categoria: auto !== 'Outros' ? auto : ja.categoria });
       }
-      if (!ja.localPendente || local) resolvidos.push(i.id);
+      if (ja.formaPendente && forma) await db.movimentos.update(ja.id!, { forma, parcelas, formaPendente: false });
+      const falta = (ja.localPendente && !local) || (ja.formaPendente && !forma);
+      if (!falta) resolvidos.push(i.id);
       continue;
     }
     novos.push({
@@ -113,22 +122,22 @@ export async function sincronizar() {
       local,
       localPendente: !local,
       detalhePendente: i.tipo === 'saida' && i.valor >= aviso,
-      ...(i.tipo === 'saida' ? { forma: i.forma, parcelas: i.forma === 'credito' && i.parcelas && i.parcelas > 1 ? i.parcelas : undefined, formaPendente: !i.forma } : {}),
+      ...(i.tipo === 'saida' ? { forma, parcelas, formaPendente: !forma } : {}),
       avisadoPor: i.app,
       categoria: categorizar(local ?? '', i.tipo),
       origem: 'notificacao' as const,
       chave: `n-${i.id}`,
       ...(i.modelo ? { modelo: i.modelo } : {}),
     });
-    // Sem lugar ainda: continua no aparelho até a pessoa responder (na notificação ou no app).
-    if (local) resolvidos.push(i.id);
+    // Falta o lugar ou a forma: continua no aparelho até a pessoa responder (na notificação ou no app).
+    if (completo) resolvidos.push(i.id);
   }
   if (novos.length) await db.movimentos.bulkAdd(novos);
   if (resolvidos.length) await Leitor.confirmar({ ids: resolvidos });
   return novos.length;
 }
 
-/** A pessoa informou o lugar dentro do app: fecha a pergunta que estava na barra de notificações. */
+/** A pessoa respondeu dentro do app (lugar, débito ou crédito): fecha a pergunta que estava na barra de notificações. */
 export function lugarInformadoNoApp(chave: string) {
   if (ehAppAndroid() && chave.startsWith('n-')) Leitor.confirmar({ ids: [chave.slice(2)] }).catch(() => undefined);
 }
