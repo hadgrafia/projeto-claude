@@ -226,6 +226,15 @@ export default function Ajustes() {
         </div>
       </section>
 
+      <Link to="/ajuda" className="cartao cartao-link" style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <span className="circulo verde"><Icone nome="ajuda" /></span>
+        <span className="cresce coluna" style={{ gap: 2 }}>
+          <strong>Dúvidas e atendimento</strong>
+          <span className="pequeno suave">Respostas rápidas e, se precisar, uma pessoa da equipe responde.</span>
+        </span>
+        <Icone nome="direita" />
+      </Link>
+
       <Link to="/cartao" className="cartao cartao-link" style={{ flexDirection: 'row', alignItems: 'center' }}>
         <span className="circulo terracota"><Icone nome="cartao" /></span>
         <span className="cresce coluna" style={{ gap: 2 }}>

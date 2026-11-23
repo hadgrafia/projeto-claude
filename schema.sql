@@ -98,3 +98,25 @@ CREATE TABLE IF NOT EXISTS sessoes_info (
   pais TEXT,
   ultimo_uso INTEGER NOT NULL
 );
+-- Atendimento com uma pessoa (dúvidas): um chamado por pessoa aberto por vez.
+-- Nome e mensagens ficam cifrados (DADOS_CHAVE); a equipe vê só o nome, nunca o e-mail.
+CREATE TABLE IF NOT EXISTS chamados (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL,
+  nome TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'aberto',
+  criado_em INTEGER NOT NULL,
+  atualizado_em INTEGER NOT NULL,
+  nao_lidas_equipe INTEGER NOT NULL DEFAULT 0,
+  nao_lidas_pessoa INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS chamados_email ON chamados (email, status);
+CREATE INDEX IF NOT EXISTS chamados_status ON chamados (status, atualizado_em);
+CREATE TABLE IF NOT EXISTS mensagens_chamado (
+  id TEXT PRIMARY KEY,
+  chamado_id TEXT NOT NULL,
+  de TEXT NOT NULL,
+  texto TEXT NOT NULL,
+  em INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS mensagens_chamado_id ON mensagens_chamado (chamado_id, em);

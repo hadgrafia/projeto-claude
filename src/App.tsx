@@ -16,6 +16,8 @@ import Lancar from './pages/Lancar';
 import Agentes from './pages/Agentes';
 import Assinaturas from './pages/Assinaturas';
 import Cartao from './pages/Cartao';
+import Ajuda from './pages/Ajuda';
+import Atendimento from './pages/Atendimento';
 import { useEquipe } from './components/Equipe';
 import { avisarDestaques } from './lib/agentesAvisos';
 import BoasVindas from './pages/BoasVindas';
@@ -29,6 +31,7 @@ import PlanoDetalhe from './pages/PlanoDetalhe';
 import Planos from './pages/Planos';
 import { BotaoOlho, useValoresOcultos } from './components/OlhoValores';
 import { vigiarPedidos } from './lib/pedidos';
+import { vigiarAtendimento } from './lib/atendimento';
 
 const ABAS: { para: string; rotulo: string; icone: NomeIcone }[] = [
   { para: '/inicio', rotulo: 'Início', icone: 'casa' },
@@ -112,7 +115,11 @@ function VigiaAgentes() {
  */
 function VigiaPedidos() {
   useEffect(() => {
-    const rodar = () => document.visibilityState === 'visible' && vigiarPedidos().catch(() => undefined);
+    const rodar = () => {
+      if (document.visibilityState !== 'visible') return;
+      vigiarPedidos().catch(() => undefined);
+      vigiarAtendimento().catch(() => undefined);
+    };
     rodar();
     document.addEventListener('visibilitychange', rodar);
     const t = window.setInterval(rodar, 10 * 60 * 1000);
@@ -286,6 +293,9 @@ export default function App() {
                   <Route path="/agentes" element={<Agentes />} />
                   <Route path="/assinaturas" element={<Assinaturas />} />
                   <Route path="/cartao" element={<Cartao />} />
+                  <Route path="/ajuda" element={<Ajuda />} />
+                  <Route path="/atendimento" element={<Atendimento />} />
+                  <Route path="/atendimento/:id" element={<Atendimento />} />
                   <Route path="*" element={<Navigate to="/inicio" replace />} />
                 </>
               ) : (

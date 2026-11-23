@@ -4,6 +4,7 @@ import { lerCache } from '../db';
 import { useOnline } from '../hooks';
 import { buscarPedidos, DOIS_DIAS, type Aceito } from '../lib/pedidos';
 import { Icone } from './Icone';
+import { AvatarPessoa } from './Atendimento';
 
 interface Pedido {
   id: string;
@@ -116,6 +117,15 @@ export function PedidosConvite() {
 
   if (!admin) return null;
   return (
+    <>
+    <Link to="/atendimento" className="cartao cartao-link" style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <AvatarPessoa tamanho={40} destaque />
+      <span className="cresce coluna" style={{ gap: 2 }}>
+        <strong>Atendimento</strong>
+        <span className="pequeno suave">Chamados das pessoas (só você vê). Para elas, quem responde é "a equipe".</span>
+      </span>
+      <Icone nome="direita" />
+    </Link>
     <section className="cartao" id="convites">
       <h2 style={{ fontSize: 15, fontWeight: 800 }}>Convites</h2>
       <p className="mini suave">Só você vê esta seção. Cada convite é um link pessoal: vale por 14 dias, funciona uma única vez e só cria conta para aquele e-mail.</p>
@@ -188,6 +198,46 @@ export function PedidosConvite() {
       </details>
       {msg && <p className="pequeno" role="status">{msg}</p>}
     </section>
+    </>
+  );
+}
+
+/** Início: chamados de atendimento (equipe) ou resposta nova para quem perguntou. */
+export function AvisoAtendimento() {
+  const [abertos, setAbertos] = useState<{ id: string; nome: string; naoLidas: number }[]>([]);
+  const [resposta, setResposta] = useState(0);
+  useEffect(() => {
+    const ler = () => {
+      lerCache<{ id: string; nome: string; naoLidas: number }[]>('chamados-abertos').then((c) => setAbertos(c?.valor ?? []));
+      lerCache<number>('resposta-atendimento').then((c) => setResposta(c?.valor ?? 0));
+    };
+    ler();
+    window.addEventListener('mp-chamados', ler);
+    return () => window.removeEventListener('mp-chamados', ler);
+  }, []);
+  const estilo = { gridColumn: '1 / -1', flexDirection: 'row' as const, alignItems: 'center' };
+  if (resposta > 0)
+    return (
+      <Link to="/ajuda?pessoa=1" className="cartao cartao-link verde" style={estilo}>
+        <AvatarPessoa tamanho={40} destaque />
+        <span className="cresce coluna" style={{ gap: 2 }}>
+          <strong>Resposta do atendimento</strong>
+          <span className="pequeno">Uma pessoa da equipe respondeu a sua dúvida.</span>
+        </span>
+        <Icone nome="direita" />
+      </Link>
+    );
+  const comNovas = abertos.filter((c) => c.naoLidas > 0);
+  if (!comNovas.length) return null;
+  return (
+    <Link to="/atendimento" className="cartao cartao-link terracota" style={estilo}>
+      <AvatarPessoa tamanho={40} />
+      <span className="cresce coluna" style={{ gap: 2 }}>
+        <strong>{comNovas.length === 1 ? 'Chamado de atendimento' : `${comNovas.length} chamados de atendimento`}</strong>
+        <span className="pequeno">{comNovas.map((c) => c.nome).slice(0, 3).join(', ')}{comNovas.length > 3 ? ' e outros' : ''} esperando resposta</span>
+      </span>
+      <Icone nome="direita" />
+    </Link>
   );
 }
 

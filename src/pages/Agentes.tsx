@@ -131,11 +131,14 @@ export default function Agentes() {
           <button type="button" className="circulo escuro" aria-label="Voltar" onClick={() => navegar(-1)}><Icone nome="voltar" /></button>
           <h1 className="titulo" style={{ fontSize: 24 }}>Agentes</h1>
         </div>
-        {conversa.length > 0 && (
-          <button type="button" className="pequeno" style={{ background: 'none', border: 0, color: 'var(--suave)', cursor: 'pointer' }} onClick={() => confirm('Apagar a conversa deste aparelho?') && setConversa([])}>
-            Limpar
-          </button>
-        )}
+        <div className="linha" style={{ gap: 10 }}>
+          {conversa.length > 0 && (
+            <button type="button" className="pequeno" style={{ background: 'none', border: 0, color: 'var(--suave)', cursor: 'pointer' }} onClick={() => confirm('Apagar a conversa deste aparelho?') && setConversa([])}>
+              Limpar
+            </button>
+          )}
+          <Link to="/ajuda" className="chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icone nome="ajuda" tamanho={16} /> Dúvidas</Link>
+        </div>
       </div>
 
       <div className="equipe">

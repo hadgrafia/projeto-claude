@@ -8,8 +8,12 @@ export function AjustesCartao({ perfil, aoSalvar, titulo = 'Cartão e compras' }
   const [limite, setLimite] = useState<number | undefined>(perfil.limiteCartao);
   const [usado, setUsado] = useState<number | undefined>(perfil.limiteUsado);
   const [aviso, setAviso] = useState<number | undefined>(perfil.limiteAvisoCompra ?? 100);
-  useEffect(() => setLimite(perfil.limiteCartao), [perfil.limiteCartao]);
-  useEffect(() => setUsado(perfil.limiteUsado), [perfil.limiteUsado]);
+  useEffect(() => {
+    setLimite(perfil.limiteCartao);
+  }, [perfil.limiteCartao]);
+  useEffect(() => {
+    setUsado(perfil.limiteUsado);
+  }, [perfil.limiteUsado]);
   const [fecha, setFecha] = useState(perfil.cartaoFechamento ? String(perfil.cartaoFechamento) : '');
   const [vence, setVence] = useState(perfil.cartaoVencimento ? String(perfil.cartaoVencimento) : '');
   const dia = (v: string) => {

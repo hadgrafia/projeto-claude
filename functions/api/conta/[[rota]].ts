@@ -166,6 +166,8 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
     await env.DB.batch([
       env.DB.prepare('DELETE FROM dados_conta WHERE email = ?').bind(s.email),
       env.DB.prepare('DELETE FROM dois_fatores WHERE email = ?').bind(s.email),
+      env.DB.prepare('DELETE FROM mensagens_chamado WHERE chamado_id IN (SELECT id FROM chamados WHERE email = ?)').bind(s.email),
+      env.DB.prepare('DELETE FROM chamados WHERE email = ?').bind(s.email),
       env.DB.prepare('DELETE FROM sessoes_info WHERE hash IN (SELECT hash FROM sessoes WHERE email = ?)').bind(s.email),
       env.DB.prepare('DELETE FROM sessoes WHERE email = ?').bind(s.email),
       env.DB.prepare('DELETE FROM convites_conta WHERE email = ?').bind(s.email),

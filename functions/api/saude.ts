@@ -25,6 +25,8 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     await env.DB.prepare('SELECT COUNT(*) FROM dois_fatores').first();
     await env.DB.prepare('SELECT COUNT(*) FROM sessoes_info').first();
     r.protecaoDaConta = 'ok';
+    await env.DB.prepare('SELECT COUNT(*) FROM chamados').first();
+    await env.DB.prepare('SELECT COUNT(*) FROM mensagens_chamado').first();
   } catch (e) {
     r.protecaoDaConta = `erro: ${(e as Error).message}`;
   }
