@@ -28,6 +28,7 @@ import NovoPlano from './pages/NovoPlano';
 import PlanoDetalhe from './pages/PlanoDetalhe';
 import Planos from './pages/Planos';
 import { BotaoOlho, useValoresOcultos } from './components/OlhoValores';
+import { vigiarPedidos } from './lib/pedidos';
 
 const ABAS: { para: string; rotulo: string; icone: NomeIcone }[] = [
   { para: '/inicio', rotulo: 'Início', icone: 'casa' },
@@ -102,6 +103,24 @@ function VigiaAgentes() {
     if (perfil?.concluiuInicio) avisarDestaques(perfil, destaques).catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chaves, perfil?.avisos?.agentes, perfil?.concluiuInicio]);
+  return null;
+}
+
+/**
+ * Administradora: confere os pedidos de convite ao abrir o app, ao voltar para ele e a cada 10 minutos
+ * com ele aberto. Avisa cada pedido novo e lembra (uma vez por dia) dos que esperam há mais de 2 dias.
+ */
+function VigiaPedidos() {
+  useEffect(() => {
+    const rodar = () => document.visibilityState === 'visible' && vigiarPedidos().catch(() => undefined);
+    rodar();
+    document.addEventListener('visibilitychange', rodar);
+    const t = window.setInterval(rodar, 10 * 60 * 1000);
+    return () => {
+      document.removeEventListener('visibilitychange', rodar);
+      window.clearInterval(t);
+    };
+  }, []);
   return null;
 }
 
@@ -278,6 +297,7 @@ export default function App() {
         {comNav && <Nav />}
         {comNav && local.pathname !== '/agentes' && <BotaoAgentes />}
         {pronto && <VigiaAgentes />}
+        {pronto && <VigiaPedidos />}
         {pronto && <PerguntaLocal />}
         {bloqueio.oculto && pronto && <CapaPrivacidade />}
       </div>

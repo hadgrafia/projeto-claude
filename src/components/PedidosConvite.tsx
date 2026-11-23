@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { lerCache } from '../db';
 import { useOnline } from '../hooks';
+import { buscarPedidos, DOIS_DIAS, type Aceito } from '../lib/pedidos';
 import { Icone } from './Icone';
 
 interface Pedido {
@@ -60,6 +63,7 @@ export function PedidosConvite() {
   const online = useOnline();
   const [admin, setAdmin] = useState(false);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [aceitos, setAceitos] = useState<Aceito[]>([]);
   const [prontos, setProntos] = useState<Pronto[]>([]);
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
@@ -71,8 +75,9 @@ export function PedidosConvite() {
       const eu = (await (await fetch('/api/eu', { credentials: 'same-origin' })).json()) as { admin: boolean };
       setAdmin(eu.admin);
       if (!eu.admin) return;
-      const r = (await (await fetch('/api/pedidos', { credentials: 'same-origin' })).json()) as { pedidos: Pedido[] };
+      const r = await buscarPedidos();
       setPedidos(r.pedidos);
+      setAceitos(r.aceitos);
     } catch {
       setAdmin(false);
     }
@@ -86,7 +91,9 @@ export function PedidosConvite() {
     try {
       const c = await postar<{ link?: string }>(`/api/pedidos/${p.id}`, { acao });
       if (acao === 'aprovar' && c.link) setProntos((a) => [...a, { nome: p.nome, email: p.email, link: c.link!, tipo: 'conta' }]);
+      if (acao === 'aprovar') setAceitos((a) => [{ nome: p.nome, email: p.email, temConta: false }, ...a.filter((x) => x.email !== p.email)]);
       setPedidos((l) => l.filter((x) => x.id !== p.id));
+      buscarPedidos().catch(() => undefined);
     } catch (e) {
       setMsg((e as Error).message);
     }
@@ -109,7 +116,7 @@ export function PedidosConvite() {
 
   if (!admin) return null;
   return (
-    <section className="cartao">
+    <section className="cartao" id="convites">
       <h2 style={{ fontSize: 15, fontWeight: 800 }}>Convites</h2>
       <p className="mini suave">Só você vê esta seção. Cada convite é um link pessoal: vale por 14 dias, funciona uma única vez e só cria conta para aquele e-mail.</p>
 
@@ -127,14 +134,17 @@ export function PedidosConvite() {
         </button>
       </div>
 
-      <h3 style={{ fontSize: 14, fontWeight: 800, marginTop: 8 }}>Pedidos feitos pelo site ({pedidos.length})</h3>
-      {pedidos.length === 0 && <p className="pequeno suave">Nenhum pedido pendente.</p>}
+      <h3 style={{ fontSize: 14, fontWeight: 800, marginTop: 8 }}>Ainda não aceitos ({pedidos.length})</h3>
+      {pedidos.length === 0 && <p className="pequeno suave">Nenhum pedido esperando.</p>}
       {pedidos.map((p) => (
         <div key={p.id} className="coluna" style={{ gap: 6, padding: 12, borderRadius: 18, background: 'var(--bg)' }}>
           <strong>{p.nome}</strong>
           <span className="pequeno">{p.email}</span>
           {p.mensagem && <span className="pequeno suave">“{p.mensagem}”</span>}
-          <span className="mini suave">{new Date(p.criado_em).toLocaleString('pt-BR')}</span>
+          <span className="mini suave">
+            Pediu em {new Date(p.criado_em).toLocaleString('pt-BR')}
+            {Date.now() - p.criado_em > DOIS_DIAS ? <strong style={{ color: 'var(--terracota-texto)' }}> · esperando há mais de 2 dias</strong> : null}
+          </span>
           <div className="grade-2">
             <button type="button" className="botao pequeno" onClick={() => decidir(p, 'aprovar')}><Icone nome="check" /> Aprovar</button>
             <button type="button" className="botao secundario pequeno" onClick={() => decidir(p, 'recusar')}>Recusar</button>
@@ -150,6 +160,22 @@ export function PedidosConvite() {
         </div>
       ))}
 
+      <h3 style={{ fontSize: 14, fontWeight: 800, marginTop: 8 }}>Já aceitos ({aceitos.length})</h3>
+      {aceitos.length === 0 && <p className="pequeno suave">Ninguém aceito pelos pedidos do site ainda.</p>}
+      {aceitos.length > 0 && (
+        <div className="lista">
+          {aceitos.map((a) => (
+            <div key={a.email} className="item" style={{ cursor: 'default' }}>
+              <span className="cresce coluna" style={{ gap: 2, minWidth: 0 }}>
+                <strong>{a.nome}</strong>
+                <span className="pequeno suave" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.email}</span>
+              </span>
+              <span className={`pilula ${a.temConta ? 'manter' : 'rever'}`}>{a.temConta ? 'Criou a conta' : 'Ainda não entrou'}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       <details>
         <summary className="pequeno" style={{ cursor: 'pointer', fontWeight: 700 }}>Alguém esqueceu a senha?</summary>
         <div className="coluna" style={{ gap: 10, marginTop: 10 }}>
@@ -162,5 +188,36 @@ export function PedidosConvite() {
       </details>
       {msg && <p className="pequeno" role="status">{msg}</p>}
     </section>
+  );
+}
+
+/** Início (só para a administradora): pedidos de convite esperando resposta. */
+export function AvisoPedidos() {
+  const [lista, setLista] = useState<{ id: string; nome: string; criado_em: number }[]>([]);
+  useEffect(() => {
+    const ler = () => lerCache<{ id: string; nome: string; criado_em: number }[]>('pedidos-pendentes').then((c) => setLista(c?.valor ?? []));
+    ler();
+    window.addEventListener('mp-pedidos', ler);
+    return () => window.removeEventListener('mp-pedidos', ler);
+  }, []);
+  if (!lista.length) return null;
+  const antigos = lista.filter((p) => Date.now() - p.criado_em > DOIS_DIAS).length;
+  return (
+    <Link
+      to="/ajustes"
+      onClick={() => setTimeout(() => document.getElementById('convites')?.scrollIntoView({ behavior: 'smooth' }), 500)}
+      className={`cartao cartao-link ${antigos ? 'terracota' : 'verde'}`}
+      style={{ gridColumn: '1 / -1', flexDirection: 'row', alignItems: 'center' }}
+    >
+      <span className="circulo" style={{ background: 'rgba(255,255,255,0.2)', color: '#fff' }}><Icone nome="sino" /></span>
+      <span className="cresce coluna" style={{ gap: 2 }}>
+        <strong>{antigos ? 'Tem convites para serem aceitos' : lista.length === 1 ? 'Novo pedido de convite' : `${lista.length} pedidos de convite`}</strong>
+        <span className="pequeno">
+          {lista.length === 1 ? `${lista[0].nome} está esperando` : `${lista.map((p) => p.nome).slice(0, 3).join(', ')}${lista.length > 3 ? ' e outros' : ''} estão esperando`}
+          {antigos ? ` · ${antigos === 1 ? '1 há' : `${antigos} há`} mais de 2 dias` : ''}
+        </span>
+      </span>
+      <Icone nome="direita" />
+    </Link>
   );
 }
