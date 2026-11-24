@@ -1,17 +1,59 @@
-import type { Investimento, Movimento, Perfil, Plano } from '../db';
+import type { Vinculo, Investimento, Movimento, Perfil, Plano } from '../db';
 import { chaveMes, mesesEntre, somarMeses } from './format';
 
 export interface ResumoRenda {
-  /** Renda mensal informada pela pessoa (salário mais recente). É a base de todos os cálculos. */
+  /** Renda usada em todos os cálculos. Renda variável (PJ, autônomo): valor seguro entre a média e o mês fraco. */
   mensal: number;
   /** Entradas registradas neste mês (notificações, extrato ou manual), só para conferência. */
   entradasDoMes: number;
+  /** PJ ou autônomo: a renda muda mês a mês. */
+  variavel: boolean;
+  /** Renda variável: média (informada ou dos últimos meses registrados) e mês fraco. */
+  media?: number;
+  minimo?: number;
+  /** De onde veio a média: informada pela pessoa ou dos meses registrados no app. */
+  fonte?: 'informada' | 'registrada';
 }
 
+export const RENDA_VARIAVEL: Vinculo[] = ['pj', 'autonomo'];
+export const NOMES_VINCULO: Record<Vinculo, string> = {
+  clt: 'CLT (carteira assinada)',
+  pj: 'PJ (empresa própria / MEI)',
+  autonomo: 'Autônomo ou freelancer',
+  servidor: 'Servidor público',
+  outro: 'Outro (aposentadoria, bolsa, pensão…)',
+};
+
+/** Entradas por mês (AAAA-MM). */
+export function entradasPorMes(movs: Movimento[]): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const m of movs) {
+    if (m.tipo !== 'entrada') continue;
+    const k = m.data.slice(0, 7);
+    out.set(k, (out.get(k) ?? 0) + m.valor);
+  }
+  return out;
+}
+
+/**
+ * Renda do mês para os cálculos.
+ * - CLT, servidor e outros: o salário informado.
+ * - PJ e autônomo (variável): planeja com um valor seguro, o meio-termo entre a média e o mês fraco,
+ *   para os planos não dependerem dos meses bons. Com 3 ou mais meses de entradas registradas
+ *   (dos últimos 6), a média e o mês fraco passam a vir do que entrou de verdade.
+ */
 export function resumoRenda(perfil: Perfil | undefined, movs: Movimento[], hoje = new Date()): ResumoRenda {
   const mes = chaveMes(hoje);
   const entradasDoMes = movs.filter((m) => m.tipo === 'entrada' && m.data.startsWith(mes)).reduce((a, m) => a + m.valor, 0);
-  return { mensal: perfil?.rendaMensal ?? 0, entradasDoMes };
+  const informada = perfil?.rendaMensal ?? 0;
+  if (!perfil?.vinculo || !RENDA_VARIAVEL.includes(perfil.vinculo)) return { mensal: informada, entradasDoMes, variavel: false };
+  const porMes = entradasPorMes(movs);
+  const meses = [1, 2, 3, 4, 5, 6].map((i) => porMes.get(somarMeses(mes, -i)) ?? 0).filter((v) => v > 0);
+  const registrada = meses.length >= 3;
+  const media = registrada ? meses.reduce((a, v) => a + v, 0) / meses.length : informada;
+  const minimoBase = registrada ? Math.min(...meses) : perfil.rendaMinima ?? informada * 0.7;
+  const minimo = Math.min(media, minimoBase);
+  return { mensal: Math.round((media + minimo) / 2), entradasDoMes, variavel: true, media, minimo, fonte: registrada ? 'registrada' : 'informada' };
 }
 
 /** Soma de saídas por mês. */

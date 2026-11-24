@@ -23,6 +23,10 @@ export interface Perfil {
   perfilRisco?: PerfilRisco;
   tema: Tema;
   metodo: 'notificacoes' | 'extrato' | 'manual';
+  /** Como a pessoa recebe: muda a forma de calcular a renda (PJ e autônomo variam mês a mês). */
+  vinculo?: Vinculo;
+  /** Renda variável: quanto entra num mês fraco (a renda mensal é a média). */
+  rendaMinima?: number;
   concluiuInicio: boolean;
   /** Compras a partir deste valor pedem finalidade e parcelamento (padrão R$ 100). */
   limiteAvisoCompra?: number;
@@ -101,6 +105,8 @@ export type TipoMov = 'saida' | 'entrada';
 export type OrigemMov = 'manual' | 'extrato' | 'notificacao';
 
 export type FormaPag = 'debito' | 'credito' | 'pix' | 'dinheiro' | 'boleto';
+
+export type Vinculo = 'clt' | 'pj' | 'autonomo' | 'servidor' | 'outro';
 
 export interface Movimento {
   id?: number;

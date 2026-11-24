@@ -6,6 +6,7 @@ import { analisarMes } from './feedback';
 import { chaveMes, mesLongo, reais } from './format';
 import { cdiDaSelic, recomendar as recomendarInvest } from './invest';
 import { proximaCobranca, totalMensal } from './assinaturas';
+import { resumoRenda } from './finance';
 
 /** A equipe de agentes. Cada um assina as próprias respostas. */
 export type IdAgente = 'nina' | 'gabriela' | 'matheus' | 'leo' | 'lari' | 'gui';
@@ -63,6 +64,11 @@ export function montarContexto(d: {
     hoje: hoje.toISOString().slice(0, 10),
     // Sem nome, e-mail ou qualquer dado que identifique a pessoa: a IA recebe só os números.
     rendaMensal: Math.round(d.renda),
+    vinculo: d.perfil?.vinculo,
+    ...(() => {
+      const r = resumoRenda(d.perfil, d.movimentos);
+      return r.variavel ? { rendaVariavel: { mediaPorMes: Math.round(r.media ?? 0), mesFraco: Math.round(r.minimo ?? 0), usadaNosPlanos: Math.round(r.mensal), origem: r.fonte } } : {};
+    })(),
     gastoMensalTipico: Math.round(d.gasto),
     livrePorMesParaPlanos: Math.round(d.livre),
     perfilInvestidor: d.perfil?.perfilRisco,

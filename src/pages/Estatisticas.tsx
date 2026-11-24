@@ -67,6 +67,11 @@ const NOMES: Record<string, string> = {
   'gastos:avisos-do-banco': 'Registrou pelos avisos do banco',
   'gastos:extrato': 'Registrou por extrato',
   'gastos:a-mao': 'Registrou à mão',
+  'vinculo:clt': 'CLT',
+  'vinculo:pj': 'PJ',
+  'vinculo:autonomo': 'Autônomo ou freelancer',
+  'vinculo:servidor': 'Servidor público',
+  'vinculo:outro': 'Outro tipo de renda',
   'aparelho:app-android': 'App Android',
   'aparelho:android-navegador': 'Android pelo navegador',
   'aparelho:iphone': 'iPhone',
@@ -95,6 +100,7 @@ const GRUPOS: { titulo: string; dica: string; filtro: (r: string) => boolean }[]
   { titulo: 'Agentes', dica: 'Quem respondeu e o que as pessoas pediram.', filtro: (r) => r.startsWith('agente:') || r.startsWith('acao:') },
   { titulo: 'Como registram os gastos', dica: 'No mês corrente de cada dia.', filtro: (r) => r.startsWith('gastos:') || r.startsWith('registro:') },
   { titulo: 'O que já configuraram', dica: '', filtro: (r) => r.startsWith('usa:') || r.startsWith('planos:') && r !== 'planos:criar' && r !== 'planos:editar' },
+  { titulo: 'Como recebem', dica: 'CLT, PJ, autônomo…', filtro: (r) => r.startsWith('vinculo:') },
   { titulo: 'Aparelhos', dica: '', filtro: (r) => r.startsWith('aparelho:') },
 ];
 

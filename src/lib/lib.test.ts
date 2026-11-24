@@ -158,3 +158,20 @@ describe('prazo desejado x prazo possível', () => {
     expect(Math.round(a.faltaPorMes!)).toBe(2333);
   });
 });
+
+describe('renda por tipo de vínculo', () => {
+  const perfil = (p: object) => ({ id: 'eu', rendaMensal: 8000, ...p }) as never;
+  const entrada = (mes: string, valor: number) => ({ data: `${mes}-10T12:00:00.000Z`, valor, tipo: 'entrada', descricao: 'x', categoria: 'Entrada', origem: 'manual', chave: mes }) as never;
+  it('CLT usa o salário informado', () => {
+    expect(resumoRenda(perfil({ vinculo: 'clt' }), [], new Date(2026, 10, 15)).mensal).toBe(8000);
+  });
+  it('PJ planeja com o meio-termo entre a média e o mês fraco informados', () => {
+    const r = resumoRenda(perfil({ vinculo: 'pj', rendaMinima: 4000 }), [], new Date(2026, 10, 15));
+    expect(r).toMatchObject({ mensal: 6000, variavel: true, media: 8000, minimo: 4000, fonte: 'informada' });
+  });
+  it('com 3+ meses de entradas registradas, usa o que entrou de verdade', () => {
+    const movs = [entrada('2026-08', 9000), entrada('2026-09', 5000), entrada('2026-10', 7000)];
+    const r = resumoRenda(perfil({ vinculo: 'autonomo', rendaMinima: 4000 }), movs, new Date(2026, 10, 15));
+    expect(r).toMatchObject({ media: 7000, minimo: 5000, mensal: 6000, fonte: 'registrada' });
+  });
+});

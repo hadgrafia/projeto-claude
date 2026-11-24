@@ -15,6 +15,9 @@ import { reais } from '../lib/format';
 import { calcularPerfil, PERGUNTAS_PERFIL } from '../lib/invest';
 import { PLANOS } from '../lib/planos';
 import { ehAppAndroid, Leitor } from '../lib/nativo';
+import { CampoVinculo } from '../components/EditarRenda';
+import { RENDA_VARIAVEL } from '../lib/finance';
+import type { Vinculo } from '../db';
 
 const ehAndroidNativo = ehAppAndroid;
 const ehIPhone = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -27,6 +30,9 @@ export default function BoasVindas() {
   const [tema, setTema] = useState<Tema>('sistema');
   const [renda, setRenda] = useState<number>();
   const [gasto, setGasto] = useState<number>();
+  const [vinculo, setVinculo] = useState<Vinculo>();
+  const [rendaMinima, setRendaMinima] = useState<number>();
+  const variavel = Boolean(vinculo && RENDA_VARIAVEL.includes(vinculo));
   const [respostas, setRespostas] = useState<(number | undefined)[]>([]);
   const [senhaCriada, setSenhaCriada] = useState(false);
   const [apps, setApps] = useState<AppEscolhido[]>([]);
@@ -42,7 +48,9 @@ export default function BoasVindas() {
     if (p === 2 && !assinaturas.length && !semAssinaturas) return 'Adicione suas assinaturas ou marque "Não tenho assinaturas".';
     if (p === 3 && nome.trim().length < 2) return 'Diga como podemos te chamar.';
     if (p === 4 && !senhaCriada) return 'Crie a senha do app para continuar.';
-    if (p === 5 && !(renda && renda > 0)) return 'Informe quanto você recebe por mês.';
+    if (p === 5 && !vinculo) return 'Diga como você recebe (CLT, PJ, autônomo…).';
+    if (p === 5 && !(renda && renda > 0)) return variavel ? 'Informe quanto entra num mês normal (a média).' : 'Informe quanto você recebe por mês.';
+    if (p === 5 && variavel && !(rendaMinima && rendaMinima > 0)) return 'Informe quanto entra num mês fraco.';
     if (p === 5 && !(gasto && gasto > 0)) return 'Informe quanto você gasta por mês, mais ou menos.';
     if (p === 6 && PERGUNTAS_PERFIL.some((_, i) => respostas[i] === undefined)) return 'Responda as 3 perguntas.';
     return '';
@@ -59,6 +67,8 @@ export default function BoasVindas() {
       id: 'eu',
       nome: nome.trim(),
       rendaMensal: renda ?? 0,
+      vinculo,
+      rendaMinima: variavel ? rendaMinima : undefined,
       rendaAtualizadaEm: new Date().toISOString(),
       gastoMensalEstimado: gasto ?? 0,
       perfilRisco: calcularPerfil(respostas.map((r) => r ?? 0)),
@@ -203,16 +213,30 @@ export default function BoasVindas() {
     // 5 — renda e gastos
     <>
       <h1 className="titulo">Quanto você recebe por mês?</h1>
-      <p className="subtitulo">Use o valor do seu salário (ou recebimento) mais recente. Se mudar, é só ajustar quando quiser no Início ou em Ajustes.</p>
-      <CampoDinheiro rotulo="Renda mensal" valor={renda} aoMudar={(v) => { setRenda(v); setAviso(''); }} dica="Obrigatório." />
+      <CampoVinculo valor={vinculo} aoMudar={(v) => { setVinculo(v); setAviso(''); }} />
+      {vinculo && (
+        <>
+          <p className="subtitulo">
+            {variavel
+              ? 'Como PJ ou autônomo, a renda muda mês a mês. Informe quanto sobra para você depois dos impostos (DAS, INSS): o app planeja com um valor seguro, sem contar com os meses bons.'
+              : 'Use o valor líquido do seu salário (ou recebimento) mais recente. Se mudar, é só ajustar quando quiser no Início ou em Ajustes.'}
+          </p>
+          <CampoDinheiro rotulo={variavel ? 'Num mês normal, quanto entra? (média)' : 'Renda mensal (líquida)'} valor={renda} aoMudar={(v) => { setRenda(v); setAviso(''); }} dica="Obrigatório." />
+          {variavel && <CampoDinheiro rotulo="E num mês fraco, quanto entra?" valor={rendaMinima} aoMudar={(v) => { setRendaMinima(v); setAviso(''); }} dica="Obrigatório. O pior mês comum dos últimos tempos." />}
+        </>
+      )}
       <CampoDinheiro rotulo="Quanto você gasta por mês, mais ou menos?" valor={gasto} aoMudar={(v) => { setGasto(v); setAviso(''); }} dica="Obrigatório. Uma estimativa basta: quando houver gastos registrados, o app usa os reais." />
-      {renda && gasto ? (
-        <div className={`cartao ${gasto >= renda ? 'areia' : 'verde'}`}>
-          <span className="suave pequeno">Sobra por mês para os seus planos</span>
-          <strong className="valor-grande" style={{ fontSize: 28 }}>{reais(Math.max(0, renda - gasto))}</strong>
-          {gasto >= renda && <span className="pequeno">Seus gastos estão iguais ou maiores que a renda. A aba Conselhos vai mostrar onde dá para economizar.</span>}
-        </div>
-      ) : null}
+      {renda && gasto && (!variavel || rendaMinima) ? (() => {
+        const base = variavel ? Math.round((renda + Math.min(renda, rendaMinima!)) / 2) : renda;
+        return (
+          <div className={`cartao ${gasto >= base ? 'areia' : 'verde'}`}>
+            <span className="suave pequeno">Sobra por mês para os seus planos</span>
+            <strong className="valor-grande" style={{ fontSize: 28 }}>{reais(Math.max(0, base - gasto))}</strong>
+            {variavel && <span className="pequeno">Calculado com {reais(base)} de renda: o meio-termo entre a média e o mês fraco. Nos meses bons, o que sobrar a mais pode ir para a reserva de emergência.</span>}
+            {gasto >= base && <span className="pequeno">Seus gastos estão iguais ou maiores que a renda. A aba Conselhos vai mostrar onde dá para economizar.</span>}
+          </div>
+        );
+      })() : null}
     </>,
 
     // 6 — perfil de investidor

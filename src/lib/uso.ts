@@ -56,6 +56,7 @@ async function retrato() {
   if (perfil?.limiteCartao) out.push('usa:cartao');
   if (perfil?.assinaturas?.length) out.push('usa:assinaturas');
   if (perfil?.metodo) out.push(`registro:${perfil.metodo}`);
+  if (perfil?.vinculo) out.push(`vinculo:${perfil.vinculo}`);
   if ((await db.investimentos.count()) > 0) out.push('usa:investimentos');
   const mes = new Date().toISOString().slice(0, 7);
   const movs = await db.movimentos.filter((m) => m.data.startsWith(mes)).toArray();

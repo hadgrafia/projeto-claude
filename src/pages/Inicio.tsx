@@ -117,9 +117,19 @@ export default function Inicio() {
       <Entra i={4}>
         <section className="cartao">
           <div className="entre">
-            <span className="pequeno suave" style={{ fontWeight: 600 }}>Renda mensal</span>
+            <span className="pequeno suave" style={{ fontWeight: 600 }}>{renda.variavel ? 'Renda usada nos planos' : 'Renda mensal'}{perfil?.vinculo ? ` · ${perfil.vinculo === 'clt' ? 'CLT' : perfil.vinculo === 'pj' ? 'PJ' : perfil.vinculo === 'autonomo' ? 'Autônomo' : perfil.vinculo === 'servidor' ? 'Servidor' : 'Outro'}` : ''}</span>
             <Dinheiro valor={renda.mensal} className="num" />
           </div>
+          {renda.variavel && (
+            <span className="mini suave">
+              Renda variável: meio-termo entre a média ({reaisCurto(renda.media ?? 0)}) e o mês fraco ({reaisCurto(renda.minimo ?? 0)}){renda.fonte === 'registrada' ? ', pelas entradas registradas dos últimos meses' : ''}. Assim os planos não dependem dos meses bons.
+            </span>
+          )}
+          {perfil && !perfil.vinculo && (
+            <button type="button" className="cartao areia pequeno" style={{ border: 0, textAlign: 'left', cursor: 'pointer', padding: 12 }} onClick={() => setEditandoRenda(true)}>
+              <strong>Você é CLT, PJ ou autônomo?</strong> Responda para o app calcular a renda do jeito certo (PJ e autônomo variam mês a mês).
+            </button>
+          )}
           <div className="grade-2 pequeno">
             <div className="coluna" style={{ gap: 0 }}><span className="mini suave">Gasto típico</span><strong className="num">{reaisCurto(gasto)}</strong></div>
             <div className="coluna" style={{ gap: 0 }}><span className="mini suave">Sobra para os planos</span><strong className="num">{reaisCurto(livre)}</strong></div>
