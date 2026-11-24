@@ -1,6 +1,7 @@
 import { json, type Env } from '../tipos';
 import type { ContaServico } from './analise';
-import { conversarComGemini, GeminiErro, type ParteGemini } from './gemini';
+import { analisarComGemini, conversarComGemini, GeminiErro, type ParteGemini } from './gemini';
+import { REGRAS_GUIA } from './guia';
 
 /**
  * Agentes do Meus Planos (chat no app e no site; o WhatsApp usa o mesmo cérebro):
@@ -15,6 +16,7 @@ A cada mensagem, escolha UM agente para responder, conforme o assunto:
 - "gabriela": planos. Cria planos conversando, explica metas, prazos, quanto separar por mês e quando dá para chegar, registra dinheiro guardado num plano, muda a porcentagem do valor livre de um plano, compara planos e explica o plano em conjunto com a família.
 - "matheus": investimentos. Selic, CDI, onde guardar o dinheiro de cada plano, rendimento estimado, diferenças entre Tesouro, CDB, LCI/LCA, poupança, fundos, ações e cripto, imposto e liquidez; registra ou atualiza investimentos. Orientação educativa, não recomendação individual registrada na CVM (diga isso só se a pessoa pedir algo muito específico).
 - "leo": antes de comprar e cartão de crédito. "Posso comprar X agora?", à vista ou parcelado, juros, parcelas que já existem, limite do cartão (e atualiza limite, valor usado e dias de fechamento e vencimento), fatura atual e das próximas faturas, quanto do limite está livre, compras no crédito e parcelas restantes, como evitar dívidas, rotativo e nome sujo. Use o objeto "cartao" do CONTEXTO: se "faturaAlta" ou "faturaPassaDaRenda" for true, ALERTE a pessoa logo no começo da resposta (fatura alta, segurar compras no crédito, nunca pagar só o mínimo); se "limiteMaiorQueRenda" for true, lembre que limite não é renda e que o teto recomendado da fatura é "tetoRecomendadoFatura". Se houver "gastosSemFormaDePagamento", peça para a pessoa dizer em Gastos se foram no débito ou no crédito. Quando perguntarem quanto podem gastar no cartão, use "cartaoParaOsPlanos": para cada plano, "maximoNoCartaoPorMes" é o máximo por mês no cartão para chegar no prazo desejado (renda − gastos fora do cartão − o que o plano precisa); diga o valor de cada plano e o de todos juntos; se for negativo, explique que o prazo não fecha nem sem cartão.
+- "gui": guia dos planos. Tudo sobre o TEMA de um plano: destinos de viagem (melhor época, alta e baixa temporada, clima, hospedagem, passeios, comida, experiências, documentos, quando comprar passagem), imóveis e bairros, modelos de carro (vale a pena, melhor época de compra, custos, revenda), equipamentos (melhores opções, Black Friday, onde comprar seguro) e qualquer pesquisa de preços, lugares ou "vale a pena?". O Gui pesquisa na internet em fontes confiáveis antes de responder: na "resposta", escreva só uma frase curta dizendo o que vai pesquisar.
 - "lari": assinaturas (Netflix, Spotify, IA, academia, Amazon Prime etc.). Lembra as próximas cobranças, soma quanto as assinaturas custam por mês e por ano, aponta repetidas ou pouco usadas para cancelar, compara planos mensais e anuais e cadastra assinaturas novas.
 Se a pessoa chamar um agente pelo nome, ele responde.
 
@@ -47,7 +49,7 @@ Campos da resposta (o app mostra botões e só executa depois que a pessoa confi
 export const ESQUEMA_AGENTES = {
   type: 'OBJECT',
   properties: {
-    agente: { type: 'STRING', enum: ['nina', 'gabriela', 'matheus', 'leo', 'lari'] },
+    agente: { type: 'STRING', enum: ['nina', 'gabriela', 'matheus', 'leo', 'lari', 'gui'] },
     resposta: { type: 'STRING', description: 'Texto curto para a pessoa (até 700 caracteres).' },
     registros: {
       type: 'ARRAY',
@@ -167,8 +169,24 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   try {
     const conta = JSON.parse(env.GCP_SA_KEY) as ContaServico;
-    const { json: r } = await conversarComGemini(env, conta, SISTEMA_AGENTES, [...historico, { role: 'user', parts: partes }], ESQUEMA_AGENTES);
-    return json(paraAcoes(r as Saida));
+    // Chamou o Gui pelo nome: vai direto para a pesquisa.
+    const direto = /^\s*gui\b/i.test(mensagem) && !anexo;
+    const r = direto ? ({ agente: 'gui', resposta: '', registros: [] } as Saida) : ((await conversarComGemini(env, conta, SISTEMA_AGENTES, [...historico, { role: 'user', parts: partes }], ESQUEMA_AGENTES)).json as Saida);
+    if (r.agente === 'gui' && mensagem.trim()) {
+      // O Gui pesquisa na internet (fontes confiáveis) antes de responder.
+      const planos = (p.contexto as { planos?: { nome?: string; tipo?: string; prazoDesejado?: string; tema?: string }[] } | undefined)?.planos ?? [];
+      const temas = planos.slice(0, 8).map((x) => `- ${x.nome} (${x.tipo}${x.prazoDesejado ? `, para ${x.prazoDesejado}` : ''}${x.tema ? `; ${x.tema}` : ''})`).join('\n');
+      const conversa = historico.slice(-6).map((h) => `${h.role === 'user' ? 'Pessoa' : 'Equipe'}: ${h.parts[0].text}`).join('\n');
+      const sistema = `Você é o Gui, o guia de planos do app "Meus Planos Financeiros" (Brasil). Responda a pergunta da pessoa sobre o tema dos planos dela (viagens, imóveis, carros, equipamentos e outros objetivos) com precisão.
+${REGRAS_GUIA}
+Responda direto ao ponto, com no máximo 350 palavras, títulos curtos se ajudar, e termine com as fontes. Hoje é ${new Date().toISOString().slice(0, 10)}.`;
+      const pergunta = `${temas ? `Planos da pessoa:\n${temas}\n\n` : ''}${conversa ? `Conversa até aqui:\n${conversa}\n\n` : ''}Pergunta: ${mensagem.replace(/^\s*gui[,:\s]*/i, '')}`;
+      const g = await analisarComGemini(env, conta, sistema, pergunta);
+      const jaTemFontes = /\]\(https?:\/\//.test(g.texto);
+      const fontes = g.fontes.length && !jaTemFontes ? `\n\nFontes:\n${g.fontes.slice(0, 6).map((f) => `- [${f.titulo}](${f.url})`).join('\n')}` : '';
+      return json({ agente: 'gui', resposta: g.texto + fontes, acoes: [] });
+    }
+    return json(paraAcoes(r));
   } catch (e) {
     if (e instanceof GeminiErro && e.status === 429) return json({ erro: 'Muita gente conversando agora. Tente em um minuto.' }, 429);
     return json({ erro: 'Não consegui responder agora. Tente de novo em instantes.' }, 502);

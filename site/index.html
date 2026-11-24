@@ -148,15 +148,16 @@
     <div class="conteudo convite">
       <div class="revelar">
         <h2>Peça seu convite</h2>
-        <p class="lead">O Meus Planos é usado só por pessoas convidadas. Deixe seu nome e e-mail: assim que o acesso for liberado, você recebe o convite.</p>
+        <p class="lead">O Meus Planos é usado só por pessoas convidadas. Crie aqui o seu acesso: assim que o pedido for aprovado, é só entrar com o seu e-mail e a senha que você escolher. Sem link, sem código.</p>
       </div>
       <form id="form-convite" class="cartao formulario revelar" novalidate>
         <label>Seu nome<input name="nome" autocomplete="name" required maxlength="80"></label>
-        <label>Seu e-mail<input name="email" type="email" autocomplete="email" inputmode="email" required maxlength="254"></label>
+        <label>Seu e-mail<input name="email" type="email" autocomplete="username" inputmode="email" required maxlength="254"></label>
+        <label>Crie uma senha<input name="senha" type="password" autocomplete="new-password" required minlength="8" maxlength="128" placeholder="8 ou mais, com letras e números"></label>
         <label>Qual é o seu plano? <small>(opcional)</small><textarea name="mensagem" maxlength="500" rows="3" placeholder="Ex.: Quero comprar um carro"></textarea></label>
         <label class="armadilha" aria-hidden="true">Site<input name="site" tabindex="-1" autocomplete="off"></label>
         <label class="aceite"><input type="checkbox" name="aceite" required> Concordo com a <a href="./privacidade.html">política de privacidade</a>.</label>
-        <button class="botao botao-terracota" type="submit">Pedir convite</button>
+        <button class="botao botao-terracota" type="submit">Criar meu acesso</button>
         <p class="retorno" role="status" aria-live="polite"></p>
       </form>
     </div>

@@ -18,6 +18,7 @@ import Assinaturas from './pages/Assinaturas';
 import Cartao from './pages/Cartao';
 import Ajuda from './pages/Ajuda';
 import Atendimento from './pages/Atendimento';
+import Estatisticas from './pages/Estatisticas';
 import { useEquipe } from './components/Equipe';
 import { avisarDestaques } from './lib/agentesAvisos';
 import BoasVindas from './pages/BoasVindas';
@@ -32,6 +33,7 @@ import Planos from './pages/Planos';
 import { BotaoOlho, useValoresOcultos } from './components/OlhoValores';
 import { vigiarPedidos } from './lib/pedidos';
 import { vigiarAtendimento } from './lib/atendimento';
+import { enviarUso, marcarTela } from './lib/uso';
 
 const ABAS: { para: string; rotulo: string; icone: NomeIcone }[] = [
   { para: '/inicio', rotulo: 'Início', icone: 'casa' },
@@ -119,6 +121,7 @@ function VigiaPedidos() {
       if (document.visibilityState !== 'visible') return;
       vigiarPedidos().catch(() => undefined);
       vigiarAtendimento().catch(() => undefined);
+      enviarUso().catch(() => undefined);
     };
     rodar();
     document.addEventListener('visibilitychange', rodar);
@@ -186,6 +189,9 @@ export default function App() {
   const { perfil, carregado } = useDados();
   const oculto = useValoresOcultos();
   const local = useLocation();
+  useEffect(() => {
+    marcarTela(local.pathname);
+  }, [local.pathname]);
   const bloqueio = useBloqueio();
   const telaGrande = useTelaGrande();
 
@@ -295,6 +301,7 @@ export default function App() {
                   <Route path="/cartao" element={<Cartao />} />
                   <Route path="/ajuda" element={<Ajuda />} />
                   <Route path="/atendimento" element={<Atendimento />} />
+                  <Route path="/estatisticas" element={<Estatisticas />} />
                   <Route path="/atendimento/:id" element={<Atendimento />} />
                   <Route path="*" element={<Navigate to="/inicio" replace />} />
                 </>

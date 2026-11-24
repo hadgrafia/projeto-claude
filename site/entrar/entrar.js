@@ -143,3 +143,31 @@ if (convite) {
     .then((r) => r.logado && irParaApp())
     .catch(() => undefined);
 }
+
+// Criar acesso: pedido de convite já com a senha. Aprovado, a pessoa entra direto com e-mail e senha.
+const fPedido = $('#sem-convite');
+fPedido.addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const nome = fPedido.nome.value.trim();
+  const email = fPedido.email.value.trim().toLowerCase();
+  const senha = fPedido.senha.value;
+  if (nome.length < 2) return avisar(fPedido, 'Digite o seu nome.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return avisar(fPedido, 'Digite um e-mail válido.');
+  if (senha.length < 8 || !/[a-zA-ZÀ-ú]/.test(senha) || !/\d/.test(senha)) return avisar(fPedido, 'A senha precisa ter pelo menos 8 caracteres, com letras e números.');
+  if (!fPedido.aceite.checked) return avisar(fPedido, 'Para continuar, concorde com a política de privacidade.');
+  const botao = fPedido.querySelector('[type=submit]');
+  botao.disabled = true;
+  avisar(fPedido, 'Enviando…', '');
+  try {
+    const r = await fetch('/api/pedido-convite', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome, email, senha, aceite: true, site: fPedido.site.value }) });
+    const c = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(c.erro || 'Não foi possível enviar agora.');
+    fPedido.reset();
+    fEntrar.email.value = email;
+    avisar(fPedido, 'Pronto! Seu pedido foi enviado. Assim que for aprovado, é só entrar com este e-mail e a senha que você criou.', 'ok');
+  } catch (e) {
+    avisar(fPedido, navigator.onLine ? e.message : 'Sem internet. Conecte-se para continuar.');
+  } finally {
+    botao.disabled = false;
+  }
+});

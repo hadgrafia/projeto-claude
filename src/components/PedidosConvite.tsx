@@ -12,12 +12,30 @@ interface Pedido {
   email: string;
   mensagem?: string;
   criado_em: number;
+  /** A pessoa já criou a senha no pedido: aprovar libera a conta na hora. */
+  comSenha?: number;
 }
 interface Pronto {
   nome: string;
   email: string;
   link: string;
-  tipo: 'conta' | 'senha';
+  tipo: 'conta' | 'senha' | 'liberado';
+}
+
+/** Aviso de acesso liberado (a pessoa já tem a senha): só entrar. */
+function emailLiberado(nome: string, email: string, entrar: string) {
+  const primeiro = nome.split(' ')[0] || nome;
+  const corpo = `Oi, ${primeiro}!
+
+Seu acesso ao Meus Planos Financeiros foi liberado. É só entrar com o seu e-mail (${email}) e a senha que você criou:
+${entrar}
+
+Para ter o app na tela inicial (grátis, sem loja e sem desligar nenhuma proteção do celular):
+- Android (Chrome): no início do app, toque em "Instalar agora" (ou menu ⋮ > Instalar app).
+- iPhone (Safari): Compartilhar > Adicionar à Tela de Início.
+
+Até logo!`;
+  return `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent('Seu acesso ao Meus Planos Financeiros foi liberado')}&body=${encodeURIComponent(corpo)}`;
 }
 
 /** Texto do convite (ou do link de senha nova) para enviar pelo e-mail da própria administradora. */
@@ -90,9 +108,10 @@ export function PedidosConvite() {
   async function decidir(p: Pedido, acao: 'aprovar' | 'recusar') {
     setMsg('');
     try {
-      const c = await postar<{ link?: string }>(`/api/pedidos/${p.id}`, { acao });
-      if (acao === 'aprovar' && c.link) setProntos((a) => [...a, { nome: p.nome, email: p.email, link: c.link!, tipo: 'conta' }]);
-      if (acao === 'aprovar') setAceitos((a) => [{ nome: p.nome, email: p.email, temConta: false }, ...a.filter((x) => x.email !== p.email)]);
+      const c = await postar<{ link?: string; contaCriada?: boolean; entrar?: string }>(`/api/pedidos/${p.id}`, { acao });
+      if (acao === 'aprovar' && c.contaCriada && c.entrar) setProntos((a) => [...a, { nome: p.nome, email: p.email, link: c.entrar!, tipo: 'liberado' }]);
+      else if (acao === 'aprovar' && c.link) setProntos((a) => [...a, { nome: p.nome, email: p.email, link: c.link!, tipo: 'conta' }]);
+      if (acao === 'aprovar') setAceitos((a) => [{ nome: p.nome, email: p.email, temConta: Boolean(c.contaCriada) }, ...a.filter((x) => x.email !== p.email)]);
       setPedidos((l) => l.filter((x) => x.id !== p.id));
       buscarPedidos().catch(() => undefined);
     } catch (e) {
@@ -126,6 +145,14 @@ export function PedidosConvite() {
       </span>
       <Icone nome="direita" />
     </Link>
+    <Link to="/estatisticas" className="cartao cartao-link" style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <span className="circulo terracota"><Icone nome="grafico" /></span>
+      <span className="cresce coluna" style={{ gap: 2 }}>
+        <strong>Estatísticas de uso</strong>
+        <span className="pequeno suave">O que as pessoas mais usam e quais planos são prioridade (só contagens, sem identificar ninguém).</span>
+      </span>
+      <Icone nome="direita" />
+    </Link>
     <section className="cartao" id="convites">
       <h2 style={{ fontSize: 15, fontWeight: 800 }}>Convites</h2>
       <p className="mini suave">Só você vê esta seção. Cada convite é um link pessoal: vale por 14 dias, funciona uma única vez e só cria conta para aquele e-mail.</p>
@@ -151,6 +178,7 @@ export function PedidosConvite() {
           <strong>{p.nome}</strong>
           <span className="pequeno">{p.email}</span>
           {p.mensagem && <span className="pequeno suave">“{p.mensagem}”</span>}
+          <span className="mini" style={{ fontWeight: 600 }}>{p.comSenha ? 'Já criou a senha: aprovando, a conta é liberada na hora.' : 'Pedido antigo, sem senha: aprovando, gera um link de convite.'}</span>
           <span className="mini suave">
             Pediu em {new Date(p.criado_em).toLocaleString('pt-BR')}
             {Date.now() - p.criado_em > DOIS_DIAS ? <strong style={{ color: 'var(--terracota-texto)' }}> · esperando há mais de 2 dias</strong> : null}
@@ -164,8 +192,12 @@ export function PedidosConvite() {
 
       {prontos.map((p) => (
         <div key={p.link} className="coluna" style={{ gap: 8, padding: 12, borderRadius: 18, background: 'var(--bg)' }}>
-          <strong className="pequeno">{p.tipo === 'conta' ? `Convite pronto para ${p.nome}` : `Link de senha nova para ${p.email}`}</strong>
-          <a className="botao terracota pequeno" href={emailConvite(p.nome, p.email, p.link, p.tipo)}>Enviar por e-mail</a>
+          <strong className="pequeno">
+            {p.tipo === 'liberado' ? `${p.nome} já pode entrar (com a senha que criou no pedido)` : p.tipo === 'conta' ? `Convite pronto para ${p.nome}` : `Link de senha nova para ${p.email}`}
+          </strong>
+          <a className="botao terracota pequeno" href={p.tipo === 'liberado' ? emailLiberado(p.nome, p.email, p.link) : emailConvite(p.nome, p.email, p.link, p.tipo)}>
+            {p.tipo === 'liberado' ? 'Avisar por e-mail (opcional)' : 'Enviar por e-mail'}
+          </a>
           <button type="button" className="botao secundario pequeno" onClick={() => navigator.clipboard.writeText(p.link).then(() => setMsg('Link copiado.'))}>Copiar o link</button>
         </div>
       ))}

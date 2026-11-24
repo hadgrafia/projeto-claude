@@ -8,13 +8,14 @@ import { cdiDaSelic, recomendar as recomendarInvest } from './invest';
 import { proximaCobranca, totalMensal } from './assinaturas';
 
 /** A equipe de agentes. Cada um assina as próprias respostas. */
-export type IdAgente = 'nina' | 'gabriela' | 'matheus' | 'leo' | 'lari';
-export const AGENTES: Record<IdAgente, { nome: string; papel: string; cor: string; exemplo: string }> = {
-  nina: { nome: 'Nina', papel: 'Gastos, resumos e Imposto de Renda', cor: '#B4552D', exemplo: 'Gastei 25 no sorvete da Borelli' },
-  gabriela: { nome: 'Gabriela', papel: 'Planos e metas', cor: '#3B4A3A', exemplo: 'Quero juntar para a casa nova em 2028' },
-  matheus: { nome: 'Matheus', papel: 'Investimentos', cor: '#5F7A5A', exemplo: 'Onde guardo o dinheiro da Casa Nova?' },
-  leo: { nome: 'Leo', papel: 'Compras e cartão', cor: '#8F4A2B', exemplo: 'Como está a fatura do meu cartão?' },
-  lari: { nome: 'Lari', papel: 'Assinaturas e cobranças', cor: '#C08A3E', exemplo: 'Quanto gasto com assinaturas?' },
+export type IdAgente = 'nina' | 'gabriela' | 'matheus' | 'leo' | 'lari' | 'gui';
+export const AGENTES: Record<IdAgente, { nome: string; papel: string; cor: string; exemplo: string; faz: string }> = {
+  nina: { nome: 'Nina', papel: 'Gastos e renda', cor: '#B4552D', exemplo: 'Gastei 25 no sorvete da Borelli', faz: 'Registra gastos por texto, áudio, foto ou PDF, faz o resumo do mês, a planilha e o Imposto de Renda.' },
+  gabriela: { nome: 'Gabriela', papel: 'Planos e metas', cor: '#3B4A3A', exemplo: 'Quero juntar para a casa nova em 2028', faz: 'Cria planos, diz quanto separar por mês e quando você chega lá.' },
+  matheus: { nome: 'Matheus', papel: 'Investimentos', cor: '#5F7A5A', exemplo: 'Onde guardo o dinheiro da Casa Nova?', faz: 'Explica Selic, CDB, Tesouro e mostra onde guardar o dinheiro de cada plano.' },
+  leo: { nome: 'Leo', papel: 'Compras e cartão', cor: '#8F4A2B', exemplo: 'Como está a fatura do meu cartão?', faz: 'Diz se vale comprar agora, olha a fatura e o limite e avisa antes de virar dívida.' },
+  lari: { nome: 'Lari', papel: 'Assinaturas', cor: '#C08A3E', exemplo: 'Quanto gasto com assinaturas?', faz: 'Lembra das cobranças, soma o que você paga e mostra o que dá para cancelar.' },
+  gui: { nome: 'Gui', papel: 'Guia dos planos', cor: '#2F5D62', exemplo: 'Vale a pena ir para Gramado em julho?', faz: 'Pesquisa em fontes confiáveis: melhor época, hospedagem, passeios, comida, quando comprar e cuidados.' },
 };
 
 export interface Situacao {
@@ -79,6 +80,8 @@ export function montarContexto(d: {
         porcentoDoLivre: p.percentual,
         separaPorMes: Math.round(s?.aporte ?? 0),
         prazoDesejado: p.prazo,
+        // Tema do plano (para o Gui pesquisar): destino, cidade, modelo… sem valores.
+        tema: temaDoPlano(p),
         previsaoReal: s?.previsao,
         ondeGuardar: recomendarInvest(s?.prazoMeses ?? s?.meses ?? 24, d.perfil?.perfilRisco, cdi).resumo,
       };
@@ -113,6 +116,22 @@ function tetoParaContexto(d: { planos: Plano[]; movimentos: Movimento[]; renda: 
     todosOsPlanosJuntos: { precisaGuardarPorMes: r(t.todos.precisa), maximoNoCartaoPorMes: r(t.todos.teto) },
     explicacao: 'maximoNoCartaoPorMes = renda − gastos fora do cartão − o que o plano precisa por mês. Negativo: mesmo sem cartão, o prazo não fecha.',
   };
+}
+
+function temaDoPlano(p: Plano) {
+  const r = p.respostas ?? {};
+  const t = (k: string) => (r[k] === undefined || r[k] === null || r[k] === '' ? '' : String(r[k]).slice(0, 80));
+  const partes =
+    p.tipo === 'viagem'
+      ? [t('destino') && `destino ${t('destino')}`, t('pessoas') && `${t('pessoas')} pessoa(s)`, t('dias') && `${t('dias')} dias`]
+      : p.tipo === 'casa'
+        ? [t('modalidade'), t('imovel'), t('cidade') || t('uf')]
+        : p.tipo === 'carro'
+          ? [t('marca'), t('modelo'), t('condicao'), t('ano')]
+          : p.tipo === 'equipamentos'
+            ? [String(r.itens ?? '').split('\n').map((l) => l.replace(/[\d.,]+\s*$/, '').trim()).filter(Boolean).slice(0, 5).join(', '), t('uso') && `uso: ${t('uso')}`]
+            : [t('descricao')];
+  return partes.filter(Boolean).join(', ') || undefined;
 }
 
 /** Cartão de crédito para o Leo: limite, fatura, parcelas e alertas, já calculados aqui no aparelho. */
@@ -271,7 +290,7 @@ export async function perguntar(mensagem: string, historico: { de: 'pessoa' | 'a
   if (r.status === 401) throw new Error('Sua sessão expirou. Abra Ajustes e toque em "Entrar de novo".');
   const c = (await r.json().catch(() => ({}))) as Partial<RespostaAgente> & { erro?: string };
   if (!r.ok) throw new Error(c.erro ?? `Erro ${r.status}`);
-  const agente = (['nina', 'gabriela', 'matheus', 'leo', 'lari'] as const).includes(c.agente as IdAgente) ? (c.agente as IdAgente) : 'nina';
+  const agente = (Object.keys(AGENTES) as IdAgente[]).includes(c.agente as IdAgente) ? (c.agente as IdAgente) : 'nina';
   return { agente, resposta: c.resposta ?? '', acoes: Array.isArray(c.acoes) ? c.acoes : [] };
 }
 

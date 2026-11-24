@@ -65,6 +65,8 @@ export interface Plano {
   /** Detalhamento da meta calculada (rótulo → valor). */
   composicao?: { rotulo: string; valor: number }[];
   analiseIA?: { texto: string; geradaEm: string };
+  /** Guia do plano (dicas pesquisadas: melhor época, hospedagem, passeios, custos, cuidados…). */
+  guia?: { texto: string; geradoEm: string };
   /** Plano em conjunto com familiares (dados cifrados de ponta a ponta no servidor). */
   conjunto?: Conjunto;
   criadoEm: string;

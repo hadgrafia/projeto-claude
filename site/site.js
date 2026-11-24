@@ -19,6 +19,12 @@ form.addEventListener('submit', async (ev) => {
     retorno.classList.add('erro');
     return;
   }
+  const s = String(dados.senha || '');
+  if (s.length < 8 || !/[a-zA-ZÀ-ú]/.test(s) || !/\d/.test(s)) {
+    retorno.textContent = 'A senha precisa ter pelo menos 8 caracteres, com letras e números.';
+    retorno.classList.add('erro');
+    return;
+  }
   if (!dados.aceite) {
     retorno.textContent = 'Para continuar, concorde com a política de privacidade.';
     retorno.classList.add('erro');
@@ -32,7 +38,15 @@ form.addEventListener('submit', async (ev) => {
     const c = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(c.erro || 'Não foi possível enviar agora.');
     form.reset();
-    retorno.textContent = c.jaPedido ? 'Você já pediu um convite. Assim que for liberado, você recebe por e-mail.' : 'Pedido enviado! Assim que o acesso for liberado, você recebe o convite por e-mail.';
+    retorno.innerHTML = '';
+    retorno.append(
+      c.jaPedido ? 'Seu pedido já estava na fila (a senha foi atualizada). ' : 'Pronto! Seu pedido foi enviado. ',
+      'Assim que for aprovado (normalmente em até 1 dia), é só entrar com o seu e-mail e a senha que você criou. ',
+    );
+    const a = document.createElement('a');
+    a.href = './entrar/';
+    a.textContent = 'Ir para Entrar';
+    retorno.append(a);
     retorno.classList.add('ok');
   } catch (e) {
     retorno.textContent = e.message;

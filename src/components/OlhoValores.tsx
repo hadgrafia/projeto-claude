@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { definirValoresOcultos, valoresOcultos } from '../lib/format';
+import { marcarUso } from '../lib/uso';
 
 /** Estado do olho, igual em todas as telas (muda junto quando a pessoa toca em qualquer olho). */
 export function useValoresOcultos() {
@@ -51,7 +52,10 @@ export function BotaoOlho({ className = 'circulo card', comRotulo = false }: { c
       aria-label={rotulo}
       aria-pressed={oculto}
       title={rotulo}
-      onClick={() => definirValoresOcultos(!oculto)}
+      onClick={() => {
+        if (!oculto) marcarUso('olho-valores');
+        definirValoresOcultos(!oculto);
+      }}
     >
       <IconeOlho fechado={oculto} />
       {comRotulo && <span className="rotulo">{oculto ? 'Valores ocultos' : 'Valores visíveis'}</span>}

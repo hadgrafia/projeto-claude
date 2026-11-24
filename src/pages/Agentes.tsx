@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Avatar, PainelAgentes, useEquipe } from '../components/Equipe';
 import { Icone } from '../components/Icone';
 import { BotaoSalvar, Markdown } from '../components/Ui';
@@ -11,6 +11,7 @@ import { categorizar, NOMES_CATEGORIAS } from '../lib/categorias';
 import { contextoDeCompra, recomendar } from '../lib/compras';
 import { NOMES_FORMA } from '../lib/cartao';
 import { conferirLimiteCartao } from '../lib/avisos';
+import { marcarUso } from '../lib/uso';
 import { jaRegistrado } from '../lib/conciliar';
 import { chaveMes, dataCurta, mesLongo, reais } from '../lib/format';
 import { chaveMovimento } from '../lib/importar';
@@ -41,7 +42,8 @@ export default function Agentes() {
   const online = useOnline();
   const equipe = useEquipe();
   const [conversa, setConversa] = useState<Mensagem[]>(lerConversa);
-  const [texto, setTexto] = useState('');
+  const local = useLocation();
+  const [texto, setTexto] = useState(() => String((local.state as { texto?: string } | null)?.texto ?? ''));
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState('');
   const [gravando, setGravando] = useState(false);
@@ -70,6 +72,7 @@ export default function Agentes() {
     try {
       const historico = conversa.slice(-10).map((m) => ({ de: m.de === 'pessoa' ? ('pessoa' as const) : ('agente' as const), texto: m.de === 'pessoa' ? m.texto : `${AGENTES[m.de].nome}: ${m.texto}` }));
       const r = await perguntar(msg.trim(), historico, equipe.contexto(), anexo);
+      marcarUso(`agente:${r.agente}`, ...(anexo ? [`agente:anexo-${anexo.tipo.split('/')[0]}`] : []), ...r.acoes.map((a) => `acao:${a.tipo}`));
       // Se a IA esqueceu de sugerir o registro de um gasto contado em texto, o app prepara.
       const local = !r.acoes.some((a) => a.tipo === 'registrar') ? gastoDoTexto(msg) : null;
       adicionar({ de: local ? 'nina' : r.agente, texto: r.resposta, acoes: local ? [local, ...r.acoes] : r.acoes });
@@ -141,15 +144,32 @@ export default function Agentes() {
         </div>
       </div>
 
-      <div className="equipe">
-        {(Object.keys(AGENTES) as IdAgente[]).map((id) => (
-          <button key={id} type="button" className="membro" onClick={() => setTexto(`${AGENTES[id].nome}, `)}>
-            <Avatar id={id} tamanho={44} />
-            <strong className="pequeno">{AGENTES[id].nome}</strong>
-            <span className="mini suave">{AGENTES[id].papel}</span>
-          </button>
-        ))}
-      </div>
+      {conversa.length === 0 ? (
+        <div className="equipe-cartoes">
+          {(Object.keys(AGENTES) as IdAgente[]).map((id) => (
+            <button key={id} type="button" className="membro-cartao" onClick={() => setTexto(AGENTES[id].exemplo)} aria-label={`${AGENTES[id].nome}: ${AGENTES[id].papel}. Exemplo: ${AGENTES[id].exemplo}`}>
+              <Avatar id={id} tamanho={46} />
+              <span className="coluna" style={{ gap: 3, minWidth: 0 }}>
+                <span className="linha" style={{ gap: 8, flexWrap: 'wrap' }}>
+                  <strong>{AGENTES[id].nome}</strong>
+                  <span className="papel" style={{ color: AGENTES[id].cor }}>{AGENTES[id].papel}</span>
+                </span>
+                <span className="pequeno suave">{AGENTES[id].faz}</span>
+                <span className="mini exemplo">Ex.: “{AGENTES[id].exemplo}”</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="equipe-faixa" role="list" aria-label="Equipe">
+          {(Object.keys(AGENTES) as IdAgente[]).map((id) => (
+            <button key={id} type="button" role="listitem" className="chip membro-chip" onClick={() => setTexto(`${AGENTES[id].nome}, `)} title={AGENTES[id].faz}>
+              <Avatar id={id} tamanho={24} />
+              <span><strong>{AGENTES[id].nome}</strong> · {AGENTES[id].papel}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {conversa.length === 0 && (
         <>

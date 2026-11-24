@@ -37,7 +37,7 @@
 <p>Arquivos de extrato (PDF, OFX, CSV) são lidos no próprio celular e não são enviados a nenhum servidor.</p>
 
 <h2>Login e convites</h2>
-<p>O acesso é restrito a pessoas convidadas. A conta é criada por um link de convite pessoal enviado ao seu e-mail; depois, você entra com e-mail e senha. A senha é guardada apenas como hash (embaralhada) e ninguém consegue vê-la. Seu e-mail é usado apenas para o acesso.</p>
+<p>O acesso é restrito a pessoas convidadas. Você pede o acesso criando o seu e-mail e senha; a conta só passa a funcionar depois que o pedido é aprovado (ou por um link de convite pessoal enviado ao seu e-mail). Depois, você entra com e-mail e senha. A senha é guardada apenas como hash (embaralhada) e ninguém consegue vê-la. Seu e-mail é usado apenas para o acesso.</p>
 
 <h2>Plano em conjunto</h2>
 <p>Se você criar ou entrar num plano em conjunto, o app envia ao servidor um resumo seu (apelido, quanto guardou, quanto separa por mês, valor livre e categorias onde pode economizar). Esses dados são <strong>cifrados no seu celular</strong> com uma chave que só os participantes têm; no plano em conjunto, o servidor guarda apenas o texto cifrado. A chave do plano também fica na cópia cifrada da sua conta, para o plano voltar se você trocar de aparelho. Sua lista de gastos nunca é compartilhada. A renda só aparece para o grupo se você permitir.</p>
@@ -47,6 +47,12 @@
 
 <h2>Agentes (Nina, Gabriela, Matheus e Leo)</h2>
 <p>Quando você conversa com os agentes, o app envia a sua mensagem (e o áudio, foto ou PDF que você anexar) junto com um resumo dos seus números (sem nome nem e-mail): renda, gastos por mês e categoria, últimos lançamentos (data, valor, lugar e categoria), planos, investimentos e limite do cartão. Nunca são enviados senha, dados de conta bancária, número de cartão ou o texto das notificações. A resposta é gerada por IA no Google Cloud (Vertex AI) e não fica guardada no servidor; a conversa fica só no seu aparelho. Nada é registrado sem você confirmar. Os avisos por conta própria dos agentes podem ser desligados em Ajustes.</p>
+
+<h2>Guia do plano e agente Gui</h2>
+<p>Para montar o guia de um plano ou responder ao Gui, o app envia só o tema do plano (por exemplo: destino e número de dias da viagem, cidade do imóvel, marca e modelo do carro), sem nome, e-mail ou valores. A pesquisa é feita pela IA no Google Cloud (Vertex AI), que busca fontes na internet; o guia fica salvo no seu aparelho e na cópia cifrada da sua conta.</p>
+
+<h2>Estatística de uso</h2>
+<p>Para saber o que mais ajuda as pessoas, o app envia uma vez por dia apenas os nomes dos recursos usados (por exemplo, "cartão", "agente Leo", "plano de viagem"). O servidor guarda só totais por dia (quantas contas usaram cada recurso), nunca quem usou, valores, textos ou lugares. A marca que evita contar a mesma conta duas vezes no dia muda todo dia e é apagada em 2 dias.</p>
 
 <h2>Atendimento</h2>
 <p>Se você falar com uma pessoa da equipe em Dúvidas, a sua mensagem e o seu primeiro nome ficam guardados cifrados no servidor, só para responder você. A equipe vê apenas o seu nome, nunca o seu e-mail ou os seus dados financeiros. Ao excluir a conta, o atendimento também é apagado. Nunca envie senha, número de cartão ou dados do banco pelo atendimento.</p>

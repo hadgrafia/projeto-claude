@@ -54,12 +54,20 @@
       </form>
 
       <!-- Criar conta sem o link do convite -->
-      <section id="sem-convite" class="cartao" hidden>
-        <h2 class="conta-titulo">Crie sua conta pelo convite</h2>
-        <p>O Meus Planos é só para convidados. Quando o seu acesso é liberado, você recebe um <strong>link de convite pessoal</strong> no seu e-mail. É só abrir esse link para escolher a sua senha.</p>
-        <p class="nota">O link vale por 14 dias e funciona uma única vez. Se não encontrar, olhe também o spam.</p>
-        <a class="botao botao-terracota" href="../#convite">Ainda não tenho convite</a>
-      </section>
+      <form id="sem-convite" class="cartao formulario" novalidate hidden>
+        <h2 class="conta-titulo">Crie seu acesso</h2>
+        <p class="nota" style="margin:0">O Meus Planos é só para convidados. Crie aqui o seu e-mail e a sua senha: assim que o pedido for aprovado (normalmente em até 1 dia), é só voltar e entrar. Sem link e sem código.</p>
+        <label>Seu nome<input name="nome" autocomplete="name" required maxlength="80"></label>
+        <label>E-mail<input name="email" type="email" autocomplete="username" inputmode="email" required maxlength="254"></label>
+        <label>Crie uma senha
+          <span class="campo-senha"><input name="senha" type="password" autocomplete="new-password" required maxlength="128" placeholder="8 ou mais, com letras e números"><button type="button" class="mostrar">Mostrar</button></span>
+        </label>
+        <label class="armadilha" aria-hidden="true">Site<input name="site" tabindex="-1" autocomplete="off"></label>
+        <label class="aceite"><input type="checkbox" name="aceite" required> Concordo com a <a href="../privacidade.html">política de privacidade</a>.</label>
+        <button class="botao botao-terracota" type="submit">Criar meu acesso</button>
+        <p class="retorno" role="status" aria-live="polite"></p>
+        <p class="nota">Recebeu um link de convite por e-mail? Abra o link: ele também funciona.</p>
+      </form>
 
       <!-- Esqueci a senha -->
       <section id="esqueci-info" class="cartao" hidden>

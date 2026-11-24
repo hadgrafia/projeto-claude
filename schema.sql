@@ -120,3 +120,25 @@ CREATE TABLE IF NOT EXISTS mensagens_chamado (
   em INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS mensagens_chamado_id ON mensagens_chamado (chamado_id, em);
+-- Senha escolhida junto com o pedido de convite (só o hash). Quando a administradora aprova,
+-- a conta é criada com ela e a pessoa já entra com e-mail e senha (sem link por e-mail).
+CREATE TABLE IF NOT EXISTS pedidos_senha (
+  pedido_id TEXT PRIMARY KEY,
+  senha TEXT NOT NULL
+);
+-- Estatística de uso (só contagens, para a administradora). Ninguém é identificado:
+-- cada aparelho manda, uma vez por dia, a lista de recursos que usou; o servidor só soma
+-- "quantas contas usaram tal recurso naquele dia". A marca anti-repetição é um código que muda
+-- todo dia (não dá para ligar dias diferentes à mesma pessoa) e é apagada depois de 2 dias.
+CREATE TABLE IF NOT EXISTS uso_agregado (
+  dia TEXT NOT NULL,
+  recurso TEXT NOT NULL,
+  contas INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (dia, recurso)
+);
+CREATE TABLE IF NOT EXISTS uso_marcas (
+  dia TEXT NOT NULL,
+  marca TEXT NOT NULL,
+  recurso TEXT NOT NULL,
+  PRIMARY KEY (dia, marca, recurso)
+);

@@ -101,7 +101,7 @@ export function selicVista(selic?: number) {
 /** Avisos dos agentes no celular, se a pessoa deixou ligado. Cada um só uma vez. */
 export async function avisarDestaques(perfil: Perfil | undefined, lista: Destaque[]) {
   if (perfil?.avisos?.agentes === false) return;
-  const nomes: Record<IdAgente, string> = { nina: 'Nina', gabriela: 'Gabriela', matheus: 'Matheus', leo: 'Leo', lari: 'Lari' };
+  const nomes: Record<IdAgente, string> = { nina: 'Nina', gabriela: 'Gabriela', matheus: 'Matheus', leo: 'Leo', lari: 'Lari', gui: 'Gui' };
   for (const d of lista) {
     if (await lerCache(`destaque:${d.chave}`)) continue;
     await salvarCache(`destaque:${d.chave}`, true);

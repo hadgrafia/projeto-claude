@@ -85,6 +85,12 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
     if (await excedeu(env, `email:${email}`, 6, 15 * MINUTO, false)) return json({ erro: 'Muitas tentativas para este e-mail. Espere 15 minutos ou toque em "Esqueci minha senha".' }, 429);
     const conta = await env.DB.prepare('SELECT senha FROM contas WHERE email = ?').bind(email).first<{ senha: string }>();
     const ok = await conferirSenha(senha, conta?.senha ?? HASH_FALSO);
+    if (!conta) {
+      // Pediu o convite com esta senha e ainda está esperando: avisa (só quem sabe a senha vê isso).
+      const pend = await env.DB.prepare("SELECT s.senha FROM pedidos p JOIN pedidos_senha s ON s.pedido_id = p.id WHERE p.email = ? AND p.status = 'pendente'").bind(email).first<{ senha: string }>();
+      if (pend && (await conferirSenha(senha, pend.senha)))
+        return json({ erro: 'Seu pedido de convite ainda está em análise. Assim que for aprovado, é só entrar aqui com este e-mail e esta senha.', pendente: true }, 403);
+    }
     if (!conta || !ok) {
       await excedeu(env, `email:${email}`, 6, 15 * MINUTO);
       return json({ erro: 'E-mail ou senha incorretos. Se ainda não criou sua conta, abra o link do convite que você recebeu por e-mail.' }, 401);

@@ -13,6 +13,7 @@ import { mesCurto, pct, reais, reaisCurto } from '../lib/format';
 import { pedirAnalise } from '../lib/ia';
 import { cdiDaSelic, recomendar } from '../lib/invest';
 import { PLANOS } from '../lib/planos';
+import { GuiaPlano } from '../components/GuiaPlano';
 
 export default function PlanoDetalhe() {
   const { id } = useParams();
@@ -152,6 +153,8 @@ export default function PlanoDetalhe() {
         {ligados.length > 0 && <span className="mini suave">Investimentos ligados: {ligados.map((i) => `${i.nome} (${reaisCurto(i.saldo)})`).join(', ')}</span>}
         <Link to="/investir" className="botao secundario pequeno">Ver plano de investimentos</Link>
       </section>
+
+      <GuiaPlano plano={plano} />
 
       <section className="cartao grafite">
         <div className="linha">

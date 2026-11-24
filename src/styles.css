@@ -328,3 +328,15 @@ h1, h2, h3, p { margin: 0; }
 html.valores-ocultos .valor-sensivel input:not(:focus) { filter: blur(7px); }
 .aviso-oculto { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--terracota-texto); }
 .nav-marca .botao-olho { margin-left: auto; width: 38px; height: 38px; }
+.barra-estat { border-radius: 8px; padding: 4px 6px; margin: -4px -6px; } .barra-estat:hover, .barra-estat:focus-visible { background: var(--areia-2); outline: none; }
+
+/* Equipe de agentes: cartões claros (conversa vazia) e faixa compacta (durante a conversa) */
+.equipe-cartoes { display: grid; grid-template-columns: 1fr; gap: 8px; }
+@media (min-width: 640px) { .equipe-cartoes { grid-template-columns: 1fr 1fr; } }
+.membro-cartao { display: flex; gap: 12px; align-items: flex-start; text-align: left; background: var(--card); border: 0; border-radius: 20px; padding: 14px; cursor: pointer; color: var(--texto); font: inherit; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.membro-cartao:hover, .membro-cartao:focus-visible { box-shadow: var(--sombra); transform: translateY(-1px); }
+.membro-cartao .papel { font-size: 12px; font-weight: 700; }
+.membro-cartao .exemplo { color: var(--terracota-texto); font-weight: 600; }
+.equipe-faixa { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.equipe-faixa::-webkit-scrollbar { display: none; }
+.membro-chip { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0; padding: 4px 12px 4px 4px; }

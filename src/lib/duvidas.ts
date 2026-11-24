@@ -35,9 +35,9 @@ export const DUVIDAS: Duvida[] = [
   },
   {
     tema: 'Começando',
-    pergunta: 'Quem são a Nina, a Gabriela, o Matheus, o Leo e a Lari?',
+    pergunta: 'Quem são a Nina, a Gabriela, o Matheus, o Leo, a Lari e o Gui?',
     resposta:
-      'São os agentes de IA do app. Nina cuida dos gastos e da renda; Gabriela, dos planos; Matheus, dos investimentos; Leo, das compras e do cartão de crédito; Lari, das assinaturas. Converse por texto, áudio, foto ou PDF. Nada é registrado sem você confirmar.',
+      'São os agentes de IA do app. Nina cuida dos gastos e da renda; Gabriela, dos planos; Matheus, dos investimentos; Leo, das compras e do cartão de crédito; Lari, das assinaturas; Gui é o guia dos planos e pesquisa em fontes confiáveis (melhor época, hospedagem, passeios, se vale a pena). Converse por texto, áudio, foto ou PDF. Nada é registrado sem você confirmar.',
     tela: { rota: '/agentes', nome: 'Agentes' },
     palavras: 'agente ia inteligencia artificial chat',
   },
@@ -46,7 +46,7 @@ export const DUVIDAS: Duvida[] = [
     tema: 'Conta e segurança',
     pergunta: 'Por que preciso de convite?',
     resposta:
-      'O app é só para convidados, para manter a segurança de todos. A conta é criada pelo link pessoal que chega no seu e-mail: ele vale 14 dias e funciona uma única vez. Não tem convite? Peça na página inicial do site.',
+      'O app é só para convidados, para manter a segurança de todos. Para pedir, crie o seu e-mail e senha em "Criar acesso" (na página Entrar ou na página inicial). Assim que o pedido for aprovado, é só entrar com eles: sem link e sem código.',
     palavras: 'convite cadastro criar conta',
   },
   {
@@ -134,6 +134,13 @@ export const DUVIDAS: Duvida[] = [
     pergunta: 'Posso juntar dinheiro com outra pessoa no mesmo plano?',
     resposta: 'Sim, com o plano em conjunto: convide alguém da família pelo próprio plano. Cada pessoa vê só o resumo da outra, nunca a lista de gastos.',
     palavras: 'conjunto casal familia compartilhar',
+  },
+  {
+    tema: 'Planos e investimentos',
+    pergunta: 'O que é o Guia do plano?',
+    resposta:
+      'Em cada plano, toque em "Montar guia": o Gui pesquisa em fontes confiáveis tudo o que ajuda antes de gastar. Na viagem: melhor época, quando comprar passagem, onde se hospedar, o que visitar e comer e experiências diferentes. No carro, na casa e nos equipamentos: melhor época de compra, custos escondidos e cuidados. Tem os links das fontes.',
+    palavras: 'guia dicas viagem hospedagem turismo comida epoca',
   },
   // Cartão e compras
   {
