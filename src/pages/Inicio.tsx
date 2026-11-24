@@ -18,6 +18,8 @@ import { situacaoPlano, useDados, useSelic } from '../hooks';
 import { analisarMes } from '../lib/feedback';
 import { mesCurto, pct, reaisCurto } from '../lib/format';
 import { BotaoOlho } from '../components/OlhoValores';
+import { CartaoCompletar } from '../components/Lugar';
+import { AvisosDoCelular } from '../components/FormaPagamento';
 
 const saudacao = () => {
   const h = new Date().getHours();
@@ -73,6 +75,8 @@ export default function Inicio() {
       <AvisoNovoAcesso />
       <AvisoPedidos />
       <AvisoAtendimento />
+      <CartaoCompletar />
+      <AvisosDoCelular />
       <CartaoEscolherApps perfil={perfil} />
       <CartaoAssinaturas perfil={perfil} />
       <ResumoCartao perfil={perfil} movimentos={movimentos} investimentos={investimentos} renda={renda.mensal} />

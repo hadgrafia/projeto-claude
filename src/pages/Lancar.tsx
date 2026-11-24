@@ -9,6 +9,7 @@ import { dataCurta, reais } from '../lib/format';
 import { db, type Movimento } from '../db';
 import { jaRegistrado } from '../lib/conciliar';
 import { appPermitido } from '../lib/appsPagamento';
+import { formaConhecida } from '../lib/nativo';
 import { avisoIgnoravel, modeloDoAviso } from '../lib/notificacao';
 
 /**
@@ -57,7 +58,10 @@ export default function Lancar() {
             return setLido(null);
           }
         }
-        return setLido(lerParametros(p));
+        const l = lerParametros(p);
+        // Débito ou crédito pela memória (banco já respondido) quando o texto não disse.
+        if (l && l.tipo === 'saida' && !l.forma) l.forma = formaConhecida(perfil, undefined, app || undefined);
+        return setLido(l);
       }
       const c = await pegarCompartilhado();
       if (!c) return setLido(null);

@@ -92,6 +92,51 @@ final class FiltroApps {
         }
     }
 
+    /*
+     * Débito ou crédito automático. A memória vem da conta (o app manda ao abrir) e aprende na hora
+     * quando a pessoa responde na notificação: depois da primeira resposta para um cartão (final 1234)
+     * ou um banco, as próximas compras já entram certas, sem perguntar.
+     */
+    static synchronized void definirFormas(Context c, JSONObject cartoes, JSONObject apps, String padrao) {
+        prefs(c).edit()
+            .putString("formas_cartao", cartoes.toString())
+            .putString("formas_app", apps.toString())
+            .putString("forma_padrao", padrao == null ? "perguntar" : padrao)
+            .apply();
+    }
+
+    static synchronized void aprenderForma(Context c, String cartao, String app, String forma) {
+        try {
+            if (cartao != null && !cartao.isEmpty()) {
+                JSONObject o = new JSONObject(prefs(c).getString("formas_cartao", "{}"));
+                o.put(cartao, forma);
+                prefs(c).edit().putString("formas_cartao", o.toString()).apply();
+            } else if (app != null && !app.isEmpty() && !"pix".equals(forma)) {
+                JSONObject o = new JSONObject(prefs(c).getString("formas_app", "{}"));
+                o.put(app, forma);
+                prefs(c).edit().putString("formas_app", o.toString()).apply();
+            }
+        } catch (JSONException ignored) {
+        }
+    }
+
+    /** Forma já conhecida para este cartão, este banco ou a escolha padrão (null = perguntar). */
+    static String formaConhecida(Context c, String cartao, String app) {
+        try {
+            if (cartao != null) {
+                String f = new JSONObject(prefs(c).getString("formas_cartao", "{}")).optString(cartao, "");
+                if (!f.isEmpty()) return f;
+            }
+            if (app != null) {
+                String f = new JSONObject(prefs(c).getString("formas_app", "{}")).optString(app, "");
+                if (!f.isEmpty()) return f;
+            }
+        } catch (JSONException ignored) {
+        }
+        String padrao = prefs(c).getString("forma_padrao", "perguntar");
+        return "credito".equals(padrao) || "debito".equals(padrao) ? padrao : null;
+    }
+
     /** Modelos de aviso que a pessoa marcou como "não era um gasto" (só o código, nunca o texto). */
     static synchronized void definirModelosIgnorados(Context c, Set<String> modelos) {
         prefs(c).edit().putString("modelos_ignorados", new JSONArray(modelos).toString()).apply();

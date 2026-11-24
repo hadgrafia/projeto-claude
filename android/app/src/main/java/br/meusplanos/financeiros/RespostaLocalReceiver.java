@@ -18,8 +18,9 @@ public class RespostaLocalReceiver extends BroadcastReceiver {
         Bundle r = RemoteInput.getResultsFromIntent(intent);
 
         if ("forma".equals(acao) && valor != null && valor.matches("debito|credito|pix")) {
-            // Crédito: a próxima pergunta é "em quantas vezes?".
-            Armazem.definirForma(c, id, valor, 0, "credito".equals(valor));
+            // Crédito = à vista (parcelado tem o botão próprio). Aprende para as próximas compras.
+            Armazem.definirForma(c, id, valor, 0, false);
+            aprender(c, id, valor);
         } else if ("vezes".equals(acao)) {
             String txt = valor;
             if (txt == null && r != null) {
@@ -37,6 +38,7 @@ public class RespostaLocalReceiver extends BroadcastReceiver {
                 return;
             }
             Armazem.definirForma(c, id, "credito", n, false);
+            aprender(c, id, "credito");
         } else {
             // "local" (também o formato das versões anteriores, sem ação).
             if (r == null) return;
@@ -47,5 +49,13 @@ public class RespostaLocalReceiver extends BroadcastReceiver {
             Armazem.definirLocal(c, id, local);
         }
         Avisos.perguntar(c, id);
+    }
+
+    /** Lembra a resposta para este cartão (se o aviso mostrou o final) ou para este banco. */
+    private static void aprender(Context c, String id, String forma) {
+        org.json.JSONObject o = Armazem.obter(c, id);
+        if (o == null) return;
+        FiltroApps.aprenderForma(c, o.optString("cartao", ""), o.optString("app", ""), forma);
+        Armazem.marcarAprendida(c, id);
     }
 }

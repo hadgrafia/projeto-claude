@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { db, type Importancia, type Movimento, type TipoMov } from '../db';
 import { inicioParcelas } from '../lib/compras';
 import { conferirLimiteCartao } from '../lib/avisos';
@@ -10,6 +10,25 @@ import { lugarInformadoNoApp, naoEraGasto } from '../lib/nativo';
 import { Icone } from './Icone';
 import { BotaoSalvar, CampoDinheiro, Folha } from './Ui';
 import { FormForma } from './FormaPagamento';
+
+/** Quadro "Completar gastos" (Início e Gastos): só aparece quando há algo a completar. */
+export function CartaoCompletar() {
+  const pendentes = usePendentes();
+  if (!pendentes.length) return null;
+  const semForma = pendentes.filter((m) => m.formaPendente).length;
+  const semLugar = pendentes.filter((m) => m.localPendente).length;
+  const partes = [semForma && `${semForma} sem débito ou crédito`, semLugar && `${semLugar} sem o lugar`].filter(Boolean).join(' · ');
+  return (
+    <button type="button" className="cartao areia cartao-link" style={{ gridColumn: '1 / -1', border: 0, textAlign: 'left', cursor: 'pointer', flexDirection: 'row', alignItems: 'center' }} onClick={abrirCompletar}>
+      <span className="circulo terracota"><Icone nome="lapis" /></span>
+      <span className="cresce coluna" style={{ gap: 2 }}>
+        <strong>Completar {pendentes.length === 1 ? '1 gasto' : `${pendentes.length} gastos`}</strong>
+        <span className="pequeno suave">{partes || 'Detalhes de compras grandes'}. Já estão registrados; responda quando quiser.</span>
+      </span>
+      <Icone nome="direita" />
+    </button>
+  );
+}
 
 /** Na pergunta que aparece sozinha: o aviso não era de um gasto (ex.: cotação do dólar). */
 export function BotaoNaoEraGasto({ mov, segurar }: { mov: Movimento; segurar?: (m?: Movimento) => void }) {
@@ -72,16 +91,39 @@ export function CampoLugar({ tipo, valor, aoMudar, sugestoes, autoFoco }: { tipo
  * Pergunta o lugar dos gastos que chegaram sem ele (notificação ou extrato).
  * Aparece sozinha assim que o app abre ou recebe um gasto novo; um de cada vez.
  */
+/** Gastos que ainda têm algo a completar (lugar, débito ou crédito, detalhes da compra grande). */
+export const usePendentes = () =>
+  useLiveQuery(async () => (await db.movimentos.orderBy('data').reverse().toArray()).filter((m) => m.localPendente || m.formaPendente || m.detalhePendente), []) ?? [];
+
+/** Abre a revisão dos gastos para completar (um de cada vez). */
+export const abrirCompletar = () => window.dispatchEvent(new Event('mp-completar'));
+
+/**
+ * Completar gastos: os gastos entram sozinhos; o que faltou (lugar, débito ou crédito) fica aqui
+ * para a pessoa responder quando quiser, tudo de uma vez. Não abre sozinho.
+ */
 export function PerguntaLocal() {
-  const pendentes = useLiveQuery(async () => (await db.movimentos.orderBy('data').reverse().toArray()).filter((m) => m.localPendente || m.formaPendente || m.detalhePendente), []) ?? [];
+  const pendentes = usePendentes();
+  const [aberta, setAberta] = useState(false);
   const [adiados, setAdiados] = useState<Set<number>>(new Set());
   // Enquanto o "✓ Salvo" aparece, a pergunta que acabou de ser respondida continua na tela.
   const [segurando, setSegurando] = useState<Movimento>();
-  const atual = segurando ?? pendentes.find((m) => !adiados.has(m.id!));
+  useEffect(() => {
+    const abrir = () => {
+      setAdiados(new Set());
+      setAberta(true);
+    };
+    window.addEventListener('mp-completar', abrir);
+    return () => window.removeEventListener('mp-completar', abrir);
+  }, []);
+  const atual = aberta ? segurando ?? pendentes.find((m) => !adiados.has(m.id!)) : undefined;
+  useEffect(() => {
+    if (aberta && !atual) setAberta(false);
+  }, [aberta, atual]);
   return (
     <Folha
       aberta={!!atual}
-      aoFechar={() => atual && setAdiados(new Set(adiados).add(atual.id!))}
+      aoFechar={() => setAberta(false)}
       titulo={atual?.localPendente ? (atual.tipo === 'entrada' ? 'De onde veio este dinheiro?' : 'Onde foi este gasto?') : atual?.formaPendente ? 'Débito ou crédito?' : 'Conte sobre esta compra'}
     >
       {atual?.localPendente && <FormLocal key={atual.id} mov={atual} segurar={setSegurando} restantes={pendentes.length - 1} aoAdiar={() => setAdiados(new Set(adiados).add(atual.id!))} />}

@@ -75,8 +75,17 @@ public class ServicoNotificacoes extends NotificationListenerService {
         if (Armazem.jaVisto(this, assinatura, agora)) return;
 
         String app = nomeDoApp(sbn.getPackageName(), ex);
+        // Débito ou crédito: se o aviso não disse, usa o que a pessoa já respondeu para este cartão ou banco.
+        boolean automatica = false;
+        if ("saida".equals(p.tipo) && p.forma == null) {
+            String conhecida = FiltroApps.formaConhecida(this, p.cartao, app);
+            if (conhecida != null) {
+                p = p.comForma(conhecida);
+                automatica = true;
+            }
+        }
         String id = UUID.randomUUID().toString();
-        Armazem.adicionar(this, id, agora, p, app, modelo);
+        Armazem.adicionar(this, id, agora, p, app, modelo, automatica);
         // Faltou o lugar ou (num gasto) se foi débito ou crédito: pergunta na própria notificação.
         if (p.local == null || ("saida".equals(p.tipo) && p.forma == null)) Avisos.perguntar(this, id);
     }

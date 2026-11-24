@@ -80,4 +80,12 @@ public class LeitorPagamentosTest {
     }
 
     static final String MODELO_DOLAR = "cafaef6a8d96848e";
+
+    @Test
+    public void finalDoCartao() {
+        assertEquals("4321", LeitorPagamentos.ler("Compra aprovada", "Compra de R$ 89,90 aprovada no cartão final 4321").cartao);
+        assertEquals("1234", LeitorPagamentos.ler("Compra aprovada", "Compra de R$ 54,90 APROVADA em IFOOD para o cartão com final 1234.").cartao);
+        assertEquals("9876", LeitorPagamentos.ler("Itaú", "Compra no cartão **** 9876 de R$ 20,00 em PADARIA").cartao);
+        assertNull(LeitorPagamentos.ler("Pix enviado", "Você enviou um Pix de R$ 50,00 para Maria Silva").cartao);
+    }
 }

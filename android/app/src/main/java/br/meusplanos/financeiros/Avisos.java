@@ -81,12 +81,13 @@ final class Avisos {
 
         NotificationCompat.Builder b = base(c, id);
         if (!entrada && forma.isEmpty()) {
+            String cartao = o.optString("cartao", "");
             b.setContentTitle("Compra de " + valor + (semLocal ? "" : " em " + local) + ": débito ou crédito?")
-                .setContentText("Aviso do " + app + ". Toque na resposta: no crédito, ela entra na fatura e no limite do cartão.")
+                .setContentText((cartao.isEmpty() ? "Aviso do " + app : "Cartão final " + cartao) + ". Responda uma vez: as próximas compras " + (cartao.isEmpty() ? "deste banco" : "deste cartão") + " entram sozinhas.")
                 .addAction(botao(c, id, 1, "Débito", "forma", "debito"))
                 .addAction(botao(c, id, 2, "Crédito", "forma", "credito"));
             if (semLocal) b.addAction(resposta(c, id, 3, "Onde foi?", CHAVE_RESPOSTA, "Nome da loja ou lugar", "local"));
-            else b.addAction(botao(c, id, 4, "Pix", "forma", "pix"));
+            else b.addAction(resposta(c, id, 6, "Parcelado", CHAVE_VEZES, "Crédito em quantas vezes? (ex.: 3)", "vezes"));
         } else if (!entrada && o.optBoolean("perguntarVezes")) {
             b.setContentTitle("Crédito: " + valor + (semLocal ? "" : " em " + local) + " em quantas vezes?")
                 .setContentText("Toque em À vista ou responda com o número de parcelas (ex.: 3).")

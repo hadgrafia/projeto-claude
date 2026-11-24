@@ -51,7 +51,7 @@ final class Armazem {
         }
     }
 
-    static synchronized void adicionar(Context c, String id, long quando, LeitorPagamentos.Pagamento p, String app, String modelo) {
+    static synchronized void adicionar(Context c, String id, long quando, LeitorPagamentos.Pagamento p, String app, String modelo, boolean formaAutomatica) {
         try {
             JSONObject o = new JSONObject();
             o.put("id", id);
@@ -63,6 +63,8 @@ final class Armazem {
             if (p.parcelas > 1) o.put("parcelas", p.parcelas);
             o.put("app", app);
             if (modelo != null && !modelo.isEmpty()) o.put("modelo", modelo);
+            if (p.cartao != null) o.put("cartao", p.cartao);
+            if (formaAutomatica) o.put("formaAutomatica", true);
             JSONArray a = itens(c);
             a.put(o);
             prefs(c).edit().putString(ITENS, a.toString()).apply();
@@ -89,6 +91,19 @@ final class Armazem {
             if (o != null && id.equals(o.optString("id"))) return o;
         }
         return null;
+    }
+
+    /** A resposta desta compra virou regra (o app copia a regra para a conta ao abrir). */
+    static synchronized void marcarAprendida(Context c, String id) {
+        JSONArray a = itens(c);
+        try {
+            for (int i = 0; i < a.length(); i++) {
+                JSONObject o = a.getJSONObject(i);
+                if (id.equals(o.optString("id"))) o.put("aprendeu", true);
+            }
+        } catch (JSONException ignored) {
+        }
+        prefs(c).edit().putString(ITENS, a.toString()).apply();
     }
 
     /** Resposta "débito ou crédito" (e em quantas vezes) dada direto na notificação. */

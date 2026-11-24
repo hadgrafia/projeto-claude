@@ -12,7 +12,7 @@ import { categorizar, ehEssencial, NOMES_CATEGORIAS } from '../lib/categorias';
 import { analisarMes, type Status } from '../lib/feedback';
 import { hora, reais } from '../lib/format';
 import { chaveMovimento } from '../lib/importar';
-import { CampoLugar, useLugaresRecentes } from '../components/Lugar';
+import { CampoLugar, CartaoCompletar, useLugaresRecentes } from '../components/Lugar';
 import { lugarInformadoNoApp, esquecerAviso, naoEraGasto } from '../lib/nativo';
 import { BotaoOlho } from '../components/OlhoValores';
 
@@ -55,7 +55,6 @@ export default function Gastos() {
     () => movimentos.filter((m) => { const t = new Date(m.data).getTime(); return t >= ini.getTime() && t < fim.getTime(); }),
     [movimentos, ini, fim],
   );
-  const pendentes = movimentos.filter((m) => m.localPendente);
   const entrou = doPeriodo.filter((m) => m.tipo === 'entrada').reduce((a, m) => a + m.valor, 0);
   const saiu = doPeriodo.filter((m) => m.tipo === 'saida').reduce((a, m) => a + m.valor, 0);
   const status = useMemo(() => new Map(analisarMes(movimentos, renda.mensal).map((s) => [s.categoria, s.status] as [string, Status])), [movimentos, renda.mensal]);
@@ -125,14 +124,7 @@ export default function Gastos() {
         </div>
       )}
 
-      {pendentes.length > 0 && (
-        <button type="button" className="cartao areia" style={{ border: 0, textAlign: 'left', cursor: 'pointer', flexDirection: 'row', alignItems: 'center' }} onClick={() => setEditando(pendentes[0])}>
-          <span className="circulo terracota"><Icone nome="lapis" /></span>
-          <span className="cresce pequeno" style={{ fontSize: 14 }}>
-            <strong>{pendentes.length} {pendentes.length === 1 ? 'gasto sem o nome do lugar' : 'gastos sem o nome do lugar'}</strong>. Toque para informar.
-          </span>
-        </button>
-      )}
+      <CartaoCompletar />
 
       <button type="button" className="botao terracota" onClick={() => setNovo(true)}>
         <Icone nome="mais" /> Anotar gasto ou entrada

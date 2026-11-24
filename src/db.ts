@@ -34,6 +34,10 @@ export interface Perfil {
   limiteCartao?: number;
   limiteUsado?: number;
   /** Dia do mês em que a fatura fecha e em que vence (opcionais; sem eles, a compra cai na fatura do mês seguinte). */
+  /** Débito ou crédito automático: o que a pessoa já respondeu por cartão (final) e por banco/app. */
+  formasAprendidas?: { cartoes: Record<string, FormaPag>; apps: Record<string, FormaPag> };
+  /** Quando o aviso não diz e não há memória: perguntar (uma vez) ou já considerar crédito/débito. */
+  formaPadrao?: 'perguntar' | 'credito' | 'debito';
   /** Tipos de aviso (códigos) que a pessoa disse que não eram gasto: os iguais são ignorados. */
   avisosIgnorados?: string[];
   cartaoFechamento?: number;
@@ -135,6 +139,10 @@ export interface Movimento {
   formaPendente?: boolean;
   /** Código do "tipo" de aviso que gerou o lançamento (nunca o texto). Usado em "não era um gasto". */
   modelo?: string;
+  /** 4 últimos dígitos do cartão, quando o aviso mostra (para lembrar se o cartão é de crédito ou débito). */
+  cartaoFinal?: string;
+  /** A forma veio da memória (cartão ou banco já respondidos antes), não do texto do aviso. */
+  formaAutomatica?: boolean;
   categoria: string;
   origem: OrigemMov;
   /** Assinatura para evitar duplicados ao importar o mesmo extrato duas vezes. */

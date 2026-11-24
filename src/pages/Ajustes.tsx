@@ -15,6 +15,7 @@ import { db, exportarTudo, importarTudo, type Tema } from '../db';
 import { useDados } from '../hooks';
 import { entrarDeNovo, sairDaConta } from '../lib/conjunto';
 import { ehAppAndroid, Leitor } from '../lib/nativo';
+import { FormaAutomatica } from '../components/FormaPagamento';
 
 export default function Ajustes() {
   const navegar = useNavigate();
@@ -255,6 +256,7 @@ export default function Ajustes() {
 
       <RegistroAutomatico />
       {perfil && <AppsPagamento perfil={perfil} aoSalvar={aviso} />}
+      {perfil && <FormaAutomatica perfil={perfil} />}
 
       <section className="cartao areia">
         <Instalar />

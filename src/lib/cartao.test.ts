@@ -146,3 +146,14 @@ describe('quanto gastar no cartão para chegar nos planos', () => {
     expect(t.porPlano[0].teto).toBe(-400);
   });
 });
+
+describe('débito ou crédito automático (memória)', () => {
+  it('cartão (final) vale mais que o banco, que vale mais que o padrão', async () => {
+    const { formaConhecida } = await import('./nativo');
+    const p = { formasAprendidas: { cartoes: { '1234': 'debito' }, apps: { Nubank: 'credito' } }, formaPadrao: 'perguntar' } as never;
+    expect(formaConhecida(p, '1234', 'Nubank')).toBe('debito');
+    expect(formaConhecida(p, '9999', 'Nubank')).toBe('credito');
+    expect(formaConhecida(p, undefined, 'Itaú')).toBeUndefined();
+    expect(formaConhecida({ ...(p as object), formaPadrao: 'credito' } as never, undefined, 'Itaú')).toBe('credito');
+  });
+});

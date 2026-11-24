@@ -25,17 +25,24 @@ public final class LeitorPagamentos {
         public final String local; // null quando não deu para descobrir
         public final String forma; // "credito", "debito", "pix", "boleto" ou null (o app pergunta)
         public final int parcelas; // 0 quando não informado
+        public final String cartao; // 4 últimos dígitos do cartão, quando o aviso mostra; senão null
 
         Pagamento(double valor, String tipo, String local) {
-            this(valor, tipo, local, null, 0);
+            this(valor, tipo, local, null, 0, null);
         }
 
-        Pagamento(double valor, String tipo, String local, String forma, int parcelas) {
+        Pagamento(double valor, String tipo, String local, String forma, int parcelas, String cartao) {
             this.valor = valor;
             this.tipo = tipo;
             this.local = local;
             this.forma = forma;
             this.parcelas = parcelas;
+            this.cartao = cartao;
+        }
+
+        /** Mesma compra com a forma descoberta pela memória (cartão ou banco já respondidos antes). */
+        Pagamento comForma(String novaForma) {
+            return new Pagamento(valor, tipo, local, novaForma, "credito".equals(novaForma) ? parcelas : 0, cartao);
         }
     }
 
@@ -106,6 +113,7 @@ public final class LeitorPagamentos {
     private static final Pattern PIX = Pattern.compile("\\bpix\\b|\\bted\\b|\\bdoc\\b|transfer[eê]ncia", F);
     private static final Pattern BOLETO = Pattern.compile("\\bboleto\\b", F);
     private static final Pattern VEZES = Pattern.compile("\\b(?:em\\s+)?(\\d{1,2})\\s?x\\b|\\bem\\s+(\\d{1,2})\\s+(?:vezes|parcelas)\\b", F);
+    private static final Pattern FINAL_CARTAO = Pattern.compile("(?:final|terminado em|terminad[oa]|\\*{2,}\\s?|x{2,}\\s?)\\s*(\\d{4})\\b", F);
     private static final Pattern VOCE_PAGOU = Pattern.compile("voc[eê] (pagou|transferiu|enviou)", F);
 
     private static final String FIM =
@@ -188,7 +196,9 @@ public final class LeitorPagamentos {
         }
         if (forma == null && parcelas > 0) forma = "credito";
         if (!"credito".equals(forma)) parcelas = 0;
-        return new Pagamento(valor, tipo, extrairLocal(completo, tipo), forma, parcelas);
+        Matcher fc = FINAL_CARTAO.matcher(completo);
+        String cartao = fc.find() ? fc.group(1) : null;
+        return new Pagamento(valor, tipo, extrairLocal(completo, tipo), forma, parcelas, cartao);
     }
 
     static String extrairLocal(String texto, String tipo) {

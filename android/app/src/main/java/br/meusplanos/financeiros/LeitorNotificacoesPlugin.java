@@ -150,6 +150,15 @@ public class LeitorNotificacoesPlugin extends Plugin {
         call.resolve();
     }
 
+    /** Débito ou crédito automático: memória da conta (por cartão e por banco) e a escolha padrão. */
+    @PluginMethod
+    public void definirFormas(PluginCall call) {
+        com.getcapacitor.JSObject cartoes = call.getObject("cartoes", new com.getcapacitor.JSObject());
+        com.getcapacitor.JSObject apps = call.getObject("apps", new com.getcapacitor.JSObject());
+        FiltroApps.definirFormas(getContext(), cartoes, apps, call.getString("padrao", "perguntar"));
+        call.resolve();
+    }
+
     /** Avisos que a pessoa disse que não eram gasto: os iguais são descartados na hora, sem guardar nada. */
     @PluginMethod
     public void ignorarModelos(PluginCall call) {
