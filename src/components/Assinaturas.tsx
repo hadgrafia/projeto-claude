@@ -129,13 +129,13 @@ export async function salvarAssinaturas(lista: Assinatura[]) {
 }
 
 /** Início: pede as assinaturas até a pessoa responder; depois mostra o resumo e a próxima cobrança. */
-export function CartaoAssinaturas({ perfil }: { perfil?: Perfil }) {
+export function CartaoAssinaturas({ perfil, soPendente = false }: { perfil?: Perfil; soPendente?: boolean }) {
   const [aberta, setAberta] = useState(false);
   const [lista, setLista] = useState<Assinatura[]>(() => assinaturasDe(perfil));
   if (!perfil) return null;
   const minhas = assinaturasDe(perfil);
   if (respondeuAssinaturas(perfil) && !aberta) {
-    if (!minhas.length) return null;
+    if (!minhas.length || soPendente) return null;
     const proxima = [...minhas].sort((a, b) => proximaCobranca(a).getTime() - proximaCobranca(b).getTime())[0];
     const dias = diasAte(proximaCobranca(proxima));
     return (

@@ -286,7 +286,7 @@ export function AvisoPedidos() {
   const antigos = lista.filter((p) => Date.now() - p.criado_em > DOIS_DIAS).length;
   return (
     <Link
-      to="/ajustes"
+      to="/ajustes?aba=admin"
       onClick={() => setTimeout(() => document.getElementById('convites')?.scrollIntoView({ behavior: 'smooth' }), 500)}
       className={`cartao cartao-link ${antigos ? 'terracota' : 'verde'}`}
       style={{ gridColumn: '1 / -1', flexDirection: 'row', alignItems: 'center' }}

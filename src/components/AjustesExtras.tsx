@@ -24,7 +24,7 @@ export function AjustesCartao({ perfil, aoSalvar, titulo = 'Cartão e compras' }
     <section className="cartao">
       <h2 style={{ fontSize: 15, fontWeight: 800 }}>{titulo}</h2>
       <CampoDinheiro rotulo="Limite total do cartão de crédito" valor={limite} aoMudar={setLimite} dica="Tem mais de um cartão? Some os limites." />
-      <CampoDinheiro rotulo="Quanto do limite já está usado hoje" valor={usado} aoMudar={setUsado} dica="Veja no app do seu banco (fatura atual + parcelas futuras). Atualize de vez em quando." />
+      <CampoDinheiro rotulo="Quanto você já gastou no cartão (fatura atual)" valor={usado} aoMudar={setUsado} dica="Veja no app do banco. Só as compras no crédito feitas depois somam a este valor; quando a fatura vence, ele deixa de contar." />
       <div className="grade-2">
         <label className="campo">
           Fatura fecha no dia

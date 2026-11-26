@@ -35,6 +35,7 @@ const NOMES: Record<string, string> = {
   'lancamento-rapido': 'Lançamento rápido (comprovante/atalho)',
   duvidas: 'Dúvidas',
   'tela:ajustes': 'Ajustes',
+  'pj:das-e-notas': 'Impostos e notas (PJ)',
   'olho-valores': 'Olho (esconder valores)',
   'guia:gerado': 'Guia do plano',
   'agente:nina': 'Nina (gastos)',

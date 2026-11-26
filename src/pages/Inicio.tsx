@@ -7,10 +7,12 @@ import { Instalar } from '../components/Instalar';
 import { PainelAgentes } from '../components/Equipe';
 import { CartaoEscolherApps } from '../components/AppsPagamento';
 import { CartaoAssinaturas } from '../components/Assinaturas';
-import { ResumoCartao } from '../components/CartaoCredito';
+import { estadoCartao } from '../lib/cartao';
+import { ehPJ, situacaoDas } from '../lib/pj';
+import { totalMensal } from '../lib/assinaturas';
 import { AvisoNovoAcesso } from '../components/ProtecaoConta';
 import { AvisoAtendimento, AvisoPedidos } from '../components/PedidosConvite';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { compromissoDoMes } from '../lib/compras';
@@ -38,6 +40,10 @@ export default function Inicio() {
   const compras = useLiveQuery(() => db.compras.toArray(), []) ?? [];
   const parcelasMes = compromissoDoMes(compras);
 
+  const cartaoE = useMemo(() => estadoCartao(perfil, compras, movimentos), [perfil, compras, movimentos]);
+  const das = ehPJ(perfil) ? situacaoDas(perfil?.das) : undefined;
+  const assinaturasMes = totalMensal(perfil?.assinaturas ?? []);
+
   return (
     <main className="tela">
       <div className="topo">
@@ -59,52 +65,74 @@ export default function Inicio() {
             <div className="coluna cresce" style={{ gap: 6 }}>
               <span className="suave pequeno">Guardado em todos os planos</span>
               <Dinheiro valor={totalGuardado} className="valor-grande" />
-              <span className="suave pequeno">de {reaisCurto(totalMeta)}</span>
+              <span className="suave pequeno">de {reaisCurto(totalMeta)} · {reaisCurto(livre)}/mês livres</span>
             </div>
             <span style={{ color: 'var(--sobre-verde)' }}>
-              <Casa pct={totalMeta ? (totalGuardado / totalMeta) * 100 : 0} tamanho={96} />
+              <Casa pct={totalMeta ? (totalGuardado / totalMeta) * 100 : 0} tamanho={84} />
             </span>
-          </div>
-          <div className="chips">
-            <span className="pilula verde">{planos.length} {planos.length === 1 ? 'plano' : 'planos'}</span>
-            <span className="pilula terracota">{reaisCurto(livre)}/mês livres</span>
           </div>
         </section>
       </Entra>
 
+      {/* Para fazer agora: tudo o que pede uma ação, num só lugar e compacto (some quando não há nada) */}
       <AvisoNovoAcesso />
-      <AvisoPedidos />
-      <AvisoAtendimento />
-      <CartaoCompletar />
-      <AvisosDoCelular />
-      <CartaoEscolherApps perfil={perfil} />
-      <CartaoAssinaturas perfil={perfil} />
-      <ResumoCartao perfil={perfil} movimentos={movimentos} investimentos={investimentos} renda={renda.mensal} />
-      <Instalar compacto />
-      <PainelAgentes compacto />
-
-      {planos.length === 0 ? (
-        <Entra i={1}>
-          <Link to="/planos/novo" className="cartao cartao-link" style={{ border: '2px dashed var(--borda)', background: 'transparent', flexDirection: 'row', alignItems: 'center' }}>
-            <span className="circulo terracota"><Icone nome="mais" /></span>
-            <span className="coluna" style={{ gap: 2 }}>
-              <strong>Criar meu primeiro plano</strong>
-              <span className="pequeno suave">Casa nova, carro, equipamentos, viagem…</span>
+      <div className="pendencias" aria-label="Para fazer agora">
+        <AvisoPedidos />
+        <AvisoAtendimento />
+        <AvisosDoCelular />
+        <CartaoCompletar />
+        {das && !das.pago && (das.atrasado || das.dias <= 5) && (
+          <Link to="/pj" className="cartao cartao-link" style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <span className="circulo terracota"><Icone nome="documento" /></span>
+            <span className="cresce coluna" style={{ gap: 2 }}>
+              <strong>{das.atrasado ? 'DAS em atraso' : das.dias === 0 ? 'A DAS vence hoje' : `A DAS vence em ${das.dias} ${das.dias === 1 ? 'dia' : 'dias'}`}</strong>
+              <span className="pequeno suave">Gere a guia e marque "Paguei".</span>
             </span>
+            <Icone nome="direita" />
           </Link>
-        </Entra>
+        )}
+        {perfil && !perfil.vinculo && (
+          <button type="button" className="cartao cartao-link" style={{ border: 0, textAlign: 'left', cursor: 'pointer', flexDirection: 'row', alignItems: 'center' }} onClick={() => setEditandoRenda(true)}>
+            <span className="circulo terracota"><Icone nome="pessoa" /></span>
+            <span className="cresce coluna" style={{ gap: 2 }}>
+              <strong>Você é CLT, PJ ou autônomo?</strong>
+              <span className="pequeno suave">Para calcular a renda do jeito certo.</span>
+            </span>
+            <Icone nome="direita" />
+          </button>
+        )}
+        {somaPct > 100 && (
+          <Link to="/planos" className="cartao cartao-link" style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <span className="circulo terracota"><Icone nome="bandeira" /></span>
+            <span className="cresce pequeno">Os planos somam {pct(somaPct)} do valor livre. Ajuste em Planos.</span>
+          </Link>
+        )}
+        <CartaoEscolherApps perfil={perfil} />
+        <CartaoAssinaturas perfil={perfil} soPendente />
+      </div>
+
+      <h2 className="secao">Planos</h2>
+      {planos.length === 0 ? (
+        <Link to="/planos/novo" className="cartao cartao-link" style={{ border: '2px dashed var(--borda)', background: 'transparent', flexDirection: 'row', alignItems: 'center' }}>
+          <span className="circulo terracota"><Icone nome="mais" /></span>
+          <span className="coluna" style={{ gap: 2 }}>
+            <strong>Criar meu primeiro plano</strong>
+            <span className="pequeno suave">Casa nova, carro, equipamentos, viagem…</span>
+          </span>
+        </Link>
       ) : (
         <div className="grade-2">
           {situacoes.map(({ p, s }, i) => (
             <Entra key={p.id} i={i + 1}>
               <motion.div whileTap={{ scale: 0.97 }}>
-                <Link to={`/planos/${p.id}`} className={`cartao cartao-link ${i === 0 ? 'terracota' : ''}`} style={{ height: '100%' }}>
-                  <Icone nome={ICONE_PLANO[p.tipo]} tamanho={26} cor={i === 0 ? '#fff' : 'var(--terracota-texto)'} />
-                  <span className="pequeno" style={{ fontWeight: 600 }}>{p.nome}</span>
+                <Link to={`/planos/${p.id}`} className="cartao cartao-link plano-mini" style={{ height: '100%' }}>
+                  <span className="linha" style={{ gap: 8 }}>
+                    <Icone nome={ICONE_PLANO[p.tipo]} tamanho={20} cor="var(--terracota-texto)" />
+                    <span className="pequeno" style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nome}</span>
+                  </span>
                   <Dinheiro valor={s.guardado} className="num" />
-                  <span className="mini suave">de {reaisCurto(p.meta)} · {pct(s.pct)}</span>
                   <Barra pct={s.pct} rotulo={`Progresso de ${p.nome}`} />
-                  <span className="mini suave">{s.previsao ? `Previsão ${mesCurto(s.previsao)}` : 'Defina quanto separar'}</span>
+                  <span className="mini suave">{pct(s.pct)} · {s.previsao ? `chega em ${mesCurto(s.previsao)}` : 'defina quanto separar'}</span>
                 </Link>
               </motion.div>
             </Entra>
@@ -112,74 +140,55 @@ export default function Inicio() {
         </div>
       )}
 
-      {somaPct > 100 && (
-        <Link to="/planos" className="cartao areia cartao-link pequeno">
-          A soma das porcentagens dos planos passou de 100% ({pct(somaPct)}). Ajuste em Planos.
-        </Link>
-      )}
-
-      <Entra i={4}>
-        <section className="cartao">
-          <div className="entre">
-            <span className="pequeno suave" style={{ fontWeight: 600 }}>{renda.variavel ? 'Renda usada nos planos' : 'Renda mensal'}{perfil?.vinculo ? ` · ${perfil.vinculo === 'clt' ? 'CLT' : perfil.vinculo === 'pj' ? 'PJ' : perfil.vinculo === 'autonomo' ? 'Autônomo' : perfil.vinculo === 'servidor' ? 'Servidor' : 'Outro'}` : ''}</span>
-            <Dinheiro valor={renda.mensal} className="num" />
+      <h2 className="secao">Seu mês</h2>
+      <section className="cartao" style={{ gap: 10 }}>
+        <div className="grade-3 pequeno">
+          <div className="coluna" style={{ gap: 0 }}>
+            <span className="mini suave">{renda.variavel ? 'Renda (segura)' : 'Renda'}</span>
+            <strong className="num">{reaisCurto(renda.mensal)}</strong>
           </div>
-          {renda.variavel && (
-            <span className="mini suave">
-              Renda variável: meio-termo entre a média ({reaisCurto(renda.media ?? 0)}) e o mês fraco ({reaisCurto(renda.minimo ?? 0)}){renda.fonte === 'registrada' ? ', pelas entradas registradas dos últimos meses' : ''}. Assim os planos não dependem dos meses bons.
-            </span>
-          )}
-          {perfil && !perfil.vinculo && (
-            <button type="button" className="cartao areia pequeno" style={{ border: 0, textAlign: 'left', cursor: 'pointer', padding: 12 }} onClick={() => setEditandoRenda(true)}>
-              <strong>Você é CLT, PJ ou autônomo?</strong> Responda para o app calcular a renda do jeito certo (PJ e autônomo variam mês a mês).
-            </button>
-          )}
-          <div className="grade-2 pequeno">
-            <div className="coluna" style={{ gap: 0 }}><span className="mini suave">Gasto típico</span><strong className="num">{reaisCurto(gasto)}</strong></div>
-            <div className="coluna" style={{ gap: 0 }}><span className="mini suave">Sobra para os planos</span><strong className="num">{reaisCurto(livre)}</strong></div>
-          </div>
-          {renda.entradasDoMes > 0 && <span className="mini suave">Entradas registradas este mês: {reaisCurto(renda.entradasDoMes)}.</span>}
-          <button type="button" className="botao secundario pequeno" onClick={() => setEditandoRenda(true)}>
-            <Icone nome="lapis" tamanho={18} /> Ajustar renda
-          </button>
-        </section>
-      </Entra>
-
-      <Entra i={5}>
-        <Link to="/compra" className="cartao terracota cartao-link" style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <span className="circulo" style={{ background: 'rgba(255,255,255,0.2)', color: '#fff' }}><Icone nome="etiqueta" /></span>
-          <span className="cresce coluna" style={{ gap: 2 }}>
-            <strong>Vai fazer uma compra?</strong>
-            <span className="pequeno">Veja se vale agora e em quantas vezes parcelar{parcelasMes > 0 ? ` · parcelas este mês: ${reaisCurto(parcelasMes)}` : ''}</span>
-          </span>
-          <Icone nome="direita" />
-        </Link>
-      </Entra>
-
-      {sugestoes.length > 0 && (
-        <Entra i={5}>
-          <Link to="/feedback" className="cartao grafite cartao-link" style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <span className="circulo terracota"><Icone nome="lampada" /></span>
-            <span className="cresce pequeno" style={{ fontSize: 14 }}>
-              <strong>{sugestoes.length} {sugestoes.length === 1 ? 'sugestão' : 'sugestões'}</strong> podem liberar {reaisCurto(ganho)}/mês para seus planos
-            </span>
+          <div className="coluna" style={{ gap: 0 }}><span className="mini suave">Gasto típico</span><strong className="num">{reaisCurto(gasto)}</strong></div>
+          <div className="coluna" style={{ gap: 0 }}><span className="mini suave">Sobra</span><strong className="num">{reaisCurto(livre)}</strong></div>
+        </div>
+        {renda.variavel && <span className="mini suave">Renda variável: meio-termo entre a média ({reaisCurto(renda.media ?? 0)}) e o mês fraco ({reaisCurto(renda.minimo ?? 0)}).</span>}
+        {sugestoes.length > 0 && (
+          <Link to="/feedback" className="pequeno" style={{ color: 'var(--terracota-texto)', fontWeight: 700 }}>
+            {sugestoes.length === 1 ? '1 sugestão pode' : `${sugestoes.length} sugestões podem`} liberar {reaisCurto(ganho)}/mês para os planos →
           </Link>
-        </Entra>
-      )}
+        )}
+        <button type="button" className="botao secundario pequeno" onClick={() => setEditandoRenda(true)}>
+          <Icone nome="lapis" tamanho={18} /> Ajustar renda
+        </button>
+      </section>
 
-      <Entra i={6}>
-        <Link to="/gastos" className="cartao cartao-link" style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <span className="circulo manter"><Icone nome="lista" /></span>
-          <span className="cresce coluna" style={{ gap: 2 }}>
-            <strong>{movimentos.length} lançamentos registrados</strong>
-            <span className="pequeno suave">Envie o extrato ou anote um gasto</span>
-          </span>
-          <Icone nome="direita" />
-        </Link>
-      </Entra>
+      <h2 className="secao">Atalhos</h2>
+      <div className="atalhos">
+        <Atalho para="/gastos" icone="lista" titulo="Gastos" detalhe={`${movimentos.length} lançamentos`} />
+        <Atalho para="/cartao" icone="cartao" titulo="Cartão" detalhe={cartaoE.limite ? `${reaisCurto(cartaoE.disponivel)} livres` : 'Informar limite'} alerta={cartaoE.limite > 0 && cartaoE.uso >= 0.8} />
+        <Atalho para="/compra" icone="etiqueta" titulo="Vai comprar?" detalhe={parcelasMes > 0 ? `parcelas: ${reaisCurto(parcelasMes)}/mês` : 'Veja se cabe'} />
+        <Atalho para="/assinaturas" icone="sino" titulo="Assinaturas" detalhe={assinaturasMes > 0 ? `${reaisCurto(assinaturasMes)}/mês` : 'Cadastrar'} />
+        <Atalho para="/agentes" icone="conversa" titulo="Agentes" detalhe="Pergunte à equipe" />
+        {ehPJ(perfil) ? <Atalho para="/pj" icone="documento" titulo="DAS e notas" detalhe={das?.pago ? 'DAS do mês paga' : perfil?.das ? `DAS vence dia ${perfil.das.dia}` : 'Ativar lembrete'} /> : <Atalho para="/feedback" icone="lampada" titulo="Conselhos" detalhe="Onde economizar" />}
+      </div>
+
+      <PainelAgentes compacto />
+      <Instalar compacto />
+
       <Folha aberta={editandoRenda} aoFechar={() => setEditandoRenda(false)} titulo="Ajustar renda">
         {perfil && <EditarRenda perfil={perfil} aoSalvar={() => setEditandoRenda(false)} />}
       </Folha>
     </main>
+  );
+}
+
+function Atalho({ para, icone, titulo, detalhe, alerta }: { para: string; icone: Parameters<typeof Icone>[0]['nome']; titulo: string; detalhe: string; alerta?: boolean }) {
+  return (
+    <Link to={para} className="atalho">
+      <span className={`circulo ${alerta ? 'terracota' : 'manter'}`}><Icone nome={icone} tamanho={20} /></span>
+      <span className="coluna" style={{ gap: 0, minWidth: 0 }}>
+        <strong>{titulo}</strong>
+        <span className="mini suave" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{detalhe}</span>
+      </span>
+    </Link>
   );
 }

@@ -340,3 +340,22 @@ html.valores-ocultos .valor-sensivel input:not(:focus) { filter: blur(7px); }
 .equipe-faixa { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
 .equipe-faixa::-webkit-scrollbar { display: none; }
 .membro-chip { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0; padding: 4px 12px 4px 4px; }
+.chip.claro { background: rgba(255,255,255,0.14); color: #fff; border-color: rgba(255,255,255,0.35); justify-content: center; }
+
+/* Início organizado: "Para fazer agora" compacto e uniforme (some quando vazio) */
+.pendencias { display: grid; gap: 6px; grid-column: 1 / -1; }
+.pendencias:empty { display: none; }
+.pendencias:not(:empty)::before { content: 'Para fazer agora'; font-size: 13px; font-weight: 800; letter-spacing: 0.02em; color: var(--suave); text-transform: uppercase; margin: 4px 2px 2px; }
+.pendencias > .cartao:not(.alerta-vermelho) { background: var(--card) !important; color: var(--texto) !important; padding: 12px 14px; border-radius: 18px; gap: 4px; border-left: 4px solid var(--terracota); box-shadow: none; }
+.pendencias > .cartao .circulo { width: 36px; height: 36px; background: var(--areia-2) !important; color: var(--terracota-texto) !important; flex-shrink: 0; }
+.pendencias > .cartao .avatar-agente { width: 36px !important; height: 36px !important; }
+.pendencias > .cartao strong { font-size: 14px; }
+.pendencias > .cartao .pequeno { font-size: 12.5px; color: var(--suave) !important; }
+/* Atalhos: grade de botões pequenos, em vez de vários cartões grandes */
+.atalhos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 900px) { .atalhos { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.atalho { display: flex; align-items: center; gap: 10px; background: var(--card); border-radius: 18px; padding: 12px; color: var(--texto); text-decoration: none; min-width: 0; }
+.atalho:hover, .atalho:focus-visible { box-shadow: var(--sombra); }
+.atalho .circulo { width: 38px; height: 38px; flex-shrink: 0; }
+.grade-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.plano-mini { gap: 6px; }

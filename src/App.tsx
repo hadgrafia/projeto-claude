@@ -19,6 +19,8 @@ import Cartao from './pages/Cartao';
 import Ajuda from './pages/Ajuda';
 import Atendimento from './pages/Atendimento';
 import Estatisticas from './pages/Estatisticas';
+import PJ from './pages/PJ';
+import { agendarLembretesDas, lembrarDas } from './lib/pj';
 import { useEquipe } from './components/Equipe';
 import { avisarDestaques } from './lib/agentesAvisos';
 import BoasVindas from './pages/BoasVindas';
@@ -122,6 +124,7 @@ function VigiaPedidos() {
       vigiarPedidos().catch(() => undefined);
       vigiarAtendimento().catch(() => undefined);
       enviarUso().catch(() => undefined);
+      lembrarDas().catch(() => undefined);
     };
     rodar();
     document.addEventListener('visibilitychange', rodar);
@@ -237,6 +240,11 @@ export default function App() {
     if (perfil) enviarFormas(perfil);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [perfil?.formasAprendidas, perfil?.formaPadrao]);
+  // …o lembrete mensal da DAS (PJ), agendado no celular.
+  useEffect(() => {
+    if (perfil?.vinculo === 'pj' && perfil.das) agendarLembretesDas(perfil.das);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [perfil?.vinculo, perfil?.das?.dia]);
   // …e os tipos de aviso que a pessoa disse que não eram gasto.
   useEffect(() => {
     if (perfil?.avisosIgnorados) enviarIgnorados(perfil.avisosIgnorados);
@@ -307,6 +315,7 @@ export default function App() {
                   <Route path="/ajuda" element={<Ajuda />} />
                   <Route path="/atendimento" element={<Atendimento />} />
                   <Route path="/estatisticas" element={<Estatisticas />} />
+                  <Route path="/pj" element={<PJ />} />
                   <Route path="/atendimento/:id" element={<Atendimento />} />
                   <Route path="*" element={<Navigate to="/inicio" replace />} />
                 </>

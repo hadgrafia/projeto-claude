@@ -2,6 +2,7 @@
 export const CATEGORIAS: { nome: string; essencial: boolean; palavras: string[] }[] = [
   { nome: 'Moradia', essencial: true, palavras: ['aluguel', 'condominio', 'iptu', 'quintoandar'] },
   { nome: 'Mercado', essencial: true, palavras: ['supermercado', 'mercado', 'carrefour', 'pao de acucar', 'assai', 'atacadao', 'hortifruti', 'sacolao', 'oxxo', 'minuto pa'] },
+  { nome: 'Impostos', essencial: true, palavras: ['simples nacional', 'pgmei', 'darf', 'documento de arrecadacao', 'receita federal', 'iss municipal'] },
   { nome: 'Contas', essencial: true, palavras: ['enel', 'sabesp', 'comgas', 'vivo', 'claro', 'tim ', 'oi ', 'internet', 'energia', 'luz', 'agua', 'gas '] },
   { nome: 'Transporte', essencial: true, palavras: ['sptrans', 'metro', 'cptm', 'bilhete unico', 'top ', 'posto', 'combustivel', 'shell', 'ipiranga', 'petrobras', 'estacionamento', 'sem parar', 'conectcar'] },
   { nome: 'Saúde', essencial: true, palavras: ['farmacia', 'drogasil', 'droga raia', 'drogaria', 'pague menos', 'hospital', 'laboratorio', 'clinica', 'unimed', 'amil', 'sulamerica', 'dentista'] },

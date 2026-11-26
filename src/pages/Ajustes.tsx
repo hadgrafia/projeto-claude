@@ -4,12 +4,13 @@ import { Icone } from '../components/Icone';
 import { Folha, Segmentado } from '../components/Ui';
 import { CriarSenha, TecladoPin } from '../components/Bloqueio';
 import { EditarRenda } from '../components/EditarRenda';
-import { AjustesCartao, AjustesContato, ExcluirConta, TrocarSenha } from '../components/AjustesExtras';
+import { AjustesContato, ExcluirConta, TrocarSenha } from '../components/AjustesExtras';
 import { Aparelhos, DuasEtapas } from '../components/ProtecaoConta';
 import { Instalar } from '../components/Instalar';
 import { RegistroAutomatico } from '../components/RegistroAutomatico';
 import { AppsPagamento } from '../components/AppsPagamento';
 import { PedidosConvite } from '../components/PedidosConvite';
+import { souAdmin } from '../lib/pedidos';
 import { ativarBiometria, biometriaDisponivel, cifrar, conferirPin, decifrar, definirTempo, lerBloqueio, removerBiometria, type ConfigBloqueio } from '../lib/bloqueio';
 import { db, exportarTudo, importarTudo, type Tema } from '../db';
 import { useDados } from '../hooks';
@@ -92,6 +93,15 @@ export default function Ajustes() {
     URL.revokeObjectURL(url);
   }
 
+  const [aba, setAba] = useState<'geral' | 'seguranca' | 'avisos' | 'dados' | 'admin'>(() => {
+    const a = new URLSearchParams(location.hash.split('?')[1] ?? '').get('aba');
+    return a === 'seguranca' || a === 'avisos' || a === 'dados' || a === 'admin' ? a : 'geral';
+  });
+  const [admin, setAdmin] = useState(false);
+  useEffect(() => {
+    souAdmin().then(setAdmin).catch(() => undefined);
+  }, []);
+
   return (
     <main className="tela sem-nav">
       <div className="linha">
@@ -99,7 +109,83 @@ export default function Ajustes() {
         <h1 className="titulo" style={{ fontSize: 24 }}>Ajustes</h1>
       </div>
       {salvo && <p className="cartao manter pequeno" role="status">{salvo}</p>}
+      <Segmentado
+        rotulo="Seções dos ajustes"
+        valor={aba}
+        aoMudar={setAba}
+        opcoes={[
+          { valor: 'geral', rotulo: 'Geral' },
+          { valor: 'seguranca', rotulo: 'Segurança' },
+          { valor: 'avisos', rotulo: 'Avisos' },
+          { valor: 'dados', rotulo: 'Dados' },
+          ...(admin ? [{ valor: 'admin' as const, rotulo: 'Equipe' }] : []),
+        ]}
+      />
 
+      {aba === 'geral' && (
+        <>
+      <section className="cartao">
+        <h2 style={{ fontSize: 15, fontWeight: 800 }}>Renda mensal</h2>
+        {perfil && <EditarRenda perfil={perfil} aoSalvar={() => aviso('Renda atualizada. Os planos foram recalculados.')} />}
+      </section>
+
+      <Link to="/ajuda" className="cartao cartao-link" style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <span className="circulo verde"><Icone nome="ajuda" /></span>
+        <span className="cresce coluna" style={{ gap: 2 }}>
+          <strong>Dúvidas e atendimento</strong>
+          <span className="pequeno suave">Respostas rápidas e, se precisar, uma pessoa da equipe responde.</span>
+        </span>
+        <Icone nome="direita" />
+      </Link>
+
+      <Link to="/cartao" className="cartao cartao-link" style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <span className="circulo terracota"><Icone nome="cartao" /></span>
+        <span className="cresce coluna" style={{ gap: 2 }}>
+          <strong>Cartão de crédito</strong>
+          <span className="pequeno suave">Limite, faturas, parcelas e dias de fechamento e vencimento.</span>
+        </span>
+        <Icone nome="direita" />
+      </Link>
+
+      <Link to="/assinaturas" className="cartao cartao-link" style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <span className="avatar-agente" style={{ width: 40, height: 40, background: '#C08A3E', fontSize: 17 }}>L</span>
+        <span className="cresce coluna" style={{ gap: 2 }}>
+          <strong>Assinaturas</strong>
+          <span className="pequeno suave">Netflix, Spotify, IA e outras: a Lari avisa antes de cada cobrança.</span>
+        </span>
+        <Icone nome="direita" />
+      </Link>
+
+      {perfil?.vinculo === 'pj' && (
+        <Link to="/pj" className="cartao cartao-link" style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <span className="circulo terracota"><Icone nome="documento" /></span>
+          <span className="cresce coluna" style={{ gap: 2 }}>
+            <strong>Impostos e notas (PJ)</strong>
+            <span className="pequeno suave">Lembrete da DAS, "Paguei" e emissão de NFS-e.</span>
+          </span>
+          <Icone nome="direita" />
+        </Link>
+      )}
+      <section className="cartao">
+        <h2 style={{ fontSize: 15, fontWeight: 800 }}>Tema</h2>
+        <Segmentado<Tema>
+          rotulo="Tema"
+          valor={perfil?.tema ?? 'sistema'}
+          aoMudar={(t) => db.perfil.update('eu', { tema: t })}
+          opcoes={[{ valor: 'claro', rotulo: 'Claro' }, { valor: 'escuro', rotulo: 'Escuro' }, { valor: 'sistema', rotulo: 'Automático' }]}
+        />
+      </section>
+
+      <section className="cartao areia">
+        <Instalar />
+        <p className="mini suave">Depois de instalado, o app abre e funciona sem internet, e se atualiza sozinho.</p>
+      </section>
+
+        </>
+      )}
+
+      {aba === 'seguranca' && (
+        <>
       <section className="cartao">
         <h2 style={{ fontSize: 15, fontWeight: 800 }}>Segurança</h2>
         {seguranca?.ativo ? (
@@ -143,39 +229,6 @@ export default function Ajustes() {
         )}
       </section>
 
-      {ehAppAndroid() && (
-        <section className="cartao">
-          <h2 style={{ fontSize: 15, fontWeight: 800 }}>Leitura de notificações</h2>
-          <div className="entre pequeno"><span>Ler avisos de pagamento</span><strong>{leitura?.permitido ? 'Ativada' : 'Desativada'}</strong></div>
-          <div className="entre pequeno"><span>Perguntar o lugar na hora</span><strong>{leitura?.avisosPermitidos ? 'Ativado' : 'Desativado'}</strong></div>
-          <p className="mini suave">O app lê só avisos com valores em R$ de pagamento ou de dinheiro recebido. Os outros avisos são ignorados na hora e nada do texto é guardado.</p>
-          {!leitura?.permitido && <button type="button" className="botao pequeno" onClick={() => Leitor.abrirPermissao()}>Ativar leitura</button>}
-          {leitura && !leitura.avisosPermitidos && (
-            <button type="button" className="botao secundario pequeno" onClick={async () => setLeitura({ ...leitura, ...(await Leitor.pedirPermissaoAvisos()) })}>Permitir avisos do app</button>
-          )}
-        </section>
-      )}
-
-      <section className="cartao">
-        <h2 style={{ fontSize: 15, fontWeight: 800 }}>Tema</h2>
-        <Segmentado<Tema>
-          rotulo="Tema"
-          valor={perfil?.tema ?? 'sistema'}
-          aoMudar={(t) => db.perfil.update('eu', { tema: t })}
-          opcoes={[{ valor: 'claro', rotulo: 'Claro' }, { valor: 'escuro', rotulo: 'Escuro' }, { valor: 'sistema', rotulo: 'Automático' }]}
-        />
-      </section>
-
-      <section className="cartao">
-        <h2 style={{ fontSize: 15, fontWeight: 800 }}>Renda mensal</h2>
-        {perfil && <EditarRenda perfil={perfil} aoSalvar={() => aviso('Renda atualizada. Os planos foram recalculados.')} />}
-      </section>
-
-      <PedidosConvite />
-
-      {perfil && <AjustesCartao perfil={perfil} aoSalvar={aviso} />}
-      {perfil && <AjustesContato perfil={perfil} aoSalvar={aviso} />}
-
       <section className="cartao">
         <h2 style={{ fontSize: 15, fontWeight: 800 }}>Acesso</h2>
         <p className="mini suave">O app só abre para e-mails convidados, com a sua conta (e-mail e senha). A sessão dura 30 dias e se renova sozinha enquanto você usa. Se a análise com IA ou o plano em conjunto avisarem que a sessão expirou, toque em "Entrar de novo".</p>
@@ -195,7 +248,40 @@ export default function Ajustes() {
 
       <DuasEtapas />
       <Aparelhos />
+      <section className="cartao verde">
+        <div className="linha" style={{ alignItems: 'flex-start' }}>
+          <Icone nome="escudo" cor="#D9774F" />
+          <p className="pequeno">Privacidade: o app nunca acessa o app do seu banco e não pede senhas bancárias. Seus dados ficam neste aparelho e numa cópia cifrada da sua conta, para voltarem em qualquer aparelho. Os agentes e a análise com IA recebem só um resumo dos números quando você pede.</p>
+        </div>
+      </section>
 
+        </>
+      )}
+
+      {aba === 'avisos' && (
+        <>
+      {perfil && <AjustesContato perfil={perfil} aoSalvar={aviso} />}
+      {ehAppAndroid() && (
+        <section className="cartao">
+          <h2 style={{ fontSize: 15, fontWeight: 800 }}>Leitura de notificações</h2>
+          <div className="entre pequeno"><span>Ler avisos de pagamento</span><strong>{leitura?.permitido ? 'Ativada' : 'Desativada'}</strong></div>
+          <div className="entre pequeno"><span>Perguntar o lugar na hora</span><strong>{leitura?.avisosPermitidos ? 'Ativado' : 'Desativado'}</strong></div>
+          <p className="mini suave">O app lê só avisos com valores em R$ de pagamento ou de dinheiro recebido. Os outros avisos são ignorados na hora e nada do texto é guardado.</p>
+          {!leitura?.permitido && <button type="button" className="botao pequeno" onClick={() => Leitor.abrirPermissao()}>Ativar leitura</button>}
+          {leitura && !leitura.avisosPermitidos && (
+            <button type="button" className="botao secundario pequeno" onClick={async () => setLeitura({ ...leitura, ...(await Leitor.pedirPermissaoAvisos()) })}>Permitir avisos do app</button>
+          )}
+        </section>
+      )}
+
+      {perfil && <AppsPagamento perfil={perfil} aoSalvar={aviso} />}
+      {perfil && <FormaAutomatica perfil={perfil} />}
+      <RegistroAutomatico />
+        </>
+      )}
+
+      {aba === 'dados' && (
+        <>
       <section className="cartao">
         <h2 style={{ fontSize: 15, fontWeight: 800 }}>Cópia de segurança</h2>
         <p className="mini suave">Seus dados já ficam guardados na sua conta e voltam sozinhos em qualquer aparelho. Se quiser, guarde também um arquivo com a cópia (por exemplo, no Google Drive ou iCloud). O arquivo sai cifrado com a sua senha do app: sem ela, ninguém consegue ler.</p>
@@ -227,50 +313,11 @@ export default function Ajustes() {
         </div>
       </section>
 
-      <Link to="/ajuda" className="cartao cartao-link" style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <span className="circulo verde"><Icone nome="ajuda" /></span>
-        <span className="cresce coluna" style={{ gap: 2 }}>
-          <strong>Dúvidas e atendimento</strong>
-          <span className="pequeno suave">Respostas rápidas e, se precisar, uma pessoa da equipe responde.</span>
-        </span>
-        <Icone nome="direita" />
-      </Link>
-
-      <Link to="/cartao" className="cartao cartao-link" style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <span className="circulo terracota"><Icone nome="cartao" /></span>
-        <span className="cresce coluna" style={{ gap: 2 }}>
-          <strong>Cartão de crédito</strong>
-          <span className="pequeno suave">Limite, faturas, parcelas e dias de fechamento e vencimento.</span>
-        </span>
-        <Icone nome="direita" />
-      </Link>
-
-      <Link to="/assinaturas" className="cartao cartao-link" style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <span className="avatar-agente" style={{ width: 40, height: 40, background: '#C08A3E', fontSize: 17 }}>L</span>
-        <span className="cresce coluna" style={{ gap: 2 }}>
-          <strong>Assinaturas</strong>
-          <span className="pequeno suave">Netflix, Spotify, IA e outras: a Lari avisa antes de cada cobrança.</span>
-        </span>
-        <Icone nome="direita" />
-      </Link>
-
-      <RegistroAutomatico />
-      {perfil && <AppsPagamento perfil={perfil} aoSalvar={aviso} />}
-      {perfil && <FormaAutomatica perfil={perfil} />}
-
-      <section className="cartao areia">
-        <Instalar />
-        <p className="mini suave">Depois de instalado, o app abre e funciona sem internet, e se atualiza sozinho.</p>
-      </section>
-
-      <section className="cartao verde">
-        <div className="linha" style={{ alignItems: 'flex-start' }}>
-          <Icone nome="escudo" cor="#D9774F" />
-          <p className="pequeno">Privacidade: o app nunca acessa o app do seu banco e não pede senhas bancárias. Seus dados ficam neste aparelho e numa cópia cifrada da sua conta, para voltarem em qualquer aparelho. Os agentes e a análise com IA recebem só um resumo dos números quando você pede.</p>
-        </div>
-      </section>
-
       <ExcluirConta />
+        </>
+      )}
+
+      {aba === 'admin' && <PedidosConvite />}
       <Folha aberta={!!pedirPin} aoFechar={() => { setPedirPin(undefined); setRestaurando(undefined); setPin(''); }} titulo="Confirme sua senha">
         <p className="pequeno suave" role="status" style={{ textAlign: 'center', minHeight: 20 }}>
           {erroPin || (pedirPin === 'restaurar' ? 'Digite a senha do app usada quando a cópia foi salva.' : 'Digite a senha do app para continuar.')}

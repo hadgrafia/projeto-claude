@@ -23,6 +23,7 @@ const ROTAS: [RegExp, string][] = [
   [/^\/lancar$/, 'lancamento-rapido'],
   [/^\/ajuda$/, 'duvidas'],
   [/^\/ajustes$/, 'tela:ajustes'],
+  [/^\/pj$/, 'pj:das-e-notas'],
 ];
 
 const hoje = () => new Date().toISOString().slice(0, 10);

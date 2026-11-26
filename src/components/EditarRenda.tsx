@@ -41,10 +41,10 @@ export function EditarRenda({ perfil, aoSalvar }: { perfil: Perfil; aoSalvar?: (
     <div className="coluna" style={{ gap: 12 }}>
       <CampoVinculo valor={vinculo} aoMudar={setVinculo} />
       <CampoDinheiro
-        rotulo={variavel ? 'Num mês normal, quanto entra? (média, depois dos impostos)' : 'Renda mensal (salário líquido mais recente)'}
+        rotulo={vinculo === 'pj' ? 'Num mês normal, quanto entra na sua conta? (média)' : variavel ? 'Num mês normal, quanto entra? (média, depois dos impostos)' : 'Renda mensal (salário líquido mais recente)'}
         valor={renda}
         aoMudar={setRenda}
-        dica={variavel ? 'Com 3 meses ou mais de entradas registradas, o app passa a usar a média real.' : 'Recebeu um valor diferente este mês? Atualize aqui: todos os planos são recalculados na hora.'}
+        dica={vinculo === 'pj' ? 'A DAS você marca como paga em "Impostos e notas" e ela entra nos gastos do mês.' : variavel ? 'Com 3 meses ou mais de entradas registradas, o app passa a usar a média real.' : 'Recebeu um valor diferente este mês? Atualize aqui: todos os planos são recalculados na hora.'}
       />
       {variavel && <CampoDinheiro rotulo="E num mês fraco, quanto entra?" valor={minima} aoMudar={setMinima} dica="O app planeja com o meio-termo entre a média e o mês fraco." />}
       <CampoDinheiro rotulo="Gasto mensal estimado" valor={gasto} aoMudar={setGasto} dica="Usado até haver gastos registrados suficientes." />

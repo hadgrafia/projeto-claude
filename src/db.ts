@@ -27,6 +27,8 @@ export interface Perfil {
   vinculo?: Vinculo;
   /** Renda variável: quanto entra num mês fraco (a renda mensal é a média). */
   rendaMinima?: number;
+  /** PJ: DAS (imposto mensal do MEI ou do Simples Nacional). */
+  das?: { tipo: 'mei' | 'simples'; dia: number; valorEstimado?: number; pagos: Record<string, { valor: number; em: string }> };
   concluiuInicio: boolean;
   /** Compras a partir deste valor pedem finalidade e parcelamento (padrão R$ 100). */
   limiteAvisoCompra?: number;

@@ -218,7 +218,9 @@ export default function BoasVindas() {
         <>
           <p className="subtitulo">
             {variavel
-              ? 'Como PJ ou autônomo, a renda muda mês a mês. Informe quanto sobra para você depois dos impostos (DAS, INSS): o app planeja com um valor seguro, sem contar com os meses bons.'
+              ? vinculo === 'pj'
+                ? 'Como PJ, a renda muda mês a mês. Informe quanto entra na sua conta: a DAS entra como gasto do mês (o app lembra do vencimento). O app planeja com um valor seguro, sem contar com os meses bons.'
+                : 'Como autônomo, a renda muda mês a mês. Informe quanto sobra para você depois dos impostos (INSS): o app planeja com um valor seguro, sem contar com os meses bons.'
               : 'Use o valor líquido do seu salário (ou recebimento) mais recente. Se mudar, é só ajustar quando quiser no Início ou em Ajustes.'}
           </p>
           <CampoDinheiro rotulo={variavel ? 'Num mês normal, quanto entra? (média)' : 'Renda mensal (líquida)'} valor={renda} aoMudar={(v) => { setRenda(v); setAviso(''); }} dica="Obrigatório." />

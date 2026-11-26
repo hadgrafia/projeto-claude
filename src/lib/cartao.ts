@@ -135,22 +135,31 @@ export interface EstadoCartao {
   itens: ItemCartao[];
   /** Parcelas que ainda vão cair (compras parceladas ativas). */
   parceladas: ItemCartao[];
+  /** Valor que a pessoa informou ("quanto já gastei no cartão"), enquanto a fatura dele não venceu. */
+  informado: number;
+  /** Fatura (mês do vencimento) onde o valor informado entra. */
+  mesInformado?: string;
 }
 
 export function estadoCartao(perfil: Perfil | undefined, compras: Compra[], movimentos: Movimento[], hoje = new Date()): EstadoCartao {
-  const itens = itensCartao(perfil, compras, movimentos);
+  // Só entram as compras feitas DEPOIS do valor que a pessoa informou (as de antes já estão nele).
+  const itens = itensCartao(perfil, compras, movimentos).filter((i) => i.conta);
   const aberta = faturaAberta(perfil, hoje);
   const primeira = faturaAPagar(perfil, hoje);
   const limite = perfil?.limiteCartao ?? 0;
-  const registrado = itens.filter((i) => i.conta).reduce((a, i) => a + aPagar(i, primeira), 0);
-  const usado = Math.min(limite || Infinity, (perfil?.limiteUsado ?? 0) + registrado);
+  // O valor informado é a fatura que estava aberta quando a pessoa informou. Depois que essa fatura
+  // vence (foi paga), ele deixa de contar sozinho.
+  const mesInformado = perfil?.limiteUsadoEm ? mesDaFatura(new Date(perfil.limiteUsadoEm), perfil.cartaoFechamento, perfil.cartaoVencimento) : undefined;
+  const informado = perfil?.limiteUsado && mesInformado && mesesEntre(primeira, mesInformado) >= 0 ? perfil.limiteUsado : 0;
+  const registrado = itens.reduce((a, i) => a + aPagar(i, primeira), 0);
+  const usado = Math.min(limite || Infinity, informado + registrado);
   const disponivel = Math.max(0, limite - usado);
   const faturas = Array.from({ length: 4 }, (_, k) => {
     const mes = somarMeses(primeira, k);
-    return { mes, valor: itens.reduce((a, i) => a + parcelaNaFatura(i, mes), 0) };
+    return { mes, valor: itens.reduce((a, i) => a + parcelaNaFatura(i, mes), 0) + (mes === mesInformado ? informado : 0) };
   });
   const parceladas = itens.filter((i) => i.parcelas > 1 && aPagar(i, primeira) > 0);
-  return { limite, usado: Number.isFinite(usado) ? usado : 0, disponivel, uso: limite ? usado / limite : 0, aberta, faturas, itens, parceladas };
+  return { limite, usado: Number.isFinite(usado) ? usado : 0, disponivel, uso: limite ? usado / limite : 0, aberta, faturas, itens, parceladas, informado, mesInformado };
 }
 
 export interface AlertasCartao {

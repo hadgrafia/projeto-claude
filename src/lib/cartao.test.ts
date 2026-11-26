@@ -157,3 +157,25 @@ describe('débito ou crédito automático (memória)', () => {
     expect(formaConhecida({ ...(p as object), formaPadrao: 'credito' } as never, undefined, 'Itaú')).toBe('credito');
   });
 });
+
+describe('valor que a pessoa informou no cartão (bug dos R$ 930)', () => {
+  const hoje = new Date(2026, 10, 24, 12);
+  const informou = new Date(2026, 10, 24, 10).toISOString();
+  const p = perfil({ limiteCartao: 5000, limiteUsado: 800, limiteUsadoEm: informou });
+  it('o que foi gasto antes de informar não soma de novo', () => {
+    const antes = mov({ data: new Date(2026, 10, 23).toISOString(), valor: 130, forma: 'credito' });
+    const e = estadoCartao(p, [], [antes], hoje);
+    expect(e.usado).toBe(800);
+    expect(e.faturas.find((f) => f.mes === e.aberta)?.valor).toBe(800);
+  });
+  it('compras no crédito depois de informar somam (e aparecem na lista)', () => {
+    const depois = mov({ data: new Date(2026, 10, 24, 11).toISOString(), valor: 50, forma: 'credito' });
+    const e = estadoCartao(p, [], [depois], hoje);
+    expect(e.usado).toBe(850);
+    expect(e.itens).toHaveLength(1);
+  });
+  it('depois que a fatura informada vence, o valor informado deixa de contar', () => {
+    const e = estadoCartao(p, [], [], new Date(2027, 0, 15));
+    expect(e.informado).toBe(0);
+  });
+});

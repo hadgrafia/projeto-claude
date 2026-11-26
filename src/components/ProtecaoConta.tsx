@@ -290,7 +290,7 @@ export function AvisoNovoAcesso() {
       <span className="pequeno">Foi você? Se não foi, desconecte o aparelho e troque a sua senha agora.</span>
       <div className="grade-2">
         <button type="button" className="botao pequeno" style={{ background: '#fff', color: '#B3261E' }} onClick={marcarVisto}>Fui eu</button>
-        <a className="botao pequeno" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', textAlign: 'center' }} href="#/ajustes" onClick={() => setTimeout(() => document.getElementById('aparelhos')?.scrollIntoView({ behavior: 'smooth' }), 500)}>
+        <a className="botao pequeno" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', textAlign: 'center' }} href="#/ajustes?aba=seguranca" onClick={() => setTimeout(() => document.getElementById('aparelhos')?.scrollIntoView({ behavior: 'smooth' }), 500)}>
           Não fui eu
         </a>
       </div>

@@ -6,7 +6,7 @@ import { SecaoConjunto } from '../components/Conjunto';
 import { CartaoPrazo } from '../components/Prazo';
 import { analisarPrazo, taxaMensal } from '../lib/finance';
 import { enviarDefinicao } from '../lib/conjunto';
-import { Barra, Casa, CampoDinheiro, Dinheiro, Entra, Folha, Markdown } from '../components/Ui';
+import { Barra, Casa, CampoDinheiro, Dinheiro, Entra, Folha, Markdown, Segmentado } from '../components/Ui';
 import { db } from '../db';
 import { situacaoPlano, useDados, useOnline, useSelic } from '../hooks';
 import { mesCurto, pct, reais, reaisCurto } from '../lib/format';
@@ -23,6 +23,7 @@ export default function PlanoDetalhe() {
   const selic = useSelic();
   const [deposito, setDeposito] = useState(false);
   const [valorDep, setValorDep] = useState<number>();
+  const [aba, setAba] = useState<'custos' | 'guardar' | 'guia' | 'analise'>('custos');
   const [carregandoIA, setCarregandoIA] = useState(false);
   const [erroIA, setErroIA] = useState('');
   const plano = planos.find((p) => p.id === Number(id));
@@ -112,8 +113,20 @@ export default function PlanoDetalhe() {
         <Icone nome="mais" /> Guardei dinheiro neste plano
       </motion.button>
 
-      <SecaoConjunto plano={plano} />
+      <Segmentado
+        rotulo="Seções do plano"
+        valor={aba}
+        aoMudar={setAba}
+        opcoes={[
+          { valor: 'custos', rotulo: 'Custos' },
+          { valor: 'guardar', rotulo: 'Guardar' },
+          { valor: 'guia', rotulo: 'Guia' },
+          { valor: 'analise', rotulo: 'Análise' },
+        ]}
+      />
 
+      {aba === 'custos' && (
+        <>
       <section className="cartao">
         <h2 style={{ fontSize: 15, fontWeight: 800 }}>Composição da meta</h2>
         {(plano.composicao ?? res.composicao).map((c) => (
@@ -138,6 +151,13 @@ export default function PlanoDetalhe() {
         </section>
       )}
 
+      {res.notas.map((n) => <p key={n} className="cartao areia pequeno">{n}</p>)}
+      {res.fontes.length > 0 && <p className="mini suave">Fontes: {res.fontes.join(' · ')}</p>}
+
+        </>
+      )}
+      {aba === 'guardar' && (
+        <>
       <section className="cartao">
         <h2 style={{ fontSize: 15, fontWeight: 800 }}>Onde guardar este dinheiro</h2>
         <p className="pequeno suave">{rec.resumo}</p>
@@ -154,8 +174,27 @@ export default function PlanoDetalhe() {
         <Link to="/investir" className="botao secundario pequeno">Ver plano de investimentos</Link>
       </section>
 
+      <SecaoConjunto plano={plano} />
+        </>
+      )}
+      {aba === 'guia' && (
+        <>
       <GuiaPlano plano={plano} />
+      <section className="cartao">
+        <h2 style={{ fontSize: 15, fontWeight: 800 }}>Onde pesquisar e comprar</h2>
+        <div className="chips">
+          {res.links.map((l) => (
+            <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className="chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: 'var(--texto)' }}>
+              <Icone nome="link" tamanho={16} /> {l.rotulo}
+            </a>
+          ))}
+        </div>
+      </section>
 
+        </>
+      )}
+      {aba === 'analise' && (
+        <>
       <section className="cartao grafite">
         <div className="linha">
           <span className="circulo terracota"><Icone nome="ia" /></span>
@@ -178,23 +217,12 @@ export default function PlanoDetalhe() {
         </Entra>
       )}
 
-      <section className="cartao">
-        <h2 style={{ fontSize: 15, fontWeight: 800 }}>Onde pesquisar e comprar</h2>
-        <div className="chips">
-          {res.links.map((l) => (
-            <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className="chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: 'var(--texto)' }}>
-              <Icone nome="link" tamanho={16} /> {l.rotulo}
-            </a>
-          ))}
-        </div>
-      </section>
-
-      {res.notas.map((n) => <p key={n} className="cartao areia pequeno">{n}</p>)}
-      {res.fontes.length > 0 && <p className="mini suave">Fontes: {res.fontes.join(' · ')}</p>}
+        </>
+      )}
 
       <button
         type="button"
-        className="botao perigo"
+        className="botao perigo pequeno"
         onClick={async () => {
           if (confirm(`Apagar o plano "${plano.nome}"? Isso não pode ser desfeito.`)) {
             await db.planos.delete(plano.id!);
