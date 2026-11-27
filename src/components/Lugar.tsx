@@ -10,6 +10,8 @@ import { lugarInformadoNoApp, naoEraGasto } from '../lib/nativo';
 import { Icone } from './Icone';
 import { BotaoSalvar, CampoDinheiro, Folha } from './Ui';
 import { FormForma } from './FormaPagamento';
+import { CampoParcelamento, totalPago, type Parcelamento } from './Parcelamento';
+import { jurosImplicitoMes } from '../lib/finance';
 
 /** Quadro "Completar gastos" (Início e Gastos): só aparece quando há algo a completar. */
 export function CartaoCompletar() {
@@ -179,8 +181,8 @@ function FormLocal({ mov, restantes, aoAdiar, segurar }: { mov: Movimento; resta
 function FormDetalheCompra({ mov, aoAdiar, segurar }: { mov: Movimento; aoAdiar: () => void; segurar: (m?: Movimento) => void }) {
   const [descricao, setDescricao] = useState(mov.local ?? '');
   const [importancia, setImportancia] = useState<Importancia>();
-  const [parcelas, setParcelas] = useState(mov.parcelas ?? 1);
-  const [juros, setJuros] = useState<number>();
+  const [parc, setParc] = useState<Parcelamento>({ parcelas: mov.parcelas ?? 1, comJuros: false });
+  const parcelas = parc.parcelas;
   const [noCartao, setNoCartao] = useState(mov.forma ? mov.forma === 'credito' : true);
   const [total, setTotal] = useState<number | undefined>(mov.valor);
   const ok = Boolean(descricao.trim() && importancia && total);
@@ -188,8 +190,9 @@ function FormDetalheCompra({ mov, aoAdiar, segurar }: { mov: Movimento; aoAdiar:
   async function salvar() {
     if (!ok) return false;
     segurar(mov);
-    const i = (juros ?? 0) / 100;
-    const valorParcela = parcelas > 1 ? (i > 0 ? (total! * i) / (1 - Math.pow(1 + i, -parcelas)) : total! / parcelas) : total!;
+    // Com juros: a pessoa diz quanto vai pagar no total (a loja quase nunca mostra a taxa).
+    const pago = totalPago(parc, total!);
+    const valorParcela = pago / parcelas;
     const perfil = await db.perfil.get('eu');
     await db.transaction('rw', db.compras, db.movimentos, async () => {
       await db.compras.add({
@@ -197,7 +200,8 @@ function FormDetalheCompra({ mov, aoAdiar, segurar }: { mov: Movimento; aoAdiar:
         importancia: importancia!,
         valor: total!,
         parcelas,
-        juros: juros ?? 0,
+        juros: jurosImplicitoMes(total!, pago, parcelas),
+        ...(pago > total! ? { totalComJuros: pago } : {}),
         valorParcela,
         noCartao,
         inicio: inicioParcelas(noCartao, new Date(mov.data), perfil),
@@ -227,23 +231,8 @@ function FormDetalheCompra({ mov, aoAdiar, segurar }: { mov: Movimento; aoAdiar:
           </button>
         ))}
       </div>
-      <CampoDinheiro rotulo="Valor total da compra" valor={total} aoMudar={setTotal} dica="Se o aviso mostrou só o valor da parcela, corrija para o total." />
-      <div className="grade-2">
-        <label className="campo">
-          Parcelas
-          <select value={parcelas} onChange={(e) => setParcelas(Number(e.target.value))}>
-            <option value={1}>À vista</option>
-            {Array.from({ length: 23 }, (_, i) => i + 2).map((n) => <option key={n} value={n}>{n}x</option>)}
-          </select>
-        </label>
-        <label className="campo">
-          Juros ao mês
-          <div className="com-sufixo">
-            <input inputMode="decimal" value={juros ?? ''} onChange={(e) => setJuros(e.target.value ? Number(e.target.value.replace(',', '.')) : undefined)} placeholder="0 = sem juros" disabled={parcelas === 1} />
-            <span>%</span>
-          </div>
-        </label>
-      </div>
+      <CampoDinheiro rotulo="Preço da compra (sem juros)" valor={total} aoMudar={setTotal} dica="Se o aviso mostrou só o valor da parcela, corrija para o preço total." />
+      <CampoParcelamento preco={total} valor={parc} aoMudar={setParc} />
       <div className="chips">
         <button type="button" className="chip" aria-pressed={noCartao} onClick={() => setNoCartao(true)}>No cartão de crédito</button>
         <button type="button" className="chip" aria-pressed={!noCartao} onClick={() => setNoCartao(false)}>Outra forma</button>

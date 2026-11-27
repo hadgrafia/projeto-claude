@@ -1,5 +1,5 @@
 import type { Vinculo, Investimento, Movimento, Perfil, Plano } from '../db';
-import { chaveMes, mesesEntre, somarMeses } from './format';
+import { chaveMes, mesesEntre, reais, somarMeses } from './format';
 
 export interface ResumoRenda {
   /** Renda usada em todos os cálculos. Renda variável (PJ, autônomo): valor seguro entre a média e o mês fraco. */
@@ -195,4 +195,33 @@ export function analisarPrazo(o: { meta: number; guardado: number; livre: number
   const pctNecessario = o.livre > 0 ? (proprio / o.livre) * 100 : Infinity;
   const situacao = mesesAtual <= prazoMeses ? 'ok' : proprio <= o.livre ? 'ajustar' : 'impossivel';
   return { ...base, prazoMeses, necessario, pctNecessario, situacao, faltaPorMes: situacao === 'impossivel' ? proprio - o.livre : undefined };
+}
+
+/**
+ * Juros ao mês "escondidos" num parcelamento: a loja diz só o total (ou a parcela), não a taxa.
+ * Ex.: R$ 200 que viram 6x de R$ 58,33 (R$ 350 no total) ≈ 18,4% ao mês.
+ */
+export function jurosImplicitoMes(valor: number, total: number, parcelas: number) {
+  if (!(valor > 0) || !(total > valor) || parcelas < 2) return 0;
+  const parcela = total / parcelas;
+  const pmt = (i: number) => (valor * i) / (1 - Math.pow(1 + i, -parcelas));
+  let lo = 0;
+  let hi = 1;
+  while (pmt(hi) < parcela && hi < 64) hi *= 2;
+  for (let k = 0; k < 80; k++) {
+    const m = (lo + hi) / 2;
+    if (pmt(m) < parcela) lo = m;
+    else hi = m;
+  }
+  return ((lo + hi) / 2) * 100;
+}
+
+/** Texto explicando quanto o parcelamento com juros custa a mais. */
+export function explicarJuros(valor: number, total: number, parcelas: number) {
+  const fmt = reais;
+  const extra = total - valor;
+  if (extra <= 0.005) return `Sem acréscimo: ${parcelas}x de ${fmt(total / parcelas)} somam o mesmo preço de ${fmt(valor)}.`;
+  const pctTotal = Math.round((extra / valor) * 100);
+  const mes = jurosImplicitoMes(valor, total, parcelas);
+  return `A compra de ${fmt(valor)} vai sair por ${fmt(total)} em ${parcelas}x de ${fmt(total / parcelas)}. São ${fmt(extra)} de juros: você paga ${pctTotal}% a mais do que o preço (cerca de ${mes.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% ao mês).`;
 }

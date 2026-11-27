@@ -175,3 +175,15 @@ describe('renda por tipo de vínculo', () => {
     expect(r).toMatchObject({ media: 7000, minimo: 5000, mensal: 6000, fonte: 'registrada' });
   });
 });
+
+import { explicarJuros, jurosImplicitoMes } from './finance';
+describe('juros do parcelamento pelo valor total', () => {
+  it('R$ 200 que viram R$ 350 em 6x', () => {
+    expect(jurosImplicitoMes(200, 350, 6)).toBeCloseTo(18.8, 1);
+    expect(explicarJuros(200, 350, 6).replace(/\u00a0/g, ' ')).toBe('A compra de R$ 200,00 vai sair por R$ 350,00 em 6x de R$ 58,33. São R$ 150,00 de juros: você paga 75% a mais do que o preço (cerca de 18,8% ao mês).');
+  });
+  it('sem acréscimo é sem juros', () => {
+    expect(jurosImplicitoMes(600, 600, 6)).toBe(0);
+    expect(explicarJuros(600, 600, 6)).toContain('Sem acréscimo');
+  });
+});

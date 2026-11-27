@@ -22,7 +22,7 @@ describe('conselheiro de compras', () => {
     expect(r.mesesParaJuntar).toBe(14);
   });
   it('necessidade sem opção sem juros: com juros, avisando o custo', () => {
-    const r = recomendar({ valor: 2000, importancia: 'necessidade', maxSemJuros: 1, comJuros: { parcelas: 12, jurosMes: 2 }, noCartao: true }, ctx);
+    const r = recomendar({ valor: 2000, importancia: 'necessidade', maxSemJuros: 1, comJuros: { parcelas: 12, total: 2600 }, noCartao: true }, ctx);
     expect(r.decisao).toBe('com-juros');
     expect(r.totalPago).toBeGreaterThan(2000);
   });

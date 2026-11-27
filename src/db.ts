@@ -188,8 +188,10 @@ export interface Compra {
   importancia: Importancia;
   valor: number;
   parcelas: number;
-  /** Juros ao mês (%) — 0 quando sem juros. */
+  /** Juros ao mês (%) — 0 quando sem juros. Calculado a partir do total informado. */
   juros: number;
+  /** Total pago com os juros (quando parcelado com juros). */
+  totalComJuros?: number;
   valorParcela: number;
   noCartao: boolean;
   /** Mês (AAAA-MM) da primeira parcela. */

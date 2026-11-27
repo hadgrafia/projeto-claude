@@ -1,7 +1,7 @@
 import type { Compra, Importancia, Movimento, Perfil } from '../db';
 import { estadoCartao, mesDaFatura, parcelaNaFatura } from './cartao';
 import { chaveMes, mesesEntre, reaisCurto } from './format';
-import { parcelaPrice } from './finance';
+import { explicarJuros, jurosImplicitoMes } from './finance';
 
 /**
  * Conselheiro de compras: diz se vale comprar agora, à vista ou em quantas parcelas,
@@ -34,8 +34,8 @@ export interface Pedido {
   importancia: Importancia;
   /** Até quantas vezes a loja parcela SEM juros (1 = só à vista). */
   maxSemJuros: number;
-  /** Opção com juros oferecida (opcional). */
-  comJuros?: { parcelas: number; jurosMes: number };
+  /** Opção com juros oferecida (opcional): em quantas vezes e quanto se paga no total com os juros. */
+  comJuros?: { parcelas: number; total: number };
   /** Desconto à vista em % (opcional). */
   descontoAVista?: number;
   noCartao: boolean;
@@ -205,18 +205,18 @@ function recomendarBase(p: Pedido, ctx: Contexto): Recomendacao {
 
   // 4) Com juros: só para necessidade.
   if (p.comJuros && p.importancia !== 'desejo') {
-    const parcela = parcelaPrice(p.valor, p.comJuros.jurosMes / 100, p.comJuros.parcelas);
-    const total = parcela * p.comJuros.parcelas;
+    const total = p.comJuros.total;
+    const parcela = total / p.comJuros.parcelas;
     if (parcela <= espacoMensal + 0.01) {
       alertas.push(`Com juros você paga ${r$(total - p.valor)} a mais. Se puder esperar ou achar sem juros, economiza esse valor.`);
       return {
         ...base,
         decisao: 'com-juros',
         titulo: `Se for mesmo necessário: ${p.comJuros.parcelas}x com juros`,
-        explicacao: [`${p.comJuros.parcelas}x de ${r$(parcela)} cabem no seu mês.`, `Total pago: ${r$(total)} (${r$(total - p.valor)} de juros).`],
+        explicacao: [`${p.comJuros.parcelas}x de ${r$(parcela)} cabem no seu mês.`, explicarJuros(p.valor, total, p.comJuros.parcelas)],
         parcelas: p.comJuros.parcelas,
         valorParcela: parcela,
-        juros: p.comJuros.jurosMes,
+        juros: jurosImplicitoMes(p.valor, total, p.comJuros.parcelas),
         totalPago: total,
         atrasoPlanos: atraso(total),
       };

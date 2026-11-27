@@ -10,6 +10,7 @@ import { compromissoDoMes, contextoDeCompra, inicioParcelas, parcelasNoMes, reco
 import { estadoCartao } from '../lib/cartao';
 import { mesCurto, reais, reaisCurto, somarMeses } from '../lib/format';
 import { conferirLimiteCartao } from '../lib/avisos';
+import { CampoParcelamento, type Parcelamento } from '../components/Parcelamento';
 
 const IMPORTANCIAS: { valor: Importancia; rotulo: string; dica: string }[] = [
   { valor: 'necessidade', rotulo: 'Necessidade', dica: 'Saúde, trabalho, casa, algo que quebrou' },
@@ -28,8 +29,7 @@ export default function Compra() {
   const [valor, setValor] = useState<number>();
   const [maxSemJuros, setMaxSemJuros] = useState(1);
   const [temJuros, setTemJuros] = useState(false);
-  const [parcelasJuros, setParcelasJuros] = useState(12);
-  const [jurosMes, setJurosMes] = useState<number>();
+  const [opcaoJuros, setOpcaoJuros] = useState<Parcelamento>({ parcelas: 12, comJuros: true });
   const [desconto, setDesconto] = useState<number>();
   const [noCartao, setNoCartao] = useState(true);
   const [salvo, setSalvo] = useState('');
@@ -42,11 +42,11 @@ export default function Compra() {
     () =>
       pronto
         ? recomendar(
-            { valor: valor!, importancia: importancia!, maxSemJuros, comJuros: temJuros && jurosMes ? { parcelas: parcelasJuros, jurosMes } : undefined, descontoAVista: desconto, noCartao },
+            { valor: valor!, importancia: importancia!, maxSemJuros, comJuros: temJuros && opcaoJuros.total && opcaoJuros.parcelas > 1 ? { parcelas: opcaoJuros.parcelas, total: opcaoJuros.total } : undefined, descontoAVista: desconto, noCartao },
             ctx,
           )
         : undefined,
-    [pronto, valor, importancia, maxSemJuros, temJuros, jurosMes, parcelasJuros, desconto, noCartao, ctx],
+    [pronto, valor, importancia, maxSemJuros, temJuros, opcaoJuros, desconto, noCartao, ctx],
   );
 
   async function registrar() {
@@ -57,6 +57,7 @@ export default function Compra() {
       valor: valor!,
       parcelas: rec.parcelas,
       juros: rec.juros,
+      ...(rec.decisao === 'com-juros' ? { totalComJuros: rec.totalPago } : {}),
       valorParcela: rec.valorParcela,
       noCartao,
       inicio: inicioParcelas(noCartao, new Date(), perfil),
@@ -123,7 +124,7 @@ export default function Compra() {
             ))}
           </div>
         </div>
-        <CampoDinheiro rotulo="Valor total" valor={valor} aoMudar={setValor} />
+        <CampoDinheiro rotulo="Preço da compra (sem juros)" valor={valor} aoMudar={setValor} dica="O preço à vista ou sem juros. Se a loja cobrar juros no parcelamento, marque a opção abaixo." />
         <label className="campo">
           Até quantas vezes SEM juros a loja parcela?
           <select value={maxSemJuros} onChange={(e) => setMaxSemJuros(Number(e.target.value))}>
@@ -151,23 +152,7 @@ export default function Compra() {
           <input type="checkbox" checked={temJuros} onChange={(e) => setTemJuros(e.target.checked)} style={{ width: 20, height: 20, accentColor: 'var(--terracota)' }} />
           A loja também oferece parcelamento COM juros
         </label>
-        {temJuros && (
-          <div className="grade-2">
-            <label className="campo">
-              Parcelas
-              <select value={parcelasJuros} onChange={(e) => setParcelasJuros(Number(e.target.value))}>
-                {Array.from({ length: 47 }, (_, i) => i + 2).map((n) => <option key={n} value={n}>{n}x</option>)}
-              </select>
-            </label>
-            <label className="campo">
-              Juros ao mês
-              <div className="com-sufixo">
-                <input inputMode="decimal" value={jurosMes ?? ''} onChange={(e) => setJurosMes(e.target.value ? Number(e.target.value.replace(',', '.')) : undefined)} placeholder="Ex.: 2,5" />
-                <span>%</span>
-              </div>
-            </label>
-          </div>
-        )}
+        {temJuros && <CampoParcelamento preco={valor} valor={opcaoJuros} aoMudar={setOpcaoJuros} somenteComJuros maxParcelas={48} rotuloParcelas="Com juros, em quantas vezes?" />}
         {noCartao && (cartao.limite ? (
           <Link to="/cartao" className="cartao areia" style={{ gap: 4, textDecoration: 'none', color: 'inherit', padding: 12 }}>
             <span className="mini suave">Seu cartão agora</span>
@@ -234,7 +219,7 @@ export default function Compra() {
                 <span className="cresce coluna" style={{ gap: 2 }}>
                   <strong>{c.descricao}</strong>
                   <span className="pequeno suave">
-                    {c.parcelas}x de {reais(c.valorParcela)}{c.juros ? ` (com juros de ${c.juros}% a.m.)` : ' sem juros'} · até {mesCurto(somarMeses(c.inicio, c.parcelas - 1))}
+                    {c.parcelas}x de {reais(c.valorParcela)}{c.juros ? ` · com juros: ${reais(c.totalComJuros ?? c.valorParcela * c.parcelas)} no total (${reais((c.totalComJuros ?? c.valorParcela * c.parcelas) - c.valor)} a mais)` : ' sem juros'} · até {mesCurto(somarMeses(c.inicio, c.parcelas - 1))}
                   </span>
                 </span>
                 <span className="coluna" style={{ alignItems: 'flex-end', gap: 2 }}>
